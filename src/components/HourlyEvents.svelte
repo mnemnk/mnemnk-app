@@ -25,13 +25,17 @@
   //   [...new Set(events.map((ev) => new Date(ev.time).getHours()))].sort((a, b) => b - a),
   // );
 
+  const APPS_WINDOW_SIZE = 60;
   const NUM_TRACKING_APPS = 4;
 
   // [dt, screenshot, application, previous applications, others]
   type EventRow = [number, MnemnkEvent | null, MnemnkEvent | null, string[], MnemnkEvent[]];
-  let events_apps: [Map<number, EventRow>, string[]] = $derived.by(() => {
+  let events_apps: [Map<number, EventRow>, Set<string>] = $derived.by(() => {
     let events_by_dt = new Map<number, EventRow>();
+    let last_app = "";
     let apps = [] as string[];
+    let apps_window = [] as string[];
+    let all_apps = new Set() as Set<string>;
     events.forEach((ev) => {
       let d = new Date(ev.time);
       let dt =
@@ -40,19 +44,23 @@
         d.getDate() * 10000 +
         d.getHours() * 100 +
         d.getMinutes();
-      let event = events_by_dt.get(dt) || ([dt, null, null, apps, []] as EventRow);
+      let event = events_by_dt.get(dt);
+      if (!event) {
+        apps_window = [last_app, ...apps_window].slice(0, APPS_WINDOW_SIZE);
+        apps = apps.filter((a) => apps_window.includes(a));
+        event = [dt, null, null, apps, []] as EventRow;
+      }
       if (ev.kind === "screen") {
         event[1] = ev;
       } else if (ev.kind === "application") {
         event[2] = ev;
-        let app_name = ev.value.name;
-        apps = apps.includes(app_name)
-          ? [app_name, ...apps.filter((a) => a !== app_name)]
-          : [app_name, ...apps];
-        if (apps.length > 5) {
-          apps = apps.slice(0, 5);
-        }
+        last_app = ev.value.name;
+        apps = apps.includes(last_app)
+          ? [last_app, ...apps.filter((a) => a !== last_app)]
+          : [last_app, ...apps].slice(0, NUM_TRACKING_APPS);
+        apps = apps.slice(0, NUM_TRACKING_APPS);
         event[3] = apps;
+        all_apps.add(last_app);
       } else {
         if (ev.kind === "browser") {
           let url = new URL(ev.value.url);
@@ -62,11 +70,10 @@
       }
       events_by_dt.set(dt, event);
     });
-    return [events_by_dt, apps];
+    return [events_by_dt, all_apps];
   });
   let events_by_dt = $derived([...events_apps[0].values()].sort((a, b) => a[0] - b[0]));
   let rows = $derived(events_by_dt.reverse());
-
   let all_apps = $derived(events_apps[1]);
 
   // $inspect(events_by_dt);
@@ -80,7 +87,7 @@
 
   let app_colors: Record<string, string> = $derived.by(() => {
     const colors = {} as Record<string, string>;
-    all_apps.forEach((app, i) => {
+    [...all_apps].forEach((app, i) => {
       colors[app] = APP_COLOR_PALLETE[i % APP_COLOR_PALLETE.length];
     });
     return colors;
