@@ -1,6 +1,6 @@
 [package]
 name = "mnemnk-app"
-version = "0.4.1"
+version = "0.4.2"
 description = "Mnemnk App"
 authors = ["stn"]
 edition = "2021"
