@@ -94,8 +94,8 @@
   });
 
   let app_paths = $derived.by(() => {
-    const paths = [];
-    const appPositions = {};
+    const paths = [] as { path: string; color: string }[];
+    const appPositions = {} as Record<string, { row: number; col: number }[]>;
 
     let num_events = events_by_dt.length;
     events_by_dt.forEach((row, rowIndex) => {
@@ -108,26 +108,34 @@
     });
 
     Object.entries(appPositions).forEach(([app, positions]) => {
-      if (positions.length > 1) {
-        const path = positions.reduce((acc, pos, i, arr) => {
-          const x = pos.col * COL_WIDTH + COL_WIDTH / 2;
-          const y = pos.row * ROW_HEIGHT + ROW_OFFSET;
-
-          if (i === 0) return `M ${x} ${y + NODE_HEIGHT}`;
-
-          const prevX = arr[i - 1].col * COL_WIDTH + COL_WIDTH / 2;
-          const prevY = arr[i - 1].row * ROW_HEIGHT + ROW_OFFSET;
-
-          const startY = prevY - NODE_HEIGHT / 2;
-          const endY = y + NODE_HEIGHT / 2;
-          const controlY = (startY + endY) / 2;
-          return (
-            acc +
-            ` L ${prevX} ${prevY - NODE_HEIGHT / 2} C ${prevX} ${controlY}, ${x} ${controlY}, ${x} ${endY}`
-          );
-        }, "");
-        paths.push({ path, color: app_colors[app] });
+      if (positions.length === 1) {
+        const x = positions[0].col * COL_WIDTH + COL_WIDTH / 2;
+        const y = positions[0].row * ROW_HEIGHT + ROW_OFFSET;
+        paths.push({
+          path: `M ${x} ${y + NODE_HEIGHT} L ${x} ${y - NODE_HEIGHT / 2}`,
+          color: app_colors[app],
+        });
       }
+      const path = positions.reduce((acc, pos, i, arr) => {
+        const x = pos.col * COL_WIDTH + COL_WIDTH / 2;
+        const y = pos.row * ROW_HEIGHT + ROW_OFFSET;
+
+        if (i === 0) return `M ${x} ${y + NODE_HEIGHT}`;
+
+        const prevX = arr[i - 1].col * COL_WIDTH + COL_WIDTH / 2;
+        const prevY = arr[i - 1].row * ROW_HEIGHT + ROW_OFFSET;
+
+        if (arr[i - 1].row - 1 !== pos.row) {
+          return acc + ` L ${prevX} ${prevY - NODE_HEIGHT / 2} M ${x} ${y + NODE_HEIGHT / 2}`;
+        }
+
+        const startY = prevY - NODE_HEIGHT / 2;
+        const endY = y - NODE_HEIGHT / 2;
+        const controlY = (startY + endY) / 2;
+        return acc + ` L ${prevX} ${startY} C ${prevX} ${controlY}, ${x} ${controlY}, ${x} ${endY}`;
+      }, "");
+
+      paths.push({ path, color: app_colors[app] });
     });
 
     return paths;
