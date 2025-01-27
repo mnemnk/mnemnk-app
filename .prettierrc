@@ -1,0 +1,25 @@
+{
+  "printWidth": 100,
+  "plugins": ["prettier-plugin-svelte", "@trivago/prettier-plugin-sort-imports"],
+  "overrides": [
+    {
+      "files": "*.svelte",
+      "options": {
+        "parser": "svelte"
+      }
+    }
+  ],
+  "importOrder": [
+    "^\\@tauri-apps/(.*)$",
+    "^(svelte/(.*)$)|^(svelte$)",
+    "^(@sveltejs/(.*)$)|^(@sveltejs/kit$)",
+    "<THIRD_PARTY_MODULES>",
+    "^\\$app/(.*)$",
+    "^\\$env/(.*)$",
+    "^\\$service-worker",
+    "^\\$lib/(.*)$",
+    "^@/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true
+}

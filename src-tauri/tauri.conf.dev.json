@@ -1,0 +1,12 @@
+{
+  "productName": "Mnemnk Dev",
+  "identifier": "com.mnemnk.app-dev",
+  "app": {
+    "windows": [
+      {
+        "title": "Mnemnk Dev",
+        "visible": true
+      }
+    ]
+  }
+}

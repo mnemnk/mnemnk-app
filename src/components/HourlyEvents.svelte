@@ -1,0 +1,285 @@
+<script lang="ts">
+  import { event } from "@tauri-apps/api";
+
+  import { onMount } from "svelte";
+
+  import { Popover } from "flowbite-svelte";
+
+  import { mimgUrl } from "@/lib/utils";
+
+  interface MnemnkEvent {
+    id: { id: { String: string } };
+    kind: string;
+    time: number;
+    value: any;
+  }
+  interface Props {
+    date?: string;
+    events?: MnemnkEvent[]; // assume events are sorted by time
+  }
+
+  let { date = "", events = [] }: Props = $props();
+
+  // unique hours in events.time
+  // let hours: number[] = $derived(
+  //   [...new Set(events.map((ev) => new Date(ev.time).getHours()))].sort((a, b) => b - a),
+  // );
+
+  const NUM_TRACKING_APPS = 4;
+
+  // [dt, screenshot, application, previous applications, others]
+  type EventRow = [number, MnemnkEvent | null, MnemnkEvent | null, string[], MnemnkEvent[]];
+  let events_apps: [Map<number, EventRow>, string[]] = $derived.by(() => {
+    let events_by_dt = new Map<number, EventRow>();
+    let apps = [] as string[];
+    events.forEach((ev) => {
+      let d = new Date(ev.time);
+      let dt =
+        d.getFullYear() * 100000000 +
+        (d.getMonth() + 1) * 1000000 +
+        d.getDate() * 10000 +
+        d.getHours() * 100 +
+        d.getMinutes();
+      let event = events_by_dt.get(dt) || ([dt, null, null, apps, []] as EventRow);
+      if (ev.kind === "screen") {
+        event[1] = ev;
+      } else if (ev.kind === "application") {
+        event[2] = ev;
+        let app_name = ev.value.name;
+        apps = apps.includes(app_name)
+          ? [app_name, ...apps.filter((a) => a !== app_name)]
+          : [app_name, ...apps];
+        if (apps.length > 5) {
+          apps = apps.slice(0, 5);
+        }
+        event[3] = apps;
+      } else {
+        if (ev.kind === "browser") {
+          let url = new URL(ev.value.url);
+          ev.value.hostname = url.hostname;
+        }
+        event[4].push(ev);
+      }
+      events_by_dt.set(dt, event);
+    });
+    return [events_by_dt, apps];
+  });
+  let events_by_dt = $derived([...events_apps[0].values()].sort((a, b) => a[0] - b[0]));
+  let rows = $derived(events_by_dt.reverse());
+
+  let all_apps = $derived(events_apps[1]);
+
+  // $inspect(events_by_dt);
+
+  const ROW_HEIGHT = 96;
+  const ROW_OFFSET = 16;
+  const COL_WIDTH = 100;
+  const NODE_HEIGHT = 15;
+
+  const APP_COLOR_PALLETE = ["#FFF100", "#FF4B00", "#005AFF", "#03AF7A", "#F6AA00", "#4DC4FF"];
+
+  let app_colors: Record<string, string> = $derived.by(() => {
+    const colors = {} as Record<string, string>;
+    all_apps.forEach((app, i) => {
+      colors[app] = APP_COLOR_PALLETE[i % APP_COLOR_PALLETE.length];
+    });
+    return colors;
+  });
+
+  let app_paths = $derived.by(() => {
+    const paths = [];
+    const appPositions = {};
+
+    let num_events = events_by_dt.length;
+    events_by_dt.forEach((row, rowIndex) => {
+      row[3].forEach((app, colIndex) => {
+        if (!appPositions[app]) {
+          appPositions[app] = [];
+        }
+        appPositions[app].push({ row: num_events - rowIndex - 1, col: colIndex });
+      });
+    });
+
+    Object.entries(appPositions).forEach(([app, positions]) => {
+      if (positions.length > 1) {
+        const path = positions.reduce((acc, pos, i, arr) => {
+          const x = pos.col * COL_WIDTH + COL_WIDTH / 2;
+          const y = pos.row * ROW_HEIGHT + ROW_OFFSET;
+
+          if (i === 0) return `M ${x} ${y + NODE_HEIGHT}`;
+
+          const prevX = arr[i - 1].col * COL_WIDTH + COL_WIDTH / 2;
+          const prevY = arr[i - 1].row * ROW_HEIGHT + ROW_OFFSET;
+
+          const startY = prevY - NODE_HEIGHT / 2;
+          const endY = y + NODE_HEIGHT / 2;
+          const controlY = (startY + endY) / 2;
+          return (
+            acc +
+            ` L ${prevX} ${prevY - NODE_HEIGHT / 2} C ${prevX} ${controlY}, ${x} ${controlY}, ${x} ${endY}`
+          );
+        }, "");
+        paths.push({ path, color: app_colors[app] });
+      }
+    });
+
+    return paths;
+  });
+
+  // $inspect(app_paths);
+
+  function backgroundImage(screenshot) {
+    if (screenshot) {
+      return `url(${mimgUrl(`${screenshot.kind}/${screenshot.value.image_id}`)})`;
+    }
+    return "";
+  }
+
+  let screenshotOnly = $state(false);
+  let scrollPos = 0;
+
+  function toggleScreenshotOnly() {
+    if (screenshotOnly) {
+      screenshotOnly = false;
+    } else {
+      scrollPos = window.scrollY || document.documentElement.scrollTop;
+      screenshotOnly = true;
+    }
+  }
+
+  $effect(() => {
+    if (!screenshotOnly) {
+      window.scrollTo(0, scrollPos);
+    }
+  });
+
+  onMount(() => {
+    return () => {
+      document.body.style.backgroundImage = "";
+    };
+  });
+</script>
+
+<div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/60"}>
+  {#if screenshotOnly}
+    <div class="fixed inset-0">
+      <button
+        type="button"
+        class="fixed inset-0 w-full h-full"
+        aria-label="back to timeline"
+        onclick={toggleScreenshotOnly}
+      ></button>
+    </div>
+  {:else}
+    <div class="w-full overflow-x-auto relative">
+      <div class="pointer-events-none absolute top-0 left-36">
+        <svg width={COL_WIDTH * NUM_TRACKING_APPS} height={ROW_HEIGHT * events_by_dt.length}>
+          {#each app_paths as pathData, i}
+            <path
+              d={pathData.path}
+              stroke={pathData.color}
+              stroke-width="12"
+              fill="none"
+              opacity="0.5"
+            />
+          {/each}
+        </svg>
+      </div>
+
+      <div class="ml-4">
+        <!-- <h1 class="text-3xl font-bold bg-transparent/60 pt-2 pb-4">{date}</h1> -->
+        {#each rows as row}
+          <div
+            id="t{row[0]}"
+            class="flex flex-nowrap space-y-1 h-24 event-row"
+            role="group"
+            onmouseenter={() => {
+              document.body.style.backgroundImage = backgroundImage(row[1]);
+            }}
+          >
+            <div class="flex-none w-12">
+              {(((row[0] / 100) | 0) % 100).toString().padStart(2, "0")}:{(row[0] % 100)
+                .toString()
+                .padStart(2, "0")}
+            </div>
+            <div class="flex-none w-36">
+              {#if row[1]}
+                <button type="button" class="screenshot-button" onclick={toggleScreenshotOnly}>
+                  <img
+                    height="36"
+                    width="85"
+                    loading="lazy"
+                    src={mimgUrl(`${row[1].kind}/${row[1].value.image_id}.t`)}
+                    alt=""
+                  />
+                </button>
+              {/if}
+            </div>
+            <div class="flex-none w-1/2 overflow-hidden mr-4">
+              {#if row[2]}
+                <div id="e-{row[2].id.id.String}" class="text-nowrap">
+                  {row[2].value.title}
+                </div>
+                <Popover
+                  arrow={false}
+                  offset={1}
+                  placement="bottom-start"
+                  trigger="click"
+                  triggeredBy="#e-{row[2].id.id.String}"
+                  class="!text-primary-50 !bg-gray-700"
+                >
+                  <div class="p-3">
+                    <div>{row[2].time.toLocaleString()}</div>
+                    <pre>{JSON.stringify(row[2].value, null, 2)}</pre>
+                  </div>
+                </Popover>
+              {/if}
+            </div>
+            <div class="flex-auto w-96 text-nowrap">
+              {#each row[4] as event (event.id.id.String)}
+                {#if event.kind === "browser"}
+                  <div id="e-{event.id.id.String}">
+                    <img
+                      src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
+                      alt=""
+                      class="inline-block"
+                      width="16"
+                      height="16"
+                    />
+                    <a href={event.value.url} target="_blank" rel="noopener noreferrer"
+                      >{event.value.title}</a
+                    >
+                  </div>
+                  <Popover
+                    arrow={false}
+                    offset={1}
+                    placement="bottom-start"
+                    trigger="click"
+                    triggeredBy="#e-{event.id.id.String}"
+                    class="!text-primary-50 !bg-gray-700"
+                  >
+                    <div>
+                      {event.value.url}
+                    </div>
+                  </Popover>
+                {:else}
+                  <div id="e-{event.id.id.String}">
+                    <div>{event.kind}</div>
+                    <div>{event.time.toLocaleString()}</div>
+                    <pre>{JSON.stringify(event.value, null, 2)}</pre>
+                  </div>
+                {/if}
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .event-row {
+    filter: drop-shadow(0 0 1.2px rgba(0, 0, 0, 0.8));
+  }
+</style>
