@@ -40,7 +40,9 @@
         d.getDate() * 10000 +
         d.getHours() * 100 +
         d.getMinutes();
-      let event = events_by_dt.get(dt) || ([dt, null, null, apps, []] as EventRow);
+      let event =
+        events_by_dt.get(dt) ||
+        ([dt, null, null, apps.slice(0, NUM_TRACKING_APPS), []] as EventRow);
       if (ev.kind === "screen") {
         event[1] = ev;
       } else if (ev.kind === "application") {
@@ -49,10 +51,7 @@
         apps = apps.includes(app_name)
           ? [app_name, ...apps.filter((a) => a !== app_name)]
           : [app_name, ...apps];
-        if (apps.length > 5) {
-          apps = apps.slice(0, 5);
-        }
-        event[3] = apps;
+        event[3] = apps.slice(0, NUM_TRACKING_APPS);
       } else {
         if (ev.kind === "browser") {
           let url = new URL(ev.value.url);
