@@ -12,7 +12,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write src",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev --config ./src-tauri/tauri.conf.dev.json"
+    "tauri:dev": "tauri dev --config ./src-tauri/tauri.conf.dev.json",
+    "release": "commit-and-tag-version"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -35,6 +36,7 @@
     "@trivago/prettier-plugin-sort-imports": "^5.2.1",
     "@types/node": "^22.10.1",
     "autoprefixer": "^10.4.20",
+    "commit-and-tag-version": "^12.5.0",
     "flowbite": "^2.5.2",
     "flowbite-svelte": "^0.47.4",
     "prettier": "^3.4.2",
