@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { event } from "@tauri-apps/api";
-
   import { onMount } from "svelte";
 
   import { Popover } from "flowbite-svelte";

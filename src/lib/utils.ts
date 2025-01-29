@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-const isEdge = navigator.userAgent.includes("Edg");
+const isEdge = (typeof navigator !== "undefined") && navigator.userAgent?.includes("Edg");
 
 export function mimgUrl(path: string): string {
   return isEdge ? `http://mimg.localhost/${path}` : `mimg://localhost/${path}`;
