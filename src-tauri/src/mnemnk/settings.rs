@@ -3,6 +3,8 @@ use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 use tauri::{AppHandle, Manager};
 
+const CONFIG_FILENAME: &str = "config.yml";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CoreSettings {
     pub autostart: Option<bool>,
@@ -83,8 +85,10 @@ impl Default for MnemnkSettings {
 }
 
 pub fn init(app: &AppHandle) {
+    let cf = config_file(app);
+    log::info!("Config file: {}", cf);
     let settings: MnemnkSettings =
-        confy::load(app_name(app), None).expect("Failed to load settings");
+        confy::load_path(cf).unwrap_or_else(|_| MnemnkSettings::default());
     dbg!(&settings);
     app.manage(Mutex::new(settings));
 }
@@ -93,8 +97,24 @@ pub fn save(app: &AppHandle) {
     let settings = app.state::<Mutex<MnemnkSettings>>();
     {
         let settings = settings.lock().unwrap();
-        confy::store(app_name(app), None, &*settings).expect("Failed to save settings");
+        confy::store_path(config_file(app), &*settings).unwrap_or_else(|e| {
+            log::error!("Failed to save settings: {}", e);
+        });
     }
+}
+
+pub fn config_file(app: &AppHandle) -> String {
+    let app_config_dir = app
+        .path()
+        .app_config_dir()
+        .expect("Failed to get app config directory");
+    if !app_config_dir.exists() {
+        std::fs::create_dir(&app_config_dir).expect("Failed to create config directory");
+    }
+    app_config_dir
+        .join(CONFIG_FILENAME)
+        .to_string_lossy()
+        .to_string()
 }
 
 pub fn data_dir(app: &AppHandle) -> Option<String> {
@@ -124,10 +144,6 @@ pub fn data_dir(app: &AppHandle) -> Option<String> {
 
 pub fn quit(app: &AppHandle) {
     save(app);
-}
-
-fn app_name(app: &AppHandle) -> &str {
-    app.config().identifier.as_str()
 }
 
 #[tauri::command]
