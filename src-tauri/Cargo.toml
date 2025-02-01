@@ -5,6 +5,7 @@ description = "Mnemnk App"
 authors = ["stn"]
 edition = "2021"
 license = "../LICENSE"
+default-run = "mnemnk-app"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
