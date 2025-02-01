@@ -7,14 +7,13 @@ fn show_window(app: &AppHandle, label: &str) -> Result<()> {
         window.navigate(Url::parse(
             window.url()?.origin().ascii_serialization().as_str(),
         )?)?;
-
         if window.is_minimized()? {
             window.unminimize()?;
-        } else if window.is_visible()? {
-            window.set_focus()?;
-        } else {
-            window.show()?;
         }
+        if window.is_visible()? {
+            window.set_focus()?;
+        }
+        window.show()?;
     }
     Ok(())
 }
