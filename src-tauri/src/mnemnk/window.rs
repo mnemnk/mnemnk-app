@@ -1,19 +1,18 @@
 use anyhow::Result;
-use tauri::{AppHandle, Manager, Url};
+use tauri::{AppHandle, Manager};
 
 fn show_window(app: &AppHandle, label: &str) -> Result<()> {
     if let Some(mut window) = app.get_webview_window(label) {
-        // window.navigate(window.url()?)?;
-        window.navigate(Url::parse(
-            window.url()?.origin().ascii_serialization().as_str(),
-        )?)?;
+        let mut url = window.url()?;
+        url.set_path("/");
+        window.navigate(url)?;
         if window.is_minimized()? {
             window.unminimize()?;
         }
-        if window.is_visible()? {
-            window.set_focus()?;
-        }
         window.show()?;
+        window.set_focus()?;
+    } else {
+        log::error!("window not found: {}", label);
     }
     Ok(())
 }
