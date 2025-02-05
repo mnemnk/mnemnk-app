@@ -1,6 +1,6 @@
 {
   "productName": "Mnemnk Dev",
-  "identifier": "Mnemnk-Dev",
+  "identifier": "com.mnemnk.mnemnk-app-dev",
   "app": {
     "windows": [
       {
