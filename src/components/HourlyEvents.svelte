@@ -203,7 +203,7 @@
         {#each rows as row}
           <div
             id="t{row[0]}"
-            class="flex flex-nowrap space-y-1 h-24 event-row"
+            class="flex flex-nowrap space-y-1 min-h-24 event-row"
             role="group"
             onmouseenter={() => {
               document.body.style.backgroundImage = backgroundImage(row[1]);
@@ -227,7 +227,7 @@
                 </button>
               {/if}
             </div>
-            <div class="flex-none w-1/2 overflow-hidden mr-4">
+            <div class="flex-none w-1/2 overflow-x-hidden mr-4">
               {#each row[2] as app (app.id.id.String)}
                 <div id="e-{app.id.id.String}" class="text-nowrap">
                   {app.value.title}
