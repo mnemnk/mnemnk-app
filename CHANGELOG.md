@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.0](https://github.com/mnemnk/mnemnk-app/compare/v0.5.5...v0.6.0) (2025-02-09)
+
+
+### Features
+
+* 🎸 change default of mnemnk-application interval ([#35](https://github.com/mnemnk/mnemnk-app/issues/35)) ([e919247](https://github.com/mnemnk/mnemnk-app/commit/e9192476a100d57b4a37e87d6849e2dfd9effb6c))
+* 🎸 support more frequent app updates ([#34](https://github.com/mnemnk/mnemnk-app/issues/34)) ([ff636a0](https://github.com/mnemnk/mnemnk-app/commit/ff636a098a945068e9ebd4877fc978c868b5d904))
+
 ## [0.5.5](https://github.com/mnemnk/mnemnk-app/compare/v0.5.1...v0.5.5) (2025-02-06)
 
 ### ⚠ BREAKING CHANGES
