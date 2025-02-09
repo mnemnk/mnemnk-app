@@ -22,7 +22,7 @@ struct AgentConfig {
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
-            interval: 60,
+            interval: 10,
             ignore: default_ignore(),
         }
     }
