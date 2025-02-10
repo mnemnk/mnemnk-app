@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.0](https://github.com/mnemnk/mnemnk-app/compare/v0.6.0...v0.7.0) (2025-02-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 mnemnk-api now requires API key
+
+### Features
+
+* 🎸 api key for mnemnk-api ([#37](https://github.com/mnemnk/mnemnk-app/issues/37)) ([936ca15](https://github.com/mnemnk/mnemnk-app/commit/936ca159378e9eb6cdfde7cd86b143e101ab5a1e)), closes [#3](https://github.com/mnemnk/mnemnk-app/issues/3)
+
+
+### Bug Fixes
+
+* 🐛 some of app events are not displayed because of too many ([#36](https://github.com/mnemnk/mnemnk-app/issues/36)) ([1b3aaa8](https://github.com/mnemnk/mnemnk-app/commit/1b3aaa8823a0da18b7b0e450b567b01dc32dcc06))
+
 ## [0.6.0](https://github.com/mnemnk/mnemnk-app/compare/v0.5.5...v0.6.0) (2025-02-09)
 
 

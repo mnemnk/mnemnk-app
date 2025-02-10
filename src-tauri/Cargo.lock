@@ -3811,7 +3811,7 @@ dependencies = [
 
 [[package]]
 name = "mnemnk-app"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "active-win-pos-rs",
  "anyhow",
