@@ -31,6 +31,7 @@ surrealdb = { version = "2.1.4", features = ["kv-rocksdb"] }
 active-win-pos-rs = "0.8.3"
 anyhow = "1.0.91"
 axum = "0.8.1"
+axum-auth = { version = "0.8", default-features = false, features = ["auth-bearer"] }
 base64 = "0.22.1"
 chrono = "0.4.38"
 clap = { version = "4.5.23", features = ["derive"] }
@@ -39,6 +40,7 @@ ctrlc = "3.4.5"
 env_logger = "0.11.6"
 image = "0.25.5"
 log = "0.4.22"
+rand = "0.9"
 regex = "1.11.1"
 tower-http = { version = "0.6.2", features = ["timeout"] }
 xcap = "0.0.14"
