@@ -1,8 +1,11 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use axum::{routing::post, Json, Router};
+use axum::{extract::State, routing::post, Json, Router};
+use axum_auth::AuthBearer;
+use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::io::{stdin, AsyncBufReadExt, BufReader};
@@ -15,12 +18,14 @@ const AGENT_NAME: &str = "mnemnk-api";
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 struct AgentConfig {
     address: String,
+    api_key: Option<String>,
 }
 
 impl Default for AgentConfig {
     fn default() -> Self {
         Self {
             address: "localhost:3296".to_string(),
+            api_key: None,
         }
     }
 }
@@ -43,8 +48,15 @@ async fn main() -> Result<()> {
             if let Some(address) = c.get("address") {
                 config.address = address.as_str().unwrap().to_string();
             }
+            if let Some(api_key) = c.get("api_key") {
+                config.api_key = Some(api_key.as_str().unwrap().to_string());
+            }
         }
     }
+    if config.api_key.is_none() {
+        config.api_key = Some(generate_api_key());
+    }
+
     println!("CONFIG {}", serde_json::to_string(&config)?);
 
     log::info!("Starting {}.", AGENT_NAME);
@@ -69,9 +81,15 @@ async fn main() -> Result<()> {
     }
 }
 
+fn generate_api_key() -> String {
+    let mut bytes = [0u8; 32]; // 256bit
+    rand::rng().fill(&mut bytes);
+    general_purpose::URL_SAFE_NO_PAD.encode(&bytes)
+}
+
 async fn start_server(config: &AgentConfig) {
     let app = Router::new()
-        .route("/store", post(store))
+        .route("/store", post(store).with_state(config.clone()))
         .layer((TimeoutLayer::new(Duration::from_secs(2)),));
     let listener = TcpListener::bind(&config.address)
         .await
@@ -113,7 +131,16 @@ struct StoreRequest {
     value: Value,
 }
 
-async fn store(request: Json<StoreRequest>) -> Result<Json<Value>, String> {
+async fn store(
+    AuthBearer(token): AuthBearer,
+    State(config): State<AgentConfig>,
+    request: Json<StoreRequest>,
+) -> Result<Json<Value>, String> {
+    if let Some(ref k) = config.api_key {
+        if token != *k {
+            return Err("Unauthorized".to_string());
+        }
+    }
     let json_value = serde_json::to_string(&request.value).map_err(|e| e.to_string())?;
     // TODO: store agent into metadata
     println!("STORE {} {}", request.kind, json_value);
