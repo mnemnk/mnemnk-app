@@ -1,5 +1,6 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::collections::{BTreeMap, HashMap};
+use std::env;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 use std::vec;
@@ -17,6 +18,7 @@ use super::store;
 
 pub struct AgentCommands {
     agents: HashMap<String, CommandChild>,
+    catalog: BTreeMap<String, PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +47,7 @@ struct AgentBoard {
 pub fn init(app: &AppHandle) {
     let agent_commands = AgentCommands {
         agents: HashMap::new(),
+        catalog: search_agents(),
     };
     app.manage(Mutex::new(agent_commands));
 
@@ -54,8 +57,6 @@ pub fn init(app: &AppHandle) {
     };
     app.manage(Mutex::new(agent_board));
 
-    let (tx, mut rx) = mpsc::channel(128);
-
     let agents;
     let settings = app.state::<Mutex<MnemnkSettings>>();
     {
@@ -63,20 +64,16 @@ pub fn init(app: &AppHandle) {
         agents = settings.agents.clone();
     }
 
-    for (program, settings) in &agents {
-        start(app, program, settings, tx.clone()).unwrap_or_else(|e| {
+    let (tx, mut rx) = mpsc::channel(128);
+
+    for (agent, settings) in &agents {
+        start(app, agent, settings, tx.clone()).unwrap_or_else(|e| {
             log::error!("Failed to start agent: {}", e);
         });
     }
 
-    // start main loop after starting all agents.
-    // so we must have enough size of broadcast channel.
-    // Or should we send a start message to each agent?
-
     // TODO: each message should have an origin field to prevent infinite loop
-
     let app_handle = app.clone();
-
     tauri::async_runtime::spawn(async move {
         while let Some(message) = rx.recv().await {
             use AgentMessage::*;
@@ -134,13 +131,23 @@ fn start(
         return Ok(());
     }
 
+    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    let agent_path;
+    {
+        let agent_commands = agent_commands.lock().unwrap();
+        if agent_commands.agents.contains_key(agent) {
+            log::error!("Agent {} is already running", agent);
+            return Err(anyhow::anyhow!("Agent is already running"));
+        }
+        agent_path = agent_commands
+            .catalog
+            .get(agent)
+            .context("Agent not found")?
+            .clone();
+    }
+
     log::info!("Starting agent: {}", agent);
 
-    let agent_path = if let Some(path) = &settings.path {
-        PathBuf::from(path.clone())
-    } else {
-        app_path().join(agent)
-    };
     let config = settings.config.clone().unwrap_or(Value::Null);
     let sidecar_command = if config == Value::Null {
         app.shell().command(agent_path.as_os_str())
@@ -348,6 +355,65 @@ fn app_path() -> PathBuf {
     let mut path = std::env::current_exe().unwrap();
     path.pop();
     path
+}
+
+fn user_path() -> Vec<PathBuf> {
+    let mut path_dirs = if let Ok(path) = env::var("PATH") {
+        env::split_paths(&path).collect()
+    } else {
+        vec![]
+    };
+    path_dirs.insert(0, app_path());
+    path_dirs
+}
+
+// is_executable and search_agents are based on cargo/main.rs
+
+#[cfg(unix)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    use std::os::unix::prelude::*;
+    fs::metadata(path)
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(windows)]
+fn is_executable<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref().is_file()
+}
+
+fn search_agents() -> BTreeMap<String, PathBuf> {
+    let prefix = "mnemnk-";
+    let suffix = env::consts::EXE_SUFFIX;
+    let mut agents = BTreeMap::new();
+    for path in user_path() {
+        let entries = match std::fs::read_dir(path) {
+            Ok(entries) => entries,
+            _ => continue,
+        };
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() {
+                let Some(filename) = path.file_name().and_then(|s| s.to_str()) else {
+                    continue;
+                };
+                let Some(name) = filename
+                    .strip_prefix(prefix)
+                    .and_then(|s| s.strip_suffix(suffix))
+                else {
+                    continue;
+                };
+                if name == "app" {
+                    continue;
+                }
+                if is_executable(&path) {
+                    agents.insert(name.to_string(), path);
+                }
+            }
+        }
+    }
+    dbg!(&agents);
+    agents
 }
 
 fn parse_stdout(line: &str) -> (&str, &str) {
