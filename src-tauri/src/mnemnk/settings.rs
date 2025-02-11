@@ -17,7 +17,6 @@ pub struct CoreSettings {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentSettings {
     pub enabled: Option<bool>,
-    pub path: Option<String>,
     pub config: Option<Value>,
 }
 
@@ -47,7 +46,6 @@ impl Default for AgentSettings {
     fn default() -> Self {
         AgentSettings {
             enabled: Some(false),
-            path: None,
             config: None,
         }
     }

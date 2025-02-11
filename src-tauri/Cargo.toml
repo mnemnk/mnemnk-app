@@ -2,10 +2,9 @@
 name = "mnemnk-app"
 version = "0.7.0"
 description = "Mnemnk App"
-authors = ["stn"]
+authors = ["Akira Ishino <akira@lumilab.jp>"]
 edition = "2021"
 license = "../LICENSE"
-default-run = "mnemnk-app"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,45 +20,21 @@ tauri-build = { version = "2", features = [] }
 tonic-build = "0.12.3"
 
 [dependencies]
+anyhow = "1.0.91"
+base64 = "0.22.1"
+chrono = "0.4.38"
+confy = { version = "0.6.1", features = ["yaml_conf"], default-features = false }
+ctrlc = "3.4.5"
+regex = "1.11.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+surrealdb = { version = "2.1.4", features = ["kv-rocksdb"] }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-surrealdb = { version = "2.1.4", features = ["kv-rocksdb"] }
-active-win-pos-rs = "0.8.3"
-anyhow = "1.0.91"
-axum = "0.8.1"
-axum-auth = { version = "0.8", default-features = false, features = ["auth-bearer"] }
-base64 = "0.22.1"
-chrono = "0.4.38"
-clap = { version = "4.5.23", features = ["derive"] }
-confy = { version = "0.6.1", features = ["yaml_conf"], default-features = false }
-ctrlc = "3.4.5"
-env_logger = "0.11.6"
 image = "0.25.5"
-log = "0.4.22"
-rand = "0.9"
-regex = "1.11.1"
-tower-http = { version = "0.6.2", features = ["timeout"] }
-xcap = "0.0.14"
-
-[[bin]]
-name = "mnemnk-app"
-path = "src/main.rs"
-
-[[bin]]
-name = "mnemnk-api"
-path = "src/mnemnk-agent/mnemnk-api.rs"
-
-[[bin]]
-name = "mnemnk-application"
-path = "src/mnemnk-agent/mnemnk-application.rs"
-
-[[bin]]
-name = "mnemnk-screen"
-path = "src/mnemnk-agent/mnemnk-screen.rs"
+log = "0.4.25"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"
