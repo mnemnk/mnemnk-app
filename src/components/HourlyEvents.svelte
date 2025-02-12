@@ -80,15 +80,23 @@
   // const COL_WIDTH = 100;
   // const NODE_HEIGHT = 15;
 
-  // const APP_COLOR_PALLETE = ["#FFF100", "#FF4B00", "#005AFF", "#03AF7A", "#F6AA00", "#4DC4FF"];
+  const APP_COLOR_PALLETE = [
+    "oklch(70% 0.1303 105.01 / 60%)", // yellow
+    "oklch(70% 0.1303 28.25 / 60%)", // red
+    "oklch(70% 0.1303 265.65 / 60%)", // blue
+    "oklch(70% 0.1303 146.95 / 60%)", // green
+    "oklch(70% 0.1303 67.34 / 60%)", // orange
+    "oklch(70% 0.1303 222.98 / 60%)", // light blue
+    "oklch(70% 0.1303 322.51 / 60%)", // purple
+  ];
 
-  // let app_colors: Record<string, string> = $derived.by(() => {
-  //   const colors = {} as Record<string, string>;
-  //   [...all_apps].forEach((app, i) => {
-  //     colors[app] = APP_COLOR_PALLETE[i % APP_COLOR_PALLETE.length];
-  //   });
-  //   return colors;
-  // });
+  let app_colors: Record<string, string> = $derived.by(() => {
+    const colors = {} as Record<string, string>;
+    [...all_apps].forEach((app, i) => {
+      colors[app] = APP_COLOR_PALLETE[i % APP_COLOR_PALLETE.length];
+    });
+    return colors;
+  });
 
   // let app_paths = $derived.by(() => {
   //   const paths = [] as { path: string; color: string }[];
@@ -229,7 +237,11 @@
             </div>
             <div class="flex-none w-1/2 overflow-x-hidden mr-4">
               {#each row[2] as app (app.id.id.String)}
-                <div id="e-{app.id.id.String}" class="text-nowrap">
+                <div
+                  id="e-{app.id.id.String}"
+                  class="text-nowrap"
+                  style="background-color: {app_colors[app.value.name]}"
+                >
                   {app.value.title}
                 </div>
                 <Popover
