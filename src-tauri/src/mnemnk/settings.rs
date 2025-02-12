@@ -57,21 +57,21 @@ impl Default for MnemnkSettings {
             core: CoreSettings::default(),
             agents: HashMap::from([
                 (
-                    "mnemnk-api".to_string(),
+                    "api".to_string(),
                     AgentSettings {
                         enabled: Some(true),
                         ..Default::default()
                     },
                 ),
                 (
-                    "mnemnk-application".to_string(),
+                    "application".to_string(),
                     AgentSettings {
                         enabled: Some(true),
                         ..Default::default()
                     },
                 ),
                 (
-                    "mnemnk-screen".to_string(),
+                    "screen".to_string(),
                     AgentSettings {
                         enabled: Some(true),
                         ..Default::default()
