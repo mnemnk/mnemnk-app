@@ -388,7 +388,7 @@ fn search_agents() -> BTreeMap<String, PathBuf> {
     let suffix = env::consts::EXE_SUFFIX;
     let mut agents = BTreeMap::new();
     for path in user_path() {
-        let entries = match std::fs::read_dir(path) {
+        let entries = match fs::read_dir(path) {
             Ok(entries) => entries,
             _ => continue,
         };
