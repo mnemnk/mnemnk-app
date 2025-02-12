@@ -81,13 +81,13 @@
   // const NODE_HEIGHT = 15;
 
   const APP_COLOR_PALLETE = [
-    "oklch(70% 0.1303 105.01 / 60%)", // yellow
-    "oklch(70% 0.1303 28.25 / 60%)", // red
-    "oklch(70% 0.1303 265.65 / 60%)", // blue
-    "oklch(70% 0.1303 146.95 / 60%)", // green
-    "oklch(70% 0.1303 67.34 / 60%)", // orange
-    "oklch(70% 0.1303 222.98 / 60%)", // light blue
-    "oklch(70% 0.1303 322.51 / 60%)", // purple
+    "oklch(70% 0.1303 105.01 / 25%)", // yellow
+    "oklch(70% 0.1303 28.25 / 25%)", // red
+    "oklch(70% 0.1303 265.65 / 25%)", // blue
+    "oklch(70% 0.1303 146.95 / 25%)", // green
+    "oklch(70% 0.1303 67.34 / 25%)", // orange
+    "oklch(70% 0.1303 222.98 / 25%)", // light blue
+    "oklch(70% 0.1303 322.51 / 25%)", // purple
   ];
 
   let app_colors: Record<string, string> = $derived.by(() => {
