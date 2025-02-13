@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.0](https://github.com/mnemnk/mnemnk-app/compare/v0.7.0...v0.8.0) (2025-02-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 need to install agents separately and change agent names in settings
+
+### Features
+
+* 🎸 remove agents code and search agents from path ([#39](https://github.com/mnemnk/mnemnk-app/issues/39)) ([02cffb7](https://github.com/mnemnk/mnemnk-app/commit/02cffb773e11087776e1522aaf17ad55ac484063)), closes [#38](https://github.com/mnemnk/mnemnk-app/issues/38)
+* 🎸 set background color to applications ([#42](https://github.com/mnemnk/mnemnk-app/issues/42)) ([2de9867](https://github.com/mnemnk/mnemnk-app/commit/2de986785f659b4a945665d833b7f6c3b0c4325a))
+
+
+### Bug Fixes
+
+* 🐛 agent name in default settings ([#41](https://github.com/mnemnk/mnemnk-app/issues/41)) ([e4f76f0](https://github.com/mnemnk/mnemnk-app/commit/e4f76f027907f3eee74e6dccb8fa8fcae9b7e326))
+* 🐛 missing fs crate on unix ([#40](https://github.com/mnemnk/mnemnk-app/issues/40)) ([3ed57ad](https://github.com/mnemnk/mnemnk-app/commit/3ed57adbcd48cd6b85f60255f4becb0213dc5173))
+* 🐛 unused warning about use std::fs on windows ([#44](https://github.com/mnemnk/mnemnk-app/issues/44)) ([735ea12](https://github.com/mnemnk/mnemnk-app/commit/735ea12ddba5201cb16131408a134e808ce75cc4))
+
 ## [0.7.0](https://github.com/mnemnk/mnemnk-app/compare/v0.6.0...v0.7.0) (2025-02-10)
 
 
