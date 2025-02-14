@@ -29,7 +29,7 @@ pub fn run() {
                 mnemnk::store::init(&app_handle)
                     .await
                     .unwrap_or_else(|e| log::error!("Failed to initialize store: {}", e));
-                mnemnk::agent::init(&app_handle);
+                mnemnk::agent::init(&app_handle).await;
                 mnemnk::autostart::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize autostart: {}", e);
                 });
