@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.1](https://github.com/mnemnk/mnemnk-app/compare/v0.8.0...v0.8.1) (2025-02-14)
+
+
+### Features
+
+* 🎸 close window using escape ([#52](https://github.com/mnemnk/mnemnk-app/issues/52)) ([4076e63](https://github.com/mnemnk/mnemnk-app/commit/4076e63ee3edd2e330ea390ddf346bc6bd6495ff)), closes [#51](https://github.com/mnemnk/mnemnk-app/issues/51)
+
+
+### Bug Fixes
+
+* 🐛 cannot find agents in macos ([#49](https://github.com/mnemnk/mnemnk-app/issues/49)) ([a4dc7f3](https://github.com/mnemnk/mnemnk-app/commit/a4dc7f3fbff6260ccbe111870b13926644035ffb)), closes [#46](https://github.com/mnemnk/mnemnk-app/issues/46)
+* 🐛 open window by clicking the app icon in task bar (macos) ([#50](https://github.com/mnemnk/mnemnk-app/issues/50)) ([e55e345](https://github.com/mnemnk/mnemnk-app/commit/e55e34553ea340c59365cfc3cf163a6292e20b0e)), closes [#47](https://github.com/mnemnk/mnemnk-app/issues/47)
+
 ## [0.8.0](https://github.com/mnemnk/mnemnk-app/compare/v0.7.0...v0.8.0) (2025-02-13)
 
 
