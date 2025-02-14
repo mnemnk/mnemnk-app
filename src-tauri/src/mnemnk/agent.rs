@@ -45,10 +45,10 @@ struct AgentBoard {
     subscribers: HashMap<String, Vec<String>>,
 }
 
-pub fn init(app: &AppHandle) {
+pub async fn init(app: &AppHandle) {
     let agent_commands = AgentCommands {
         agents: HashMap::new(),
-        catalog: search_agents(),
+        catalog: search_agents(app).await,
     };
     app.manage(Mutex::new(agent_commands));
 
@@ -358,14 +358,35 @@ fn app_path() -> PathBuf {
     path
 }
 
-fn user_path() -> Vec<PathBuf> {
-    let mut path_dirs = if let Ok(path) = env::var("PATH") {
+async fn user_path(app: &AppHandle) -> Vec<PathBuf> {
+    let mut path_dirs = if let Ok(path) = env_path(app).await {
         env::split_paths(&path).collect()
     } else {
         vec![]
     };
     path_dirs.insert(0, app_path());
     path_dirs
+}
+
+#[cfg(target_os = "macos")]
+async fn env_path(app: &AppHandle) -> Result<String> {
+    let output = app
+        .shell()
+        .command("zsh")
+        .args(vec!["-i", "-c", "echo $PATH"])
+        .output()
+        .await
+        .unwrap();
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        Err(anyhow::anyhow!("Failed to get PATH"))
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+async fn env_path(_app: &AppHandle) -> Result<String> {
+    env::var("PATH").context("Failed to get PATH")
 }
 
 // is_executable and search_agents are based on cargo/main.rs
@@ -383,11 +404,11 @@ fn is_executable<P: AsRef<Path>>(path: P) -> bool {
     path.as_ref().is_file()
 }
 
-fn search_agents() -> BTreeMap<String, PathBuf> {
+async fn search_agents(app: &AppHandle) -> BTreeMap<String, PathBuf> {
     let prefix = "mnemnk-";
     let suffix = env::consts::EXE_SUFFIX;
     let mut agents = BTreeMap::new();
-    for path in user_path() {
+    for path in user_path(app).await {
         let entries = match fs::read_dir(path) {
             Ok(entries) => entries,
             _ => continue,
