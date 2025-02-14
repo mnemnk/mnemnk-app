@@ -1,3 +1,4 @@
+use tauri::Manager;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod mnemnk;
@@ -58,7 +59,14 @@ pub fn run() {
         })
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {
-                window.hide().unwrap();
+                #[cfg(not(target_os = "macos"))]
+                {
+                    window.hide().unwrap();
+                }
+                #[cfg(target_os = "macos")]
+                {
+                    tauri::AppHandle::hide(window.app_handle()).unwrap();
+                }
                 api.prevent_close();
             }
             _ => {}
