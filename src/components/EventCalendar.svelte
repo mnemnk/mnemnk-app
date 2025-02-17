@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { run } from "svelte/legacy";
-
   interface Props {
-    year?: any;
-    daily_counts?: any;
+    year?: number;
+    daily_counts?: [number, number][];
     onDateChange?: (date: string) => void;
   }
 
@@ -74,10 +72,9 @@
     }
   }
 
-  let grid = $state();
-  run(() => {
-    grid = Array(53)
-      .fill()
+  let grid = $derived.by(() => {
+    let grid = Array(53)
+      .fill(null)
       .map(() => Array(7).fill(null));
     if (daily_counts) {
       daily_counts.forEach((count) => {
@@ -87,6 +84,7 @@
         }
       });
     }
+    return grid;
   });
 
   let monthLabels = $derived(

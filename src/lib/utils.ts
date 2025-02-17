@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-const isEdge = (typeof navigator !== "undefined") && navigator.userAgent?.includes("Edg");
+const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
 export function mimgUrl(path: string): string {
   return isEdge ? `http://mimg.localhost/${path}` : `mimg://localhost/${path}`;
@@ -10,9 +10,9 @@ export async function find_events_by_ymd(year: number, month: number, day: numbe
   return await invoke("find_events_by_ymd", { year, month, day });
 }
 
-export async function index_year(year: number) {
+export async function index_year(year: number): Promise<[string, number][]> {
   let results = await invoke("index_year", { year });
-  let ret = [];
+  let ret: [string, number][] = [];
   for (let i = 0; i < results.dates.length; i++) {
     let date = results.dates[i];
     let num_event = results.num_events[i];
