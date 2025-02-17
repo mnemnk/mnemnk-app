@@ -1,6 +1,4 @@
 <script lang="ts">
-  import IconsMdiMagnify from "~icons/mdi/magnify";
-
   interface Props {
     query?: string;
     onsearch?: (query: string) => void;
@@ -24,10 +22,5 @@
       autocomplete="off"
       bind:value={query}
     />
-    <button
-      type="submit"
-      class="absolute right-3 top-1/2 transform -translate-y-1/2 focus:outline-none cursor-default"
-      ><IconsMdiMagnify /></button
-    >
   </form>
 </div>
