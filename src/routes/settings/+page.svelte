@@ -3,9 +3,6 @@
 
   import { preventDefault } from "svelte/legacy";
 
-  import { AppBar } from "@skeletonlabs/skeleton";
-  import IconsMdiChevronLeft from "~icons/mdi/chevron-left";
-
   let { data } = $props();
 
   let settings = $state(data.settings);
@@ -16,19 +13,11 @@
   }
 </script>
 
-<div>
-  <AppBar class="!bg-transparent">
-    {#snippet lead()}
-      <a href="/"><IconsMdiChevronLeft /></a>
-    {/snippet}
-    <div class="text-xl">Settings</div>
-  </AppBar>
-  <main class="container mx-auto p-8 space-y-8">
-    <div>
-      <form onsubmit={preventDefault(save)}>
-        <textarea bind:value={settings} class="w-full h-96 !bg-surface-500"></textarea>
-        <button type="submit" class="btn">Save</button>
-      </form>
-    </div>
-  </main>
-</div>
+<main class="container mx-auto p-8 space-y-8 mt-20">
+  <div>
+    <form onsubmit={preventDefault(save)}>
+      <textarea bind:value={settings} class="w-full h-96 !bg-surface-500"></textarea>
+      <button type="submit" class="btn">Save</button>
+    </form>
+  </div>
+</main>

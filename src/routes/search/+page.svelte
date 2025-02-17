@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { AppBar } from "@skeletonlabs/skeleton";
-  import IconsMdiChevronLeft from "~icons/mdi/chevron-left";
-
   import { goto } from "$app/navigation";
 
   import SearchBox from "@/components/SearchBox.svelte";
@@ -19,15 +16,7 @@
   }
 </script>
 
-<div>
-  <AppBar class="!bg-transparent">
-    {#snippet lead()}
-      <a href="/"><IconsMdiChevronLeft /></a>
-    {/snippet}
-    <div class="text-xl"></div>
-  </AppBar>
-  <main class="container mx-auto p-8 space-y-8">
-    <SearchBox {query} {onsearch} />
-    <SearchResults {events} />
-  </main>
-</div>
+<main class="container mx-auto p-8 space-y-8 mt-20">
+  <SearchBox {query} {onsearch} />
+  <SearchResults {events} />
+</main>

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { getCurrentWindow } from "@tauri-apps/api/window";
 
   import Attribution from "@/components/Attribution.svelte";
+  import NavBar from "@/components/NavBar.svelte";
 
   import "../app.css";
 
@@ -19,6 +20,7 @@
   }
 </script>
 
+<NavBar />
 {@render children?.()}
 <Attribution />
 
