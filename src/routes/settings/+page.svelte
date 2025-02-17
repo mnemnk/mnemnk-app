@@ -16,7 +16,7 @@
 <main class="container mx-auto p-8 space-y-8 mt-20">
   <div>
     <form onsubmit={preventDefault(save)}>
-      <textarea bind:value={settings} class="w-full h-96 !bg-surface-500"></textarea>
+      <textarea bind:value={settings} class="w-full h-96 dark:!bg-gray-800"></textarea>
       <button type="submit" class="btn">Save</button>
     </form>
   </div>
