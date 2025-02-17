@@ -18,5 +18,7 @@
 </script>
 
 <main class="container mx-auto p-8 space-y-8 mt-20">
-  <EventCalendar {year} {daily_counts} {onDateChange} />
+  <div class="mx-auto">
+    <EventCalendar {year} {daily_counts} {onDateChange} />
+  </div>
 </main>
