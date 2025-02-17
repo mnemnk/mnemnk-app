@@ -10,10 +10,14 @@
   );
 </script>
 
-<div>
-  <main id="main" class="container mt-20">
-    <div class="w-screen bg-transparent/0 p-0">
-      <HourlyEvents date={date_str} {events} />
-    </div>
-  </main>
-</div>
+<main id="main" class="container">
+  <div class="w-[100vw] p-0">
+    <HourlyEvents date={date_str} {events} />
+  </div>
+</main>
+
+<style>
+  :global(body) {
+    overflow-x: hidden;
+  }
+</style>

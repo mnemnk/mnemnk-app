@@ -7,7 +7,7 @@
   }
 </script>
 
-<div class="fixed bottom-1 right-1 p-0 text-xs text-gray-700">
+<div class="fixed bottom-1 right-1 p-0 text-xs text-gray-400">
   <button {onclick}>
     {#await getName() then name}
       {name}
