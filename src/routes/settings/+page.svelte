@@ -6,11 +6,7 @@
   import { AppBar } from "@skeletonlabs/skeleton";
   import IconsMdiChevronLeft from "~icons/mdi/chevron-left";
 
-  interface Props {
-    data: any;
-  }
-
-  let { data }: Props = $props();
+  let { data } = $props();
 
   let settings = $state(data.settings);
 
