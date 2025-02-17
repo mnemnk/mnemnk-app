@@ -7,11 +7,7 @@
   import SearchBox from "@/components/SearchBox.svelte";
   import SearchResults from "@/components/SearchResults.svelte";
 
-  interface Props {
-    data: any;
-  }
-  let { data }: Props = $props();
-
+  let { data } = $props();
   let query = $derived(data.query);
   let events = $derived(data.events);
 

@@ -4,15 +4,13 @@
 
   import HourlyEvents from "@/components/HourlyEvents.svelte";
 
-  interface Props {
-    data: any;
-  }
+  let { data } = $props();
+  let date = $derived(data.date);
+  let events = $derived(data.events);
 
-  let { data }: Props = $props();
-
-  let date = data.date;
-  let date_str = `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`;
-  let events = data.events;
+  let date_str = $derived(
+    `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
+  );
 </script>
 
 <div>

@@ -8,12 +8,7 @@
   import SearchBox from "@/components/SearchBox.svelte";
   import { dateString } from "@/lib/utils";
 
-  interface Props {
-    data: any;
-  }
-
-  let { data }: Props = $props();
-
+  let { data } = $props();
   let year = $derived(data.year);
   let daily_counts = $derived(data.daily_counts);
 
