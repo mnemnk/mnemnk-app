@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.2](https://github.com/mnemnk/mnemnk-app/compare/v0.8.1...v0.8.2) (2025-02-17)
+
+
+### Features
+
+* 🎸 new navbar ([#54](https://github.com/mnemnk/mnemnk-app/issues/54)) ([0819a21](https://github.com/mnemnk/mnemnk-app/commit/0819a21c8d05b0d315b7210c73b32110dd747e23))
+* 🎸 uninstall unused libraries ([#55](https://github.com/mnemnk/mnemnk-app/issues/55)) ([654826c](https://github.com/mnemnk/mnemnk-app/commit/654826c36c13671228e4c7ded59dc32dc5bc1049))
+* 🎸 update event calendar design ([#56](https://github.com/mnemnk/mnemnk-app/issues/56)) ([6afc91c](https://github.com/mnemnk/mnemnk-app/commit/6afc91cda584f20caa5ae61438f21cc36cf31332))
+
 ## [0.8.1](https://github.com/mnemnk/mnemnk-app/compare/v0.8.0...v0.8.1) (2025-02-14)
 
 
