@@ -96,112 +96,47 @@
   );
 </script>
 
-<div class="event-calendar">
-  <div class="year-label">
-    {year}
-  </div>
-  <div class="month-labels">
-    <div class="weekday-spacer"></div>
-    {#each monthLabels as month}
-      <div class="month-label">
-        {#if month}
-          {month}
-        {/if}
+<div>
+  <h1 class="text-xl text-center mb-8">{year}</h1>
+  <div class="flex justify-center">
+    <div class="w-[776px]">
+      <div class="flex flex-row gap-[2px] pl-[34px] mb-1">
+        {#each monthLabels as month}
+          <div class="flex-none w-[12px] text-sm text-gray-200">
+            {#if month}
+              {month}
+            {/if}
+          </div>
+        {/each}
       </div>
-    {/each}
-  </div>
 
-  <div class="graph-container">
-    <div class="weekday-labels">
-      {#each weekdays as day}
-        <div class="weekday-label">
-          {day}
-        </div>
-      {/each}
-    </div>
-
-    <div class="grid">
-      {#each grid as week, weekIndex}
-        <div class="week">
-          {#each week as day, dayIndex}
-            <div
-              class="day"
-              style="background-color: {day ? getColor(day.count) : colors[0]}"
-              title={day ? `${day.date}: ${day.count} events` : "No events"}
-              onclick={() => handleDateChange(day.date)}
-              role="button"
-              tabindex="0"
-              onkeydown={(e) => e.key === "Enter" && handleDateChange(day.date)}
-            ></div>
+      <div class="flex flex-row gap-[4px]">
+        <div class="flex flex-col gap-[2px]">
+          {#each weekdays as day}
+            <div class="text-sm/[10px] text-right text-gray-200 h-[12px] w-[30px] pr-[4px]">
+              {day}
+            </div>
           {/each}
         </div>
-      {/each}
+
+        <div class="flex flex-row gap-[2px]">
+          {#each grid as week, weekIndex}
+            <div class="flex flex-col gap-[2px]">
+              {#each week as day, dayIndex}
+                <div
+                  class="w-[12px] h-[12px] rounded-[2px] cursor-pointer"
+                  style:background-color={day ? getColor(day.count) : colors[0]}
+                  title={day ? `${day.date}: ${day.count} events` : "No events"}
+                  onclick={() => handleDateChange(day.date)}
+                  role="button"
+                  tabindex="0"
+                  onkeydown={(e) => e.key === "Enter" && handleDateChange(day.date)}
+                ></div>
+              {/each}
+            </div>
+          {/each}
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
-<style>
-  .event-calendar {
-    padding: 1rem;
-  }
-
-  .month-labels {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 8px;
-  }
-
-  .weekday-spacer {
-    width: 30px;
-  }
-
-  .month-label {
-    width: 10px;
-    font-size: 12px;
-    color: #666;
-  }
-
-  .graph-container {
-    display: flex;
-    gap: 4px;
-  }
-
-  .weekday-labels {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 12px;
-    color: #666;
-  }
-
-  .weekday-label {
-    height: 10px;
-    line-height: 10px;
-    text-align: right;
-    padding-right: 4px;
-    width: 26px;
-  }
-
-  .grid {
-    display: flex;
-    gap: 2px;
-  }
-
-  .week {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .day {
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: transform 0.1s ease;
-  }
-
-  .day:hover {
-    transform: scale(1.1);
-  }
-</style>
