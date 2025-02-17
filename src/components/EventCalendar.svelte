@@ -95,7 +95,7 @@
 </script>
 
 <div>
-  <h1 class="text-xl text-center mb-8">{year}</h1>
+  <h1 class="text-3xl text-bold text-center mb-8">{year}</h1>
   <div class="flex justify-center">
     <div class="w-[776px]">
       <div class="flex flex-row gap-[2px] pl-[34px] mb-1">

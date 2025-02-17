@@ -185,13 +185,13 @@
     <div class="fixed inset-0">
       <button
         type="button"
-        class="fixed inset-0 w-full h-full"
+        class="fixed inset-0 w-full h-full min-h-screen"
         aria-label="back to timeline"
         onclick={toggleScreenshotOnly}
       ></button>
     </div>
   {:else}
-    <div class="w-full overflow-x-auto relative">
+    <div class="w-full min-h-screen relative pt-14">
       <!-- <div class="pointer-events-none absolute top-0 left-36">
         <svg width={COL_WIDTH * NUM_TRACKING_APPS} height={ROW_HEIGHT * events_by_dt.length}>
           {#each app_paths as pathData, i}
@@ -207,7 +207,7 @@
       </div> -->
 
       <div class="ml-4">
-        <!-- <h1 class="text-3xl font-bold bg-transparent/60 pt-2 pb-4">{date}</h1> -->
+        <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date}</h1>
         {#each rows as row}
           <div
             id="t{row[0]}"
