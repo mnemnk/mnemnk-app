@@ -16,7 +16,7 @@
   <form class="relative" {onsubmit}>
     <input
       id="search-input"
-      class="w-full bg-surface-900 rounded-md p-2"
+      class="w-full dark:bg-gray-900 rounded-md p-2"
       type="text"
       placeholder="Enter a query..."
       autocomplete="off"
