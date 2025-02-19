@@ -1,7 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export async function load({ url }) {
-  let settings = await invoke("get_settings_json");
+import type { Settings } from "$lib/types";
+
+export async function load() {
+  let settings: Settings = await invoke("get_settings_json");
   return {
     settings,
   };
