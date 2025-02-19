@@ -122,8 +122,8 @@ pub fn data_dir(app: &AppHandle) -> Option<String> {
         let settings = settings.lock().unwrap();
         data_dir = settings.core.data_dir.clone();
     }
-    if let Some(dir) = &data_dir {
-        let dir = PathBuf::from(dir);
+    if data_dir.is_some() && !data_dir.as_ref().unwrap().is_empty() {
+        let dir = PathBuf::from(data_dir.as_ref().unwrap());
         if !dir.exists() {
             std::fs::create_dir(dir).expect("Failed to create data directory");
         }
@@ -140,25 +140,46 @@ pub fn data_dir(app: &AppHandle) -> Option<String> {
     data_dir
 }
 
-pub fn quit(app: &AppHandle) {
-    save(app);
+pub fn quit(_app: &AppHandle) {
+    // save(app);
 }
 
 #[tauri::command]
-pub fn get_settings_json(app: AppHandle) -> Result<String, String> {
+pub fn get_settings_json(app: AppHandle) -> Result<Value, String> {
     let settings = app.state::<Mutex<MnemnkSettings>>();
     let settings = settings.lock().unwrap();
-    let json = serde_json::to_string_pretty(&*settings).map_err(|e| e.to_string())?;
+    // let json = serde_json::to_string_pretty(&*settings).map_err(|e| e.to_string())?;
+    let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
     Ok(json)
 }
 
 #[tauri::command]
 pub fn set_settings_json(app: AppHandle, json_str: String) -> Result<(), String> {
+    let new_settings: MnemnkSettings =
+        serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
     {
         let settings = app.state::<Mutex<MnemnkSettings>>();
         let mut settings = settings.lock().unwrap();
-        *settings = serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
+        *settings = new_settings;
     }
     save(&app);
     Ok(())
+}
+
+#[tauri::command]
+pub fn set_core_settings_json(app: AppHandle, settings: Value) -> Result<(), String> {
+    let new_settings: CoreSettings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
+    {
+        let settings = app.state::<Mutex<MnemnkSettings>>();
+        let mut settings = settings.lock().unwrap();
+        (*settings).core = new_settings;
+    }
+    save(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_settings_filepath(app: AppHandle) -> Result<String, String> {
+    let cf = config_file(&app);
+    Ok(cf)
 }

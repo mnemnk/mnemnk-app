@@ -15,6 +15,10 @@ pub fn init(app: &AppHandle) -> Result<()> {
         shortcut_key = settings.core.shortcut_key.clone();
     }
     if let Some(shortcut_key) = shortcut_key {
+        if shortcut_key.is_empty() {
+            return Ok(());
+        }
+
         let shortcut = Shortcut::try_from(shortcut_key)?;
         log::info!("register shortcut: {:?}", shortcut);
 

@@ -1,4 +1,3 @@
-use tauri::Manager;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod mnemnk;
@@ -50,6 +49,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             mnemnk::settings::get_settings_json,
             mnemnk::settings::set_settings_json,
+            mnemnk::settings::set_core_settings_json,
+            mnemnk::settings::get_settings_filepath,
             mnemnk::store::index_year,
             mnemnk::store::find_events_by_ymd,
             mnemnk::store::search,
@@ -65,6 +66,7 @@ pub fn run() {
                 }
                 #[cfg(target_os = "macos")]
                 {
+                    use tauri::Manager;
                     tauri::AppHandle::hide(window.app_handle()).unwrap();
                 }
                 api.prevent_close();

@@ -1,23 +1,26 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { open } from "@tauri-apps/plugin-shell";
 
-  import { preventDefault } from "svelte/legacy";
+  import { Button } from "flowbite-svelte";
+
+  import { get_settings_filepath } from "@/lib/utils";
+
+  import Core from "./Core.svelte";
 
   let { data } = $props();
 
-  let settings = $state(data.settings);
+  let core_settings = $state(data.settings.core);
 
-  async function save() {
-    let result = await invoke("set_settings_json", { jsonStr: settings });
-    console.log(result);
+  async function open_settings_file() {
+    let path = await get_settings_filepath();
+    await open(path);
   }
 </script>
 
 <main class="container mx-auto p-8 space-y-8 mt-20">
-  <div>
-    <form onsubmit={preventDefault(save)}>
-      <textarea bind:value={settings} class="w-full h-96 dark:!bg-gray-800"></textarea>
-      <button type="submit" class="btn">Save</button>
-    </form>
+  <div class="flex">
+    <h1 class="text-xl font-semibold sm:text-2xl">Settings</h1>
+    <Button onclick={open_settings_file} class="ml-auto">config.yml</Button>
   </div>
+  <Core settings={core_settings} />
 </main>

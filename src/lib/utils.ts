@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import type { CoreSettings, AgentSettings, Settings } from "./types";
+
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
 export function mimgUrl(path: string): string {
@@ -38,4 +40,16 @@ export function formatTime(date: Date): string {
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
+}
+
+export async function get_settings_filepath(): Promise<string> {
+  return await invoke("get_settings_filepath");
+}
+
+export async function get_settings_json(): Promise<Settings> {
+  return await invoke("get_settings_json");
+}
+
+export async function set_core_settings_json(settings: CoreSettings): Promise<void> {
+  await invoke("set_core_settings_json", { settings });
 }
