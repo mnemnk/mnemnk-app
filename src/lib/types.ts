@@ -1,3 +1,12 @@
+// agent
+
+export type AgentCatalogEntry = {
+  name: string;
+  path: string;
+};
+
+// settings
+
 export type CoreSettings = {
   autostart: boolean;
   data_dir: string;
@@ -7,8 +16,8 @@ export type CoreSettings = {
 };
 
 export type AgentSettings = {
-  enabled: boolean;
-  config: Record<string, any>;
+  enabled: boolean | null;
+  config: Record<string, any> | null;
 };
 
 export type Settings = {

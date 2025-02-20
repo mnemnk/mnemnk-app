@@ -8,8 +8,9 @@ use std::vec;
 
 use anyhow::{Context as _, Result};
 use regex::Regex;
+use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::mpsc;
@@ -20,6 +21,7 @@ use super::store;
 pub struct AgentCommands {
     agents: HashMap<String, CommandChild>,
     catalog: BTreeMap<String, PathBuf>,
+    tx: mpsc::Sender<AgentMessage>,
 }
 
 #[derive(Clone, Debug)]
@@ -46,9 +48,12 @@ struct AgentBoard {
 }
 
 pub async fn init(app: &AppHandle) {
+    let (tx, mut rx) = mpsc::channel(128);
+
     let agent_commands = AgentCommands {
         agents: HashMap::new(),
         catalog: search_agents(app).await,
+        tx,
     };
     app.manage(Mutex::new(agent_commands));
 
@@ -65,12 +70,12 @@ pub async fn init(app: &AppHandle) {
         agents = settings.agents.clone();
     }
 
-    let (tx, mut rx) = mpsc::channel(128);
-
     for (agent, settings) in &agents {
-        start(app, agent, settings, tx.clone()).unwrap_or_else(|e| {
-            log::error!("Failed to start agent: {}", e);
-        });
+        if settings.enabled.unwrap_or(false) {
+            start_agent(app, agent).unwrap_or_else(|e| {
+                log::error!("Failed to start agent: {}", e);
+            });
+        }
     }
 
     // TODO: each message should have an origin field to prevent infinite loop
@@ -114,12 +119,7 @@ pub async fn init(app: &AppHandle) {
     });
 }
 
-fn start(
-    app: &AppHandle,
-    agent: &str,
-    settings: &AgentSettings,
-    main_tx: mpsc::Sender<AgentMessage>,
-) -> Result<()> {
+fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
     // sanitize the agent name
     let re = Regex::new(r"[^a-zA-Z0-9_-]").unwrap();
     if let Some(_) = re.find(agent) {
@@ -127,13 +127,25 @@ fn start(
         return Err(anyhow::anyhow!("Invalid agent name"));
     }
 
-    if !settings.enabled.unwrap_or(false) {
-        log::info!("Agent {} is disabled", agent);
-        return Ok(());
+    let settings = app.state::<Mutex<MnemnkSettings>>();
+    let agent_settings;
+    {
+        let settings = settings.lock().unwrap();
+        if settings.agents.get(agent).is_none() {
+            agent_settings = AgentSettings::default();
+        } else {
+            agent_settings = settings.agents.get(agent).unwrap().clone();
+        }
     }
+
+    // if !agent_settings.enabled.unwrap_or(false) {
+    //     log::info!("Agent {} is disabled", agent);
+    //     return Ok(());
+    // }
 
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let agent_path;
+    let main_tx;
     {
         let agent_commands = agent_commands.lock().unwrap();
         if agent_commands.agents.contains_key(agent) {
@@ -145,11 +157,12 @@ fn start(
             .get(agent)
             .context("Agent not found")?
             .clone();
+        main_tx = agent_commands.tx.clone();
     }
 
     log::info!("Starting agent: {}", agent);
 
-    let config = settings.config.clone().unwrap_or(Value::Null);
+    let config = agent_settings.config.unwrap_or(Value::Null);
     let sidecar_command = if config == Value::Null {
         app.shell().command(agent_path.as_os_str())
     } else {
@@ -290,32 +303,33 @@ fn start(
     Ok(())
 }
 
-// pub fn stop(app: &AppHandle, program: &str) -> Result<()> {
-//     let agent_commands = app.state::<Mutex<AgentCommands>>();
-//     let mut agent_commands = agent_commands.lock().unwrap();
-//     let sidecar_command = agent_commands
-//         .agents
-//         .remove(program)
-//         .context("Agent not found")?;
-//     sidecar_command.kill().context("Failed to kill sidecar")?;
-//     Ok(())
-// }
+pub fn stop_agent(app: &AppHandle, agent: &str) -> Result<()> {
+    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    let mut agent_commands = agent_commands.lock().unwrap();
+    if let Some(child) = agent_commands.agents.get_mut(agent) {
+        child.write("QUIT\n".as_bytes()).unwrap_or_else(|e| {
+            log::error!("Failed to write to {}: {}", agent, e);
+        });
+    }
+    Ok(())
+}
 
 pub fn quit(app: &AppHandle) {
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     {
         // send QUIT command to all agents
         let mut agent_commands = agent_commands.lock().unwrap();
-        let programs = agent_commands
+        let agents = agent_commands
             .agents
             .keys()
             .cloned()
             .collect::<vec::Vec<String>>();
-        for program in programs {
-            log::info!("Stopping agent: {}", program);
-            if let Some(child) = agent_commands.agents.get_mut(&program) {
+        for agent in agents {
+            log::info!("Stopping agent: {}", agent);
+            // we cannot use stop_agent here because it will also try to lock aget_commands.
+            if let Some(child) = agent_commands.agents.get_mut(&agent) {
                 child.write("QUIT\n".as_bytes()).unwrap_or_else(|e| {
-                    log::error!("Failed to write to {}: {}", program, e);
+                    log::error!("Failed to write to {}: {}", agent, e);
                 });
             }
         }
@@ -324,7 +338,6 @@ pub fn quit(app: &AppHandle) {
     // wait for all agents to exit
     for _ in 0..20 {
         {
-            let agent_commands = app.state::<Mutex<AgentCommands>>();
             let agent_commands = agent_commands.lock().unwrap();
             if agent_commands.agents.is_empty() {
                 return;
@@ -447,9 +460,13 @@ fn recieve_config(app: &AppHandle, agent: &str, config: Value) -> Result<()> {
     let settings = app.state::<Mutex<MnemnkSettings>>();
     {
         let mut settings = settings.lock().unwrap();
-        let agent_settings = settings.agents.get_mut(agent).unwrap();
-        agent_settings.config = Some(config);
-        // settings.agents.insert(agent.to_string(), agent_settings);
+        if let Some(agent_settings) = settings.agents.get_mut(agent) {
+            agent_settings.config = Some(config);
+        } else {
+            let mut agent_settings = AgentSettings::default();
+            agent_settings.config = Some(config);
+            settings.agents.insert(agent.to_string(), agent_settings);
+        }
     }
     settings::save(app);
     Ok(())
@@ -509,4 +526,63 @@ fn subscribe(app: &AppHandle, agent: &str, kind: &str) {
                 .insert(kind.to_string(), vec![agent.to_string()]);
         }
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AgentCatalogEntry {
+    pub name: String,
+    pub path: String,
+}
+
+#[tauri::command]
+pub fn get_agent_catalog_cmd(
+    agent_commands: State<Mutex<AgentCommands>>,
+) -> Result<Vec<AgentCatalogEntry>, String> {
+    let catalog;
+    {
+        let agent_commands = agent_commands.lock().unwrap();
+        catalog = agent_commands.catalog.clone();
+    }
+    Ok(catalog
+        .into_iter()
+        .map(|(k, v)| AgentCatalogEntry {
+            name: k,
+            path: v.to_string_lossy().to_string(),
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn start_agent_cmd(app: AppHandle, agent: String) -> Result<(), String> {
+    start_agent(&app, &agent).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_agent_cmd(app: AppHandle, agent: String) -> Result<(), String> {
+    stop_agent(&app, &agent).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_agent_enabled_cmd(
+    app: AppHandle,
+    settings: State<Mutex<MnemnkSettings>>,
+    agent: &str,
+    enabled: bool,
+) -> Result<(), String> {
+    {
+        let mut settings = settings.lock().unwrap();
+        if let Some(agent_settings) = settings.agents.get_mut(agent) {
+            agent_settings.enabled = Some(enabled);
+        } else {
+            settings.agents.insert(
+                agent.to_string(),
+                AgentSettings {
+                    enabled: Some(enabled),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+    settings::save(&app);
+    Ok(())
 }

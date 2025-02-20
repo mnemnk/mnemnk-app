@@ -47,9 +47,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            mnemnk::agent::get_agent_catalog_cmd,
+            mnemnk::agent::start_agent_cmd,
+            mnemnk::agent::stop_agent_cmd,
+            mnemnk::agent::set_agent_enabled_cmd,
             mnemnk::settings::get_settings_json,
             mnemnk::settings::set_settings_json,
-            mnemnk::settings::set_core_settings_json,
+            mnemnk::settings::set_core_settings_cmd,
             mnemnk::settings::get_settings_filepath,
             mnemnk::store::index_year,
             mnemnk::store::find_events_by_ymd,
