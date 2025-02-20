@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { CoreSettings, AgentSettings, Settings } from "./types";
+import type { AgentCatalogEntry, CoreSettings, Settings } from "./types";
 
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
@@ -42,6 +42,22 @@ export function formatTime(date: Date): string {
     .padStart(2, "0")}`;
 }
 
+// agent
+
+export async function get_agent_catalog(): Promise<AgentCatalogEntry[]> {
+  return await invoke("get_agent_catalog_cmd");
+}
+
+export async function start_agent(agent: string): Promise<void> {
+  await invoke("start_agent_cmd", { agent });
+}
+
+export async function stop_agent(agent: string): Promise<void> {
+  await invoke("stop_agent_cmd", { agent });
+}
+
+// settings
+
 export async function get_settings_filepath(): Promise<string> {
   return await invoke("get_settings_filepath");
 }
@@ -50,6 +66,10 @@ export async function get_settings_json(): Promise<Settings> {
   return await invoke("get_settings_json");
 }
 
-export async function set_core_settings_json(settings: CoreSettings): Promise<void> {
-  await invoke("set_core_settings_json", { settings });
+export async function set_core_settings(new_settings: CoreSettings): Promise<void> {
+  await invoke("set_core_settings_cmd", { new_settings });
+}
+
+export async function set_agent_enabled(agent: string, enabled: boolean): Promise<void> {
+  await invoke("set_agent_enabled_cmd", { agent, enabled });
 }

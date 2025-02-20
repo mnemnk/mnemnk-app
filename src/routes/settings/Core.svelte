@@ -2,15 +2,13 @@
   import { Button, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
-  import { set_core_settings_json } from "@/lib/utils";
+  import { set_core_settings } from "@/lib/utils";
 
   interface Props {
     settings: Record<string, any>;
   }
 
   let { settings }: Props = $props();
-
-  console.log(settings);
 
   let autostart = $state(settings["autostart"]);
   let data_dir = $state(settings["data_dir"]);
@@ -19,7 +17,7 @@
   let thumbnail_height = $state(settings["thumbnail_height"]);
 
   async function save_settings() {
-    await set_core_settings_json({
+    await set_core_settings({
       autostart,
       data_dir,
       shortcut_key,
@@ -35,7 +33,7 @@
       <span>Data Directory</span>
       <Input type="text" placeholder="Data Directory" bind:value={data_dir} />
     </Label>
-    <Toggle bind:value={autostart}>Auto Start</Toggle>
+    <Toggle bind:checked={autostart}>Auto Start</Toggle>
     <Label class="col-span-6 space-y-2">
       <span>Shortcut Key</span>
       <Input type="text" bind:value={shortcut_key} />

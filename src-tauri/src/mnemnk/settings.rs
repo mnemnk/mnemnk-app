@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, path::PathBuf, sync::Mutex};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 
 const CONFIG_FILENAME: &str = "config.yml";
 
@@ -145,8 +145,7 @@ pub fn quit(_app: &AppHandle) {
 }
 
 #[tauri::command]
-pub fn get_settings_json(app: AppHandle) -> Result<Value, String> {
-    let settings = app.state::<Mutex<MnemnkSettings>>();
+pub fn get_settings_json(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
     let settings = settings.lock().unwrap();
     // let json = serde_json::to_string_pretty(&*settings).map_err(|e| e.to_string())?;
     let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
@@ -154,11 +153,14 @@ pub fn get_settings_json(app: AppHandle) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub fn set_settings_json(app: AppHandle, json_str: String) -> Result<(), String> {
+pub fn set_settings_json(
+    app: AppHandle,
+    settings: State<Mutex<MnemnkSettings>>,
+    json_str: String,
+) -> Result<(), String> {
     let new_settings: MnemnkSettings =
         serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
     {
-        let settings = app.state::<Mutex<MnemnkSettings>>();
         let mut settings = settings.lock().unwrap();
         *settings = new_settings;
     }
@@ -166,11 +168,15 @@ pub fn set_settings_json(app: AppHandle, json_str: String) -> Result<(), String>
     Ok(())
 }
 
-#[tauri::command]
-pub fn set_core_settings_json(app: AppHandle, settings: Value) -> Result<(), String> {
-    let new_settings: CoreSettings = serde_json::from_value(settings).map_err(|e| e.to_string())?;
+#[tauri::command(rename_all = "snake_case")]
+pub fn set_core_settings_cmd(
+    app: AppHandle,
+    settings: State<Mutex<MnemnkSettings>>,
+    new_settings: Value,
+) -> Result<(), String> {
+    let new_settings: CoreSettings =
+        serde_json::from_value(new_settings).map_err(|e| e.to_string())?;
     {
-        let settings = app.state::<Mutex<MnemnkSettings>>();
         let mut settings = settings.lock().unwrap();
         (*settings).core = new_settings;
     }
