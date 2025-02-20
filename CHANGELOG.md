@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.3](https://github.com/mnemnk/mnemnk-app/compare/v0.8.2...v0.8.3) (2025-02-20)
+
+
+### Features
+
+* 🎸 agents page ([#64](https://github.com/mnemnk/mnemnk-app/issues/64)) ([4185bb7](https://github.com/mnemnk/mnemnk-app/commit/4185bb7b48e520efe49d01a565e97f01a9da40a4)), closes [#61](https://github.com/mnemnk/mnemnk-app/issues/61)
+* 🎸 Settings page ([#60](https://github.com/mnemnk/mnemnk-app/issues/60)) ([e658ab4](https://github.com/mnemnk/mnemnk-app/commit/e658ab4bf636f8a188f2b8a37f2a4213352efadd)), closes [#10](https://github.com/mnemnk/mnemnk-app/issues/10)
+
 ## [0.8.2](https://github.com/mnemnk/mnemnk-app/compare/v0.8.1...v0.8.2) (2025-02-17)
 
 
