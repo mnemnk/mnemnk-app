@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
+import { search_events } from "$lib/utils.js";
 
 export async function load({ url }) {
-  const query = url.searchParams.get("q");
+  const query = url.searchParams.get("q") || "";
   if (!query) {
     return {
       query: "",
@@ -9,7 +9,7 @@ export async function load({ url }) {
     };
   }
 
-  let events = await invoke("search", { query });
+  let events = await search_events(query);
   return {
     query,
     events,

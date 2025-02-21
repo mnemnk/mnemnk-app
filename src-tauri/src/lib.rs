@@ -56,8 +56,8 @@ pub fn run() {
             mnemnk::settings::set_core_settings_cmd,
             mnemnk::settings::get_settings_filepath,
             mnemnk::store::index_year,
-            mnemnk::store::find_events_by_ymd,
-            mnemnk::store::search,
+            mnemnk::store::find_events_by_ymd_cmd,
+            mnemnk::store::search_events_cmd,
         ])
         .register_uri_scheme_protocol("mimg", |ctx, request| {
             mnemnk::store::handle_mimg_protocol(ctx.app_handle(), request)

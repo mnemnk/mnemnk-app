@@ -5,6 +5,21 @@ export type AgentCatalogEntry = {
   path: string;
 };
 
+// events
+
+export type MnemnkEvent = {
+  id: string;
+  kind: string;
+  time: number;
+  value: any;
+};
+
+export type ScreenshotEvent = MnemnkEvent & {
+  value: {
+    image_id: string;
+  };
+};
+
 // settings
 
 export type CoreSettings = {
