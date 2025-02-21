@@ -374,8 +374,8 @@ pub async fn index_year(year: i32) -> Result<IndexYearResult, String> {
 
 // find events by ymd
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EventRecord {
+#[derive(Debug, Deserialize)]
+struct EventRecordInternal {
     id: RecordId,
     kind: String,
     time: surrealdb::Datetime,
@@ -383,7 +383,16 @@ pub struct EventRecord {
     value: serde_json::Value,
 }
 
-async fn do_find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<EventRecord>> {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EventRecord {
+    id: String,
+    kind: String,
+    time: surrealdb::Datetime,
+    local_offset: i64,
+    value: serde_json::Value,
+}
+
+async fn find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
         SELECT 
             id,
@@ -401,26 +410,35 @@ async fn do_find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<Ev
         "#;
     let local_ymd = year * 10000 + month * 100 + day;
     let mut result = DB.query(sql).bind(("local_ymd", local_ymd)).await?;
-    let events: Vec<EventRecord> = result.take(0)?;
-
+    let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
 
 #[tauri::command]
-pub async fn find_events_by_ymd(
+pub async fn find_events_by_ymd_cmd(
     year: i32,
     month: i32,
     day: i32,
 ) -> Result<Vec<EventRecord>, String> {
-    let result = do_find_events_by_ymd(year, month, day)
+    let result = find_events_by_ymd(year, month, day)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(result)
+    let events = result
+        .iter()
+        .map(|e| EventRecord {
+            id: e.id.to_string().replace(':', "-"),
+            kind: e.kind.clone(),
+            time: e.time.clone(),
+            local_offset: e.local_offset,
+            value: e.value.clone(),
+        })
+        .collect();
+    Ok(events)
 }
 
 // Search
 
-async fn do_search(query: String) -> Result<Vec<EventRecord>> {
+async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
         SELECT 
             id,
@@ -430,19 +448,31 @@ async fn do_search(query: String) -> Result<Vec<EventRecord>> {
             value
         FROM
             event
+        ORDER BY
+            time ASC
         WHERE
             text @@ array::join(search::analyze("eventTextAnalyzer", $query), " ")
         ;
         "#;
     let mut result = DB.query(sql).bind(("query", query)).await?;
-    let events: Vec<EventRecord> = result.take(0)?;
+    let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
 
 #[tauri::command]
-pub async fn search(query: String) -> Result<Vec<EventRecord>, String> {
-    let result = do_search(query).await.map_err(|e| e.to_string())?;
-    Ok(result)
+pub async fn search_events_cmd(query: String) -> Result<Vec<EventRecord>, String> {
+    let result = search_events(query).await.map_err(|e| e.to_string())?;
+    let events = result
+        .iter()
+        .map(|e| EventRecord {
+            id: e.id.to_string().replace(':', "-"),
+            kind: e.kind.clone(),
+            time: e.time.clone(),
+            local_offset: e.local_offset,
+            value: e.value.clone(),
+        })
+        .collect();
+    Ok(events)
 }
 
 // Tests

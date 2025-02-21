@@ -3,20 +3,26 @@
 
   import { Popover } from "flowbite-svelte";
 
+  import type { MnemnkEvent, ScreenshotEvent } from "@/lib/types";
   import { mimgUrl } from "@/lib/utils";
 
-  interface MnemnkEvent {
-    id: { id: { String: string } };
-    kind: string;
-    time: number;
-    value: any;
-  }
+  // interface MnemnkEvent {
+  //   id: { id: { String: string } };
+  //   kind: string;
+  //   time: number;
+  //   value: any;
+  // }
+
   interface Props {
-    date?: string;
-    events?: MnemnkEvent[]; // assume events are sorted by time
+    date: Date;
+    events: MnemnkEvent[]; // assume events are sorted by time
   }
 
-  let { date = "", events = [] }: Props = $props();
+  let { date, events }: Props = $props();
+
+  let date_str = $derived(
+    `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
+  );
 
   // unique hours in events.time
   // let hours: number[] = $derived(
@@ -148,7 +154,7 @@
 
   // $inspect(app_paths);
 
-  function backgroundImage(screenshot) {
+  function backgroundImage(screenshot: ScreenshotEvent) {
     if (screenshot) {
       return `url(${mimgUrl(`${screenshot.kind}/${screenshot.value.image_id}`)})`;
     }
@@ -207,14 +213,16 @@
       </div> -->
 
       <div class="ml-4">
-        <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date}</h1>
+        <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date_str}</h1>
         {#each rows as row}
           <div
             id="t{row[0]}"
             class="flex flex-nowrap space-y-1 min-h-24 event-row"
             role="group"
             onmouseenter={() => {
-              document.body.style.backgroundImage = backgroundImage(row[1]);
+              if (row[1]) {
+                document.body.style.backgroundImage = backgroundImage(row[1]);
+              }
             }}
           >
             <div class="flex-none w-12">
@@ -236,9 +244,9 @@
               {/if}
             </div>
             <div class="flex-none w-1/2 overflow-x-hidden mr-4">
-              {#each row[2] as app (app.id.id.String)}
+              {#each row[2] as app (app.id)}
                 <div
-                  id="e-{app.id.id.String}"
+                  id="e-{app.id}"
                   class="text-nowrap"
                   style="background-color: {app_colors[app.value.name]}"
                 >
@@ -249,7 +257,7 @@
                   offset={1}
                   placement="bottom-start"
                   trigger="click"
-                  triggeredBy="#e-{app.id.id.String}"
+                  triggeredBy="#e-{app.id}"
                   class="!text-primary-50 !bg-gray-700"
                 >
                   <div class="p-3">
@@ -260,9 +268,9 @@
               {/each}
             </div>
             <div class="flex-auto w-96 text-nowrap">
-              {#each row[3] as event (event.id.id.String)}
+              {#each row[3] as event (event.id)}
                 {#if event.kind === "browser"}
-                  <div id="e-{event.id.id.String}">
+                  <div id="e-{event.id}">
                     <img
                       src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
                       alt=""
@@ -279,7 +287,7 @@
                     offset={1}
                     placement="bottom-start"
                     trigger="click"
-                    triggeredBy="#e-{event.id.id.String}"
+                    triggeredBy="#e-{event.id}"
                     class="!text-primary-50 !bg-gray-700"
                   >
                     <div>
@@ -287,7 +295,7 @@
                     </div>
                   </Popover>
                 {:else}
-                  <div id="e-{event.id.id.String}">
+                  <div id="e-{event.id}">
                     <div>{event.kind}</div>
                     <div>{event.time.toLocaleString()}</div>
                     <pre>{JSON.stringify(event.value, null, 2)}</pre>
