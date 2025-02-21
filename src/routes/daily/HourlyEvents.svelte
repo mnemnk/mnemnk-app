@@ -6,12 +6,7 @@
   import type { MnemnkEvent, ScreenshotEvent } from "@/lib/types";
   import { mimgUrl } from "@/lib/utils";
 
-  // interface MnemnkEvent {
-  //   id: { id: { String: string } };
-  //   kind: string;
-  //   time: number;
-  //   value: any;
-  // }
+  import EventsScrollbar from "./EventsScrollbar.svelte";
 
   interface Props {
     date: Date;
@@ -24,15 +19,6 @@
     `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
   );
 
-  // unique hours in events.time
-  // let hours: number[] = $derived(
-  //   [...new Set(events.map((ev) => new Date(ev.time).getHours()))].sort((a, b) => b - a),
-  // );
-
-  // const APPS_WINDOW_SIZE = 60;
-  // const NUM_TRACKING_APPS = 4;
-
-  // [dt, screenshot, applications, previous applications, others]
   type EventRow = [number, MnemnkEvent | null, MnemnkEvent[], MnemnkEvent[]];
   let events_apps: [Map<number, EventRow>, Set<string>] = $derived.by(() => {
     let events_by_dt = new Map<number, EventRow>();
@@ -76,7 +62,7 @@
     return [events_by_dt, all_apps];
   });
   let events_by_dt = $derived([...events_apps[0].values()].sort((a, b) => a[0] - b[0]));
-  let rows = $derived(events_by_dt.reverse());
+  let rows = $derived(events_by_dt);
   let all_apps = $derived(events_apps[1]);
 
   // $inspect(events_by_dt);
@@ -186,128 +172,133 @@
   });
 </script>
 
-<div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/60"}>
-  {#if screenshotOnly}
-    <div class="fixed inset-0">
-      <button
-        type="button"
-        class="fixed inset-0 w-full h-full min-h-screen"
-        aria-label="back to timeline"
-        onclick={toggleScreenshotOnly}
-      ></button>
-    </div>
-  {:else}
-    <div class="w-full min-h-screen relative pt-14">
-      <!-- <div class="pointer-events-none absolute top-0 left-36">
-        <svg width={COL_WIDTH * NUM_TRACKING_APPS} height={ROW_HEIGHT * events_by_dt.length}>
-          {#each app_paths as pathData, i}
-            <path
-              d={pathData.path}
-              stroke={pathData.color}
-              stroke-width="12"
-              fill="none"
-              opacity="0.5"
-            />
-          {/each}
-        </svg>
-      </div> -->
+<div class="static">
+  <div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/60"}>
+    {#if screenshotOnly}
+      <div class="fixed inset-0">
+        <button
+          type="button"
+          class="fixed inset-0 w-full h-full min-h-screen"
+          aria-label="back to timeline"
+          onclick={toggleScreenshotOnly}
+        ></button>
+      </div>
+    {:else}
+      <div class="w-full min-h-screen relative pt-14">
+        <!-- <div class="pointer-events-none absolute top-0 left-36">
+          <svg width={COL_WIDTH * NUM_TRACKING_APPS} height={ROW_HEIGHT * events_by_dt.length}>
+            {#each app_paths as pathData, i}
+              <path
+                d={pathData.path}
+                stroke={pathData.color}
+                stroke-width="12"
+                fill="none"
+                opacity="0.5"
+              />
+            {/each}
+          </svg>
+        </div> -->
 
-      <div class="ml-4">
-        <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date_str}</h1>
-        {#each rows as row}
-          <div
-            id="t{row[0]}"
-            class="flex flex-nowrap space-y-1 min-h-24 event-row"
-            role="group"
-            onmouseenter={() => {
-              if (row[1]) {
-                document.body.style.backgroundImage = backgroundImage(row[1]);
-              }
-            }}
-          >
-            <div class="flex-none w-12">
-              {(((row[0] / 100) | 0) % 100).toString().padStart(2, "0")}:{(row[0] % 100)
-                .toString()
-                .padStart(2, "0")}
-            </div>
-            <div class="flex-none w-36">
-              {#if row[1]}
-                <button type="button" class="screenshot-button" onclick={toggleScreenshotOnly}>
-                  <img
-                    height="36"
-                    width="85"
-                    loading="lazy"
-                    src={mimgUrl(`${row[1].kind}/${row[1].value.image_id}.t`)}
-                    alt=""
-                  />
-                </button>
-              {/if}
-            </div>
-            <div class="flex-none w-1/2 overflow-x-hidden mr-4">
-              {#each row[2] as app (app.id)}
-                <div
-                  id="e-{app.id}"
-                  class="text-nowrap"
-                  style="background-color: {app_colors[app.value.name]}"
-                >
-                  {app.value.title}
-                </div>
-                <Popover
-                  arrow={false}
-                  offset={1}
-                  placement="bottom-start"
-                  trigger="click"
-                  triggeredBy="#e-{app.id}"
-                  class="!text-primary-50 !bg-gray-700"
-                >
-                  <div class="p-3">
-                    <div>{app.time.toLocaleString()}</div>
-                    <pre>{JSON.stringify(app.value, null, 2)}</pre>
-                  </div>
-                </Popover>
-              {/each}
-            </div>
-            <div class="flex-auto w-96 text-nowrap">
-              {#each row[3] as event (event.id)}
-                {#if event.kind === "browser"}
-                  <div id="e-{event.id}">
+        <div class="ml-4">
+          <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date_str}</h1>
+          {#each rows as row}
+            <div
+              id="t{row[0]}"
+              class="flex flex-nowrap space-y-1 min-h-24 event-row"
+              role="group"
+              onmouseenter={() => {
+                if (row[1]) {
+                  document.body.style.backgroundImage = backgroundImage(row[1]);
+                }
+              }}
+            >
+              <div class="flex-none w-12">
+                {(((row[0] / 100) | 0) % 100).toString().padStart(2, "0")}:{(row[0] % 100)
+                  .toString()
+                  .padStart(2, "0")}
+              </div>
+              <div class="flex-none w-36">
+                {#if row[1]}
+                  <button type="button" class="screenshot-button" onclick={toggleScreenshotOnly}>
                     <img
-                      src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
+                      height="36"
+                      width="85"
+                      loading="lazy"
+                      src={mimgUrl(`${row[1].kind}/${row[1].value.image_id}.t`)}
                       alt=""
-                      class="inline-block"
-                      width="16"
-                      height="16"
                     />
-                    <a href={event.value.url} target="_blank" rel="noopener noreferrer"
-                      >{event.value.title}</a
-                    >
+                  </button>
+                {/if}
+              </div>
+              <div class="flex-none w-1/2 overflow-x-hidden mr-4">
+                {#each row[2] as app (app.id)}
+                  <div
+                    id="e-{app.id}"
+                    class="text-nowrap"
+                    style="background-color: {app_colors[app.value.name]}"
+                  >
+                    {app.value.title}
                   </div>
                   <Popover
                     arrow={false}
                     offset={1}
                     placement="bottom-start"
                     trigger="click"
-                    triggeredBy="#e-{event.id}"
+                    triggeredBy="#e-{app.id}"
                     class="!text-primary-50 !bg-gray-700"
                   >
-                    <div>
-                      {event.value.url}
+                    <div class="p-3">
+                      <div>{app.time.toLocaleString()}</div>
+                      <pre>{JSON.stringify(app.value, null, 2)}</pre>
                     </div>
                   </Popover>
-                {:else}
-                  <div id="e-{event.id}">
-                    <div>{event.kind}</div>
-                    <div>{event.time.toLocaleString()}</div>
-                    <pre>{JSON.stringify(event.value, null, 2)}</pre>
-                  </div>
-                {/if}
-              {/each}
+                {/each}
+              </div>
+              <div class="flex-auto w-96 text-nowrap">
+                {#each row[3] as event (event.id)}
+                  {#if event.kind === "browser"}
+                    <div id="e-{event.id}">
+                      <img
+                        src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
+                        alt=""
+                        class="inline-block"
+                        width="16"
+                        height="16"
+                      />
+                      <a href={event.value.url} target="_blank" rel="noopener noreferrer"
+                        >{event.value.title}</a
+                      >
+                    </div>
+                    <Popover
+                      arrow={false}
+                      offset={1}
+                      placement="bottom-start"
+                      trigger="click"
+                      triggeredBy="#e-{event.id}"
+                      class="!text-primary-50 !bg-gray-700"
+                    >
+                      <div>
+                        {event.value.url}
+                      </div>
+                    </Popover>
+                  {:else}
+                    <div id="e-{event.id}">
+                      <div>{event.kind}</div>
+                      <div>{event.time.toLocaleString()}</div>
+                      <pre>{JSON.stringify(event.value, null, 2)}</pre>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
             </div>
-          </div>
-        {/each}
+          {/each}
+        </div>
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
+  <div class="fixed top-0 right-0 z-10">
+    <EventsScrollbar {events} />
+  </div>
 </div>
 
 <style>
