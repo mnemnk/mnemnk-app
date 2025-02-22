@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.4](https://github.com/mnemnk/mnemnk-app/compare/v0.8.3...v0.8.4) (2025-02-22)
+
+
+### Features
+
+* 🎸 event scrollbar in daily page ([#67](https://github.com/mnemnk/mnemnk-app/issues/67)) ([1d8d133](https://github.com/mnemnk/mnemnk-app/commit/1d8d1330031b7976910a45dd2ece0a3f08032ea2))
+
 ## [0.8.3](https://github.com/mnemnk/mnemnk-app/compare/v0.8.2...v0.8.3) (2025-02-20)
 
 
