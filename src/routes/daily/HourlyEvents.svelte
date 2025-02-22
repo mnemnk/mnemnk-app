@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-
   import { Popover } from "flowbite-svelte";
 
   import type { MnemnkEvent, ScreenshotEvent } from "@/lib/types";
@@ -65,21 +63,14 @@
   let rows = $derived(events_by_dt);
   let all_apps = $derived(events_apps[1]);
 
-  // $inspect(events_by_dt);
-
-  // const ROW_HEIGHT = 96;
-  // const ROW_OFFSET = 16;
-  // const COL_WIDTH = 100;
-  // const NODE_HEIGHT = 15;
-
   const APP_COLOR_PALLETE = [
-    "oklch(70% 0.1303 105.01 / 25%)", // yellow
-    "oklch(70% 0.1303 28.25 / 25%)", // red
-    "oklch(70% 0.1303 265.65 / 25%)", // blue
-    "oklch(70% 0.1303 146.95 / 25%)", // green
-    "oklch(70% 0.1303 67.34 / 25%)", // orange
-    "oklch(70% 0.1303 222.98 / 25%)", // light blue
-    "oklch(70% 0.1303 322.51 / 25%)", // purple
+    "oklch(100% 0.1303 105.01 / 40%)", // yellow
+    "oklch(100% 0.1303 28.25 / 40%)", // red
+    "oklch(100% 0.1303 265.65 / 40%)", // blue
+    "oklch(100% 0.1303 146.95 / 40%)", // green
+    "oklch(100% 0.1303 67.34 / 40%)", // orange
+    "oklch(100% 0.1303 222.98 / 40%)", // light blue
+    "oklch(100% 0.1303 322.51 / 40%)", // purple
   ];
 
   let app_colors: Record<string, string> = $derived.by(() => {
@@ -90,219 +81,173 @@
     return colors;
   });
 
-  // let app_paths = $derived.by(() => {
-  //   const paths = [] as { path: string; color: string }[];
-  //   const appPositions = {} as Record<string, { row: number; col: number }[]>;
-
-  //   let num_events = events_by_dt.length;
-  //   events_by_dt.forEach((row, rowIndex) => {
-  //     row[2][1].forEach((app, colIndex) => {
-  //       if (!appPositions[app]) {
-  //         appPositions[app] = [];
-  //       }
-  //       appPositions[app].push({ row: num_events - rowIndex - 1, col: colIndex });
-  //     });
-  //   });
-
-  //   Object.entries(appPositions).forEach(([app, positions]) => {
-  //     if (positions.length === 1) {
-  //       const x = positions[0].col * COL_WIDTH + COL_WIDTH / 2;
-  //       const y = positions[0].row * ROW_HEIGHT + ROW_OFFSET;
-  //       paths.push({
-  //         path: `M ${x} ${y + NODE_HEIGHT} L ${x} ${y - NODE_HEIGHT / 2}`,
-  //         color: app_colors[app],
-  //       });
-  //     }
-  //     const path = positions.reduce((acc, pos, i, arr) => {
-  //       const x = pos.col * COL_WIDTH + COL_WIDTH / 2;
-  //       const y = pos.row * ROW_HEIGHT + ROW_OFFSET;
-
-  //       if (i === 0) return `M ${x} ${y + NODE_HEIGHT}`;
-
-  //       const prevX = arr[i - 1].col * COL_WIDTH + COL_WIDTH / 2;
-  //       const prevY = arr[i - 1].row * ROW_HEIGHT + ROW_OFFSET;
-
-  //       if (arr[i - 1].row - 1 !== pos.row) {
-  //         return acc + ` L ${prevX} ${prevY - NODE_HEIGHT / 2} M ${x} ${y + NODE_HEIGHT / 2}`;
-  //       }
-
-  //       const startY = prevY - NODE_HEIGHT / 2;
-  //       const endY = y - NODE_HEIGHT / 2;
-  //       const controlY = (startY + endY) / 2;
-  //       return acc + ` L ${prevX} ${startY} C ${prevX} ${controlY}, ${x} ${controlY}, ${x} ${endY}`;
-  //     }, "");
-
-  //     paths.push({ path, color: app_colors[app] });
-  //   });
-
-  //   return paths;
-  // });
-
-  // $inspect(app_paths);
-
-  function backgroundImage(screenshot: ScreenshotEvent) {
-    if (screenshot) {
-      return `url(${mimgUrl(`${screenshot.kind}/${screenshot.value.image_id}`)})`;
-    }
-    return "";
-  }
-
   let screenshotOnly = $state(false);
-  let scrollPos = 0;
 
   function toggleScreenshotOnly() {
     if (screenshotOnly) {
       screenshotOnly = false;
     } else {
-      scrollPos = window.scrollY || document.documentElement.scrollTop;
       screenshotOnly = true;
     }
   }
 
-  $effect(() => {
-    if (!screenshotOnly) {
-      window.scrollTo(0, scrollPos);
-    }
-  });
+  function changeBackgroundImage(screenshot: ScreenshotEvent) {
+    const img = new Image();
+    img.src = mimgUrl(`${screenshot.kind}/${screenshot.value.image_id}`);
+    img.onload = () => {
+      document.body.style.backgroundImage = `url(${img.src})`;
+    };
+  }
 
-  onMount(() => {
+  $effect(() => {
     return () => {
       document.body.style.backgroundImage = "";
     };
   });
 </script>
 
-<div class="static">
-  <div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/60"}>
-    {#if screenshotOnly}
-      <div class="fixed inset-0">
-        <button
-          type="button"
-          class="fixed inset-0 w-full h-full min-h-screen"
-          aria-label="back to timeline"
-          onclick={toggleScreenshotOnly}
-        ></button>
-      </div>
-    {:else}
-      <div class="w-full min-h-screen relative pt-14">
-        <!-- <div class="pointer-events-none absolute top-0 left-36">
-          <svg width={COL_WIDTH * NUM_TRACKING_APPS} height={ROW_HEIGHT * events_by_dt.length}>
-            {#each app_paths as pathData, i}
-              <path
-                d={pathData.path}
-                stroke={pathData.color}
-                stroke-width="12"
-                fill="none"
-                opacity="0.5"
-              />
-            {/each}
-          </svg>
-        </div> -->
-
-        <div class="ml-4">
-          <h1 class="text-3xl font-bold bg-transparent/0 pb-8">{date_str}</h1>
-          {#each rows as row}
-            <div
-              id="t{row[0]}"
-              class="flex flex-nowrap space-y-1 min-h-24 event-row"
-              role="group"
-              onmouseenter={() => {
-                if (row[1]) {
-                  document.body.style.backgroundImage = backgroundImage(row[1]);
-                }
-              }}
+<div class="static w-[100vw]">
+  <div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/20"}>
+    <div class="min-h-screen relative pt-14">
+      <h1 class="text-3xl font-bold pb-8">{date_str}</h1>
+      {#each rows as row}
+        <div
+          id="t{row[0]}"
+          class="flex flex-cols gap-4 min-h-24"
+          role="group"
+          onmouseenter={() => {
+            if (row[1]) {
+              changeBackgroundImage(row[1]);
+            }
+          }}
+        >
+          <div class="w-[43px] p-[4px] flex-none bg-transparent/60 flex flex-rows items-center">
+            <span class="text-[15px] font-semibold -mt-1">
+              {(((row[0] / 100) | 0) % 100).toString().padStart(2, "0")}:{(row[0] % 100)
+                .toString()
+                .padStart(2, "0")}
+            </span>
+          </div>
+          {#if screenshotOnly}
+            <button
+              class="w-[85px] flex-none"
+              type="button"
+              onclick={toggleScreenshotOnly}
+              aria-label="back to timeline"
+            ></button>
+          {:else}
+            <button class="w-[85px] flex-none" type="button" onclick={toggleScreenshotOnly}>
+              {#if row[1]}
+                <img
+                  height="36"
+                  width="85"
+                  loading="lazy"
+                  src={mimgUrl(`${row[1].kind}/${row[1].value.image_id}.t`)}
+                  alt=""
+                />
+              {/if}
+            </button>
+          {/if}
+          {#if screenshotOnly}
+            <button
+              class="w-[39vw] flex-none"
+              type="button"
+              onclick={toggleScreenshotOnly}
+              aria-label="back to timeline"
             >
-              <div class="flex-none w-12">
-                {(((row[0] / 100) | 0) % 100).toString().padStart(2, "0")}:{(row[0] % 100)
-                  .toString()
-                  .padStart(2, "0")}
-              </div>
-              <div class="flex-none w-36">
-                {#if row[1]}
-                  <button type="button" class="screenshot-button" onclick={toggleScreenshotOnly}>
+              {#each row[2] as app (app.id)}
+                <div>&nbsp;</div>
+              {/each}
+            </button>
+          {:else}
+            <div class="w-[39vw] flex-none overflow-x-hidden">
+              {#each row[2] as app (app.id)}
+                <div
+                  id="e-{app.id}"
+                  class="text-nowrap drop-shadow"
+                  style:background-color={app_colors[app.value.name]}
+                >
+                  {app.value.title}
+                </div>
+                <Popover
+                  arrow={false}
+                  offset={1}
+                  placement="bottom-start"
+                  trigger="click"
+                  triggeredBy="#e-{app.id}"
+                  class="!text-primary-50 !bg-gray-700 !bg-transparent/90 z-10 ml-4"
+                >
+                  <div class="p-3">
+                    <div>{app.time.toLocaleString()}</div>
+                    <pre>{JSON.stringify(app.value, null, 2)}</pre>
+                  </div>
+                </Popover>
+              {/each}
+            </div>
+          {/if}
+          {#if screenshotOnly}
+            <button
+              class="grow"
+              type="button"
+              onclick={toggleScreenshotOnly}
+              aria-label="back to timeline"
+            >
+              {#each row[3] as event (event.id)}
+                <div>&nbsp;</div>
+              {/each}
+            </button>
+          {:else}
+            <div class="grow text-nowrap overflow-x-visible">
+              {#each row[3] as event (event.id)}
+                {#if screenshotOnly}
+                  <div>&nbsp;</div>
+                {:else if event.kind === "browser"}
+                  <div id="e-{event.id}">
                     <img
-                      height="36"
-                      width="85"
                       loading="lazy"
-                      src={mimgUrl(`${row[1].kind}/${row[1].value.image_id}.t`)}
+                      src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
                       alt=""
+                      class="inline-block drop-shadow"
+                      width="16"
+                      height="16"
                     />
-                  </button>
-                {/if}
-              </div>
-              <div class="flex-none w-1/2 overflow-x-hidden mr-4">
-                {#each row[2] as app (app.id)}
-                  <div
-                    id="e-{app.id}"
-                    class="text-nowrap"
-                    style="background-color: {app_colors[app.value.name]}"
-                  >
-                    {app.value.title}
+                    <a href={event.value.url} target="_blank" rel="noopener noreferrer"
+                      >{event.value.title}</a
+                    >
                   </div>
                   <Popover
                     arrow={false}
                     offset={1}
                     placement="bottom-start"
-                    trigger="click"
-                    triggeredBy="#e-{app.id}"
-                    class="!text-primary-50 !bg-gray-700"
+                    trigger="hover"
+                    triggeredBy="#e-{event.id}"
+                    class="!text-primary-50 !bg-gray-700 !bg-transparent/90 z-10 ml-4"
                   >
-                    <div class="p-3">
-                      <div>{app.time.toLocaleString()}</div>
-                      <pre>{JSON.stringify(app.value, null, 2)}</pre>
+                    <div>
+                      {event.value.url}
                     </div>
                   </Popover>
-                {/each}
-              </div>
-              <div class="flex-auto w-96 text-nowrap">
-                {#each row[3] as event (event.id)}
-                  {#if event.kind === "browser"}
-                    <div id="e-{event.id}">
-                      <img
-                        src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
-                        alt=""
-                        class="inline-block"
-                        width="16"
-                        height="16"
-                      />
-                      <a href={event.value.url} target="_blank" rel="noopener noreferrer"
-                        >{event.value.title}</a
-                      >
-                    </div>
-                    <Popover
-                      arrow={false}
-                      offset={1}
-                      placement="bottom-start"
-                      trigger="click"
-                      triggeredBy="#e-{event.id}"
-                      class="!text-primary-50 !bg-gray-700"
-                    >
-                      <div>
-                        {event.value.url}
-                      </div>
-                    </Popover>
-                  {:else}
-                    <div id="e-{event.id}">
-                      <div>{event.kind}</div>
-                      <div>{event.time.toLocaleString()}</div>
-                      <pre>{JSON.stringify(event.value, null, 2)}</pre>
-                    </div>
-                  {/if}
-                {/each}
-              </div>
+                {:else}
+                  <div id="e-{event.id}" class="drop-shadow">
+                    <div>{event.kind}</div>
+                    <div>{event.time.toLocaleString()}</div>
+                    <pre>{JSON.stringify(event.value, null, 2)}</pre>
+                  </div>
+                {/if}
+              {/each}
             </div>
-          {/each}
+          {/if}
         </div>
-      </div>
-    {/if}
-  </div>
-  <div class="fixed top-0 right-0 z-10">
-    <EventsScrollbar {events} />
+      {/each}
+    </div>
+    <div class="fixed top-0 right-0 z-10">
+      <EventsScrollbar {events} />
+    </div>
   </div>
 </div>
 
 <style>
-  .event-row {
+  .drop-shadow {
     filter: drop-shadow(0 0 1.2px rgba(0, 0, 0, 0.8));
   }
 </style>

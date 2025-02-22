@@ -7,7 +7,7 @@
 </script>
 
 <main id="main" class="container">
-  <div class="w-[100vw] p-0">
+  <div class="p-0">
     <HourlyEvents {date} {events} />
   </div>
 </main>

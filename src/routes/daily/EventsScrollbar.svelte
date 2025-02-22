@@ -25,7 +25,7 @@
   });
 </script>
 
-<div class="grid grid-rows-24 pt-10 pr-4">
+<div class="grid grid-rows-24 pt-10 p-4 bg-transparent/40">
   {#each hours as hour}
     <div class="text-[3dvh]/[3.5dvh] overflow-visible">
       {#if hour !== null}
