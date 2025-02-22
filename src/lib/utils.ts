@@ -1,22 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { AgentCatalogEntry, CoreSettings, MnemnkEvent, Settings } from "./types";
+import type { AgentCatalogEntry, CoreSettings, DailyStats, MnemnkEvent, Settings } from "./types";
 
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
 export function mimgUrl(path: string): string {
   return isEdge ? `http://mimg.localhost/${path}` : `mimg://localhost/${path}`;
-}
-
-export async function index_year(year: number): Promise<[string, number][]> {
-  let results = await invoke("index_year", { year });
-  let ret: [string, number][] = [];
-  for (let i = 0; i < results.dates.length; i++) {
-    let date = results.dates[i];
-    let num_event = results.num_events[i];
-    ret.push([date, num_event]);
-  }
-  return ret;
 }
 
 export function dateString(date: Date): string {
@@ -60,6 +49,10 @@ export async function find_events_by_ymd(
   day: number,
 ): Promise<MnemnkEvent[]> {
   return await invoke("find_events_by_ymd_cmd", { year, month, day });
+}
+
+export async function daily_stats(): Promise<DailyStats[]> {
+  return await invoke("daily_stats_cmd");
 }
 
 // search
