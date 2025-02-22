@@ -55,7 +55,7 @@ pub fn run() {
             mnemnk::settings::set_settings_json,
             mnemnk::settings::set_core_settings_cmd,
             mnemnk::settings::get_settings_filepath,
-            mnemnk::store::index_year,
+            mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
             mnemnk::store::search_events_cmd,
         ])

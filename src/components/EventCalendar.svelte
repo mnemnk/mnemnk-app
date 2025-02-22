@@ -1,11 +1,13 @@
 <script lang="ts">
+  import type { DailyStats } from "$lib/types";
+
   interface Props {
-    year?: number;
-    daily_counts?: [number, number][];
+    year: number;
+    daily_stats: DailyStats[];
     onDateChange?: (date: string) => void;
   }
 
-  let { year = new Date().getFullYear(), daily_counts = [], onDateChange }: Props = $props();
+  let { year, daily_stats, onDateChange }: Props = $props();
 
   // TODO: use style?
   const colors = {
@@ -76,11 +78,11 @@
     let grid = Array(53)
       .fill(null)
       .map(() => Array(7).fill(null));
-    if (daily_counts) {
-      daily_counts.forEach((count) => {
-        const { weekIndex, dayIndex, date } = getPosition(count[0]);
+    if (daily_stats) {
+      daily_stats.forEach((stats) => {
+        const { weekIndex, dayIndex, date } = getPosition(stats.date);
         if (weekIndex < 53) {
-          grid[weekIndex][dayIndex] = { date, count: count[1] };
+          grid[weekIndex][dayIndex] = { date, count: stats.count };
         }
       });
     }

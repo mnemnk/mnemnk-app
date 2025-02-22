@@ -2,12 +2,12 @@
   import { goto } from "$app/navigation";
 
   import EventCalendar from "@/components/EventCalendar.svelte";
-  // import SearchBox from "@/components/SearchBox.svelte";
   import { dateString } from "@/lib/utils";
 
   let { data } = $props();
-  let year = $derived(data.year);
-  let daily_counts = $derived(data.daily_counts);
+  let daily_stats = $derived(data.daily_stats);
+
+  let year = new Date().getFullYear();
 
   function onDateChange(date: string) {
     let d = new Date(date);
@@ -19,6 +19,6 @@
 
 <main class="container mx-auto p-8 space-y-8 mt-20">
   <div class="mx-auto">
-    <EventCalendar {year} {daily_counts} {onDateChange} />
+    <EventCalendar {year} {daily_stats} {onDateChange} />
   </div>
 </main>

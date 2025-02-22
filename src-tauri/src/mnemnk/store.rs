@@ -322,53 +322,34 @@ fn check_mimg_path(path: &str) -> bool {
 //     Ok(png_data)
 // }
 
-// Index Year
+// daily stats
 
-#[derive(Debug, Deserialize)]
-struct YmdCount {
-    local_ymd: i64,
-    count: i64,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DailyStats {
+    date: i32,
+    count: i32,
 }
 
-#[derive(Debug, Serialize)]
-pub struct IndexYearResult {
-    pub dates: Vec<i32>,
-    pub num_events: Vec<i32>,
-}
-
-impl From<Vec<YmdCount>> for IndexYearResult {
-    fn from(ymd_count: Vec<YmdCount>) -> Self {
-        let dates = ymd_count.iter().map(|e| e.local_ymd as i32).collect();
-        let num_events = ymd_count.iter().map(|e| e.count as i32).collect();
-        IndexYearResult { dates, num_events }
-    }
-}
-
-async fn do_index_year(year: i32) -> Result<IndexYearResult> {
+async fn daily_stats() -> Result<Vec<DailyStats>> {
     let sql = r#"
         SELECT
-            local_ymd,
+            local_ymd AS date,
             COUNT() AS count
         FROM
             event
-        WHERE
-            local_y = $local_y
         GROUP BY
-            local_ymd
-        ORDER BY
-            local_ymd
+            date
         ;
     "#;
 
-    let mut result = DB.query(sql).bind(("local_y", year)).await?;
-    let ymd_count: Vec<YmdCount> = result.take(0)?;
-
-    Ok(ymd_count.into())
+    let mut result = DB.query(sql).await?;
+    let daily_stats: Vec<DailyStats> = result.take(0)?;
+    Ok(daily_stats)
 }
 
 #[tauri::command]
-pub async fn index_year(year: i32) -> Result<IndexYearResult, String> {
-    let result = do_index_year(year).await.map_err(|e| e.to_string())?;
+pub async fn daily_stats_cmd() -> Result<Vec<DailyStats>, String> {
+    let result = daily_stats().await.map_err(|e| e.to_string())?;
     Ok(result)
 }
 
@@ -448,10 +429,10 @@ async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
             value
         FROM
             event
-        ORDER BY
-            time ASC
         WHERE
             text @@ array::join(search::analyze("eventTextAnalyzer", $query), " ")
+        ORDER BY
+            time ASC
         ;
         "#;
     let mut result = DB.query(sql).bind(("query", query)).await?;

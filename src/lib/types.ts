@@ -20,6 +20,11 @@ export type ScreenshotEvent = MnemnkEvent & {
   };
 };
 
+export type DailyStats = {
+  date: number;
+  count: number;
+};
+
 // settings
 
 export type CoreSettings = {
