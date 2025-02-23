@@ -13,6 +13,7 @@ export async function load() {
       settings.agents[agent.name] = {
         enabled: false,
         config: null,
+        schema: null,
       };
     } else if (settings.agents[agent.name].enabled === null) {
       settings.agents[agent.name].enabled = false;

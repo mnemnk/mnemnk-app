@@ -38,6 +38,7 @@ export type CoreSettings = {
 export type AgentSettings = {
   enabled: boolean | null;
   config: Record<string, any> | null;
+  schema: Record<string, any> | null;
 };
 
 export type Settings = {
