@@ -18,6 +18,7 @@ pub struct CoreSettings {
 pub struct AgentSettings {
     pub enabled: Option<bool>,
     pub config: Option<Value>,
+    pub schema: Option<Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,6 +48,7 @@ impl Default for AgentSettings {
         AgentSettings {
             enabled: Some(false),
             config: None,
+            schema: None,
         }
     }
 }
@@ -55,29 +57,7 @@ impl Default for MnemnkSettings {
     fn default() -> Self {
         MnemnkSettings {
             core: CoreSettings::default(),
-            agents: HashMap::from([
-                (
-                    "api".to_string(),
-                    AgentSettings {
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
-                ),
-                (
-                    "application".to_string(),
-                    AgentSettings {
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
-                ),
-                (
-                    "screen".to_string(),
-                    AgentSettings {
-                        enabled: Some(true),
-                        ..Default::default()
-                    },
-                ),
-            ]),
+            agents: HashMap::default(),
         }
     }
 }
@@ -147,7 +127,6 @@ pub fn quit(_app: &AppHandle) {
 #[tauri::command]
 pub fn get_settings_json(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
     let settings = settings.lock().unwrap();
-    // let json = serde_json::to_string_pretty(&*settings).map_err(|e| e.to_string())?;
     let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
     Ok(json)
 }

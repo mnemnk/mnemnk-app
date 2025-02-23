@@ -1,7 +1,7 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-shell";
 
-  import { Button, Input, Label, Toggle } from "flowbite-svelte";
+  import { Button, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
   import { get_settings_filepath, set_agent_enabled, start_agent, stop_agent } from "@/lib/utils";
@@ -33,27 +33,64 @@
     <Button onclick={open_settings_file} class="ml-auto">config.yml</Button>
   </div>
   {#each catalog as agent}
-    <Card title={agent.name} tooltip={agent.path}>
-      <form class="grid grid-cols-6 gap-6">
-        <Toggle
-          bind:checked={agents[agent.name].enabled as boolean}
-          onchange={() => toggle_agent(agent.name)}
-          class="col-span-6"
-        ></Toggle>
-        {#if agents[agent.name].config}
-          {#each Object.keys(agents[agent.name].config) as key}
+    {@const name = agent.name as string}
+    {#if agents[name].schema && agents[name].config}
+      {@const schema = agents[name].schema as Record<string, any>}
+      {@const properties = schema["properties"] as Record<string, any>}
+      <Card
+        title={schema["title"] || name}
+        subtitle={schema["description"] || ""}
+        tooltip={agent.path}
+      >
+        <form class="grid grid-cols-6 gap-6">
+          <Toggle
+            bind:checked={agents[name].enabled as boolean}
+            onchange={() => toggle_agent(name)}
+            class="col-span-6"
+          ></Toggle>
+          {#each Object.keys(properties) as key}
+            {@const prop = properties[key]}
             <Label class="col-span-6 space-y-2">
-              <span>{key}</span>
-              {#if typeof agents[agent.name].config[key] === "boolean"}
-                <Toggle bind:checked={agents[agent.name].config[key]} disabled />
+              <h3>{prop["title"] || key}</h3>
+              <p class="text-xs text-gray-500">{prop["description"]}</p>
+              {#if prop["type"] === "boolean"}
+                <Toggle bind:checked={agents[name].config[key]} />
+              {:else if prop["type"] === "integer"}
+                <NumberInput bind:value={agents[name].config[key]} />
+              {:else if prop["type"] === "number"}
+                <Input type="text" bind:value={agents[name].config[key]} />
               {:else}
-                <Input type="text" bind:value={agents[agent.name].config[key]} disabled />
+                <Input type="text" bind:value={agents[name].config[key]} />
               {/if}
             </Label>
           {/each}
           <Button class="w-fit" outline disabled>Save</Button>
-        {/if}
-      </form>
-    </Card>
+        </form>
+      </Card>
+    {:else}
+      <Card title={name} tooltip={agent.path}>
+        <form class="grid grid-cols-6 gap-6">
+          <Toggle
+            bind:checked={agents[name].enabled as boolean}
+            onchange={() => toggle_agent(name)}
+            class="col-span-6"
+          ></Toggle>
+          {#if agents[name].config}
+            {@const config = agents[name].config as Record<string, any>}
+            {#each Object.keys(config) as key}
+              <Label class="col-span-6 space-y-2">
+                <span>{key}</span>
+                {#if typeof config[key] === "boolean"}
+                  <Toggle bind:checked={config[key]} disabled />
+                {:else}
+                  <Input type="text" bind:value={config[key]} disabled />
+                {/if}
+              </Label>
+            {/each}
+            <Button class="w-fit" outline disabled>Save</Button>
+          {/if}
+        </form>
+      </Card>
+    {/if}
   {/each}
 </main>

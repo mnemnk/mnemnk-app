@@ -203,6 +203,17 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                 },
                             )
                         }
+                        "CONFIG_SCHEMA" => {
+                            let value = serde_json::from_str::<Value>(args);
+                            if let Err(e) = value {
+                                log::error!("Failed to parse config schema: {}", e);
+                                continue;
+                            }
+                            recieve_config_schema(&app_handle, &agent, value.unwrap())
+                                .unwrap_or_else(|e| {
+                                    log::error!("Failed to receive config schema: {}", e);
+                                })
+                        }
                         "READ" => {
                             let kind = args.to_string();
                             if kind.is_empty() {
@@ -465,6 +476,22 @@ fn recieve_config(app: &AppHandle, agent: &str, config: Value) -> Result<()> {
         } else {
             let mut agent_settings = AgentSettings::default();
             agent_settings.config = Some(config);
+            settings.agents.insert(agent.to_string(), agent_settings);
+        }
+    }
+    settings::save(app);
+    Ok(())
+}
+
+fn recieve_config_schema(app: &AppHandle, agent: &str, schema: Value) -> Result<()> {
+    let settings = app.state::<Mutex<MnemnkSettings>>();
+    {
+        let mut settings = settings.lock().unwrap();
+        if let Some(agent_settings) = settings.agents.get_mut(agent) {
+            agent_settings.schema = Some(schema);
+        } else {
+            let mut agent_settings = AgentSettings::default();
+            agent_settings.schema = Some(schema);
             settings.agents.insert(agent.to_string(), agent_settings);
         }
     }
