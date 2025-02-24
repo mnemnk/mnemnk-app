@@ -41,6 +41,10 @@ export async function stop_agent(agent: string): Promise<void> {
   await invoke("stop_agent_cmd", { agent });
 }
 
+export async function save_agent_config(agent: string, config: Record<string, any>): Promise<void> {
+  await invoke("save_agent_config_cmd", { agent, config });
+}
+
 // events
 
 export async function find_events_by_ymd(
