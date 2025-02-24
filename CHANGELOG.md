@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.5](https://github.com/mnemnk/mnemnk-app/compare/v0.8.4...v0.8.5) (2025-02-24)
+
+
+### Features
+
+* 🎸 index page caching ([#69](https://github.com/mnemnk/mnemnk-app/issues/69)) ([e1d90fe](https://github.com/mnemnk/mnemnk-app/commit/e1d90fe2d12c8d894c9e60a7ff55dee53f0bca5c)), closes [#63](https://github.com/mnemnk/mnemnk-app/issues/63)
+* 🎸 save agent settings from agent page ([#72](https://github.com/mnemnk/mnemnk-app/issues/72)) ([c8d3a6d](https://github.com/mnemnk/mnemnk-app/commit/c8d3a6d4b02f1e8840e11cf109856d7e7562e5bd)), closes [#66](https://github.com/mnemnk/mnemnk-app/issues/66)
+* 🎸 support CONFIG_SCHEMA command ([#71](https://github.com/mnemnk/mnemnk-app/issues/71)) ([7459fdd](https://github.com/mnemnk/mnemnk-app/commit/7459fdd80fa7a2b41c2e9c794f90f47d96bdfb49))
+
+
+### Bug Fixes
+
+* 🐛 release build failure on daily page ([#74](https://github.com/mnemnk/mnemnk-app/issues/74)) ([37311e6](https://github.com/mnemnk/mnemnk-app/commit/37311e6a6113c02f0a1715038527ece7041b0982))
+* 🐛 validate agent name and settings ([#73](https://github.com/mnemnk/mnemnk-app/issues/73)) ([5f0e426](https://github.com/mnemnk/mnemnk-app/commit/5f0e4268d362118a3ed6d785b64be95c86c0b56d))
+
 ## [0.8.4](https://github.com/mnemnk/mnemnk-app/compare/v0.8.3...v0.8.4) (2025-02-22)
 
 
