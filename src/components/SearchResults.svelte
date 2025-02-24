@@ -29,7 +29,7 @@
     let date_str = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
     let time_str = `${d.getHours().toString().padStart(2, "0")}${d.getMinutes().toString().padStart(2, "0")}`;
     let tag = `t${date_str}${time_str}`;
-    goto(`/daily/${date_str}/#${tag}`);
+    goto(`/daily?d=${date_str}#${tag}`);
   }
 </script>
 

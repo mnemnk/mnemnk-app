@@ -11,7 +11,7 @@
 
   function onDateChange(date: string) {
     let d = new Date(date);
-    goto(`/daily/${dateString(d)}/`);
+    goto(`/daily?d=${dateString(d)}`);
   }
 </script>
 
