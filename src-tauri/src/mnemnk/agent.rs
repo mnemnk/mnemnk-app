@@ -613,3 +613,28 @@ pub fn set_agent_enabled_cmd(
     settings::save(&app);
     Ok(())
 }
+
+#[tauri::command]
+pub fn save_agent_config_cmd(
+    app: AppHandle,
+    settings: State<Mutex<MnemnkSettings>>,
+    agent: &str,
+    config: Value,
+) -> Result<(), String> {
+    {
+        let mut settings = settings.lock().unwrap();
+        if let Some(agent_settings) = settings.agents.get_mut(agent) {
+            agent_settings.config = Some(config);
+        } else {
+            settings.agents.insert(
+                agent.to_string(),
+                AgentSettings {
+                    config: Some(config),
+                    ..Default::default()
+                },
+            );
+        }
+    }
+    settings::save(&app);
+    Ok(())
+}

@@ -1,15 +1,22 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-shell";
 
-  import { Button, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
+  import { Button, Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
-  import { get_settings_filepath, set_agent_enabled, start_agent, stop_agent } from "@/lib/utils";
+  import {
+    get_settings_filepath,
+    save_agent_config,
+    set_agent_enabled,
+    start_agent,
+    stop_agent,
+  } from "@/lib/utils";
 
   let { data } = $props();
 
-  let agents = $state(data.settings.agents);
-  let catalog = $state(data.catalog);
+  let agents = data.settings.agents;
+  let catalog = data.catalog;
+  let properties = $state(data.properties);
 
   async function open_settings_file() {
     let path = await get_settings_filepath();
@@ -18,11 +25,59 @@
 
   async function toggle_agent(agent_name: string) {
     if (agents[agent_name].enabled) {
-      await start_agent(agent_name);
-      await set_agent_enabled(agent_name, true);
-    } else {
+      agents[agent_name].enabled = false;
       await set_agent_enabled(agent_name, false);
       await stop_agent(agent_name);
+    } else {
+      agents[agent_name].enabled = true;
+      await start_agent(agent_name);
+      await set_agent_enabled(agent_name, true);
+    }
+  }
+
+  async function save(agent_name: string) {
+    if (properties.has(agent_name)) {
+      const props = properties.get(agent_name);
+      let config = { ...agents[agent_name].config };
+      if (props && config) {
+        for (const [key, value] of props.entries()) {
+          if (value.type === "boolean") {
+            config = {
+              ...config,
+              [key]: value.value === "true",
+            };
+          } else if (value.type === "integer") {
+            config = {
+              ...config,
+              [key]: parseInt(value.value),
+            };
+          } else if (value.type === "number") {
+            config = {
+              ...config,
+              [key]: parseFloat(value.value),
+            };
+          } else if (value.type === "string") {
+            console.log(config);
+            config = {
+              ...config,
+              [key]: value.value,
+            };
+            console.log(config);
+          } else if (value.type === "string[]") {
+            config = {
+              ...config,
+              [key]: value.value.split("\n"),
+            };
+          } else if (value.type === "string?") {
+            config = {
+              ...config,
+              [key]: value.value === "" ? null : value.value,
+            };
+          }
+        }
+        agents[agent_name].config = config;
+        save_agent_config(agent_name, config);
+      }
     }
   }
 </script>
@@ -34,44 +89,62 @@
   </div>
   {#each catalog as agent}
     {@const name = agent.name as string}
-    {#if agents[name].schema && agents[name].config}
-      {@const schema = agents[name].schema as Record<string, any>}
-      {@const properties = schema["properties"] as Record<string, any>}
+    {@const props = properties.get(name)}
+    {#if props}
       <Card
-        title={schema["title"] || name}
-        subtitle={schema["description"] || ""}
+        title={agents[name].schema?.["title"] || name}
+        subtitle={agents[name].schema?.["description"] || ""}
         tooltip={agent.path}
       >
         <form class="grid grid-cols-6 gap-6">
           <Toggle
-            bind:checked={agents[name].enabled as boolean}
+            checked={agents[name].enabled as boolean}
             onchange={() => toggle_agent(name)}
             class="col-span-6"
           ></Toggle>
-          {#each Object.keys(properties) as key}
-            {@const prop = properties[key]}
-            <Label class="col-span-6 space-y-2">
-              <h3>{prop["title"] || key}</h3>
-              <p class="text-xs text-gray-500">{prop["description"]}</p>
-              {#if prop["type"] === "boolean"}
-                <Toggle bind:checked={agents[name].config[key]} />
-              {:else if prop["type"] === "integer"}
-                <NumberInput bind:value={agents[name].config[key]} />
-              {:else if prop["type"] === "number"}
-                <Input type="text" bind:value={agents[name].config[key]} />
-              {:else}
-                <Input type="text" bind:value={agents[name].config[key]} />
-              {/if}
-            </Label>
+          {#each props.keys() as key}
+            {@const prop = props.get(key)}
+            {#if prop}
+              <Label class="col-span-6 space-y-2">
+                <h3>{prop.title || key}</h3>
+                <p class="text-xs text-gray-500">{prop["description"]}</p>
+                {#if prop.type === "boolean"}
+                  <Toggle
+                    bind:checked={() => prop.value, (value) => props.set(key, { ...prop, value })}
+                  />
+                {:else if prop.type === "integer"}
+                  <NumberInput
+                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
+                  />
+                {:else if prop.type === "number"}
+                  <Input
+                    type="text"
+                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
+                  />
+                {:else if prop.type === "string" || prop.type === "string?"}
+                  <Input
+                    type="text"
+                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
+                  />
+                {:else if prop.type === "string[]"}
+                  <Textarea
+                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
+                    rows={4}
+                  />
+                {:else}
+                  <Input type="text" value={prop.value} disabled />
+                {/if}
+              </Label>
+            {/if}
           {/each}
-          <Button class="w-fit" outline disabled>Save</Button>
+          <Button onclick={() => save(name)} class="w-fit" outline>Save</Button>
         </form>
       </Card>
     {:else}
       <Card title={name} tooltip={agent.path}>
         <form class="grid grid-cols-6 gap-6">
           <Toggle
-            bind:checked={agents[name].enabled as boolean}
+            checked={agents[name].enabled as boolean}
             onchange={() => toggle_agent(name)}
             class="col-span-6"
           ></Toggle>
@@ -81,9 +154,9 @@
               <Label class="col-span-6 space-y-2">
                 <span>{key}</span>
                 {#if typeof config[key] === "boolean"}
-                  <Toggle bind:checked={config[key]} disabled />
+                  <Toggle checked={config[key]} disabled />
                 {:else}
-                  <Input type="text" bind:value={config[key]} disabled />
+                  <Input type="text" value={config[key]} disabled />
                 {/if}
               </Label>
             {/each}

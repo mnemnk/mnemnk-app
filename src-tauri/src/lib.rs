@@ -51,6 +51,7 @@ pub fn run() {
             mnemnk::agent::start_agent_cmd,
             mnemnk::agent::stop_agent_cmd,
             mnemnk::agent::set_agent_enabled_cmd,
+            mnemnk::agent::save_agent_config_cmd,
             mnemnk::settings::get_settings_json,
             mnemnk::settings::set_settings_json,
             mnemnk::settings::set_core_settings_cmd,
