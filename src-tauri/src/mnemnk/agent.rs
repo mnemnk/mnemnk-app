@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 use std::vec;
 
@@ -449,10 +449,7 @@ async fn search_agents(app: &AppHandle) -> BTreeMap<String, PathBuf> {
                 else {
                     continue;
                 };
-                if name == "app" {
-                    continue;
-                }
-                if is_executable(&path) {
+                if validate_app_name(name) && is_executable(&path) {
                     agents.insert(name.to_string(), path);
                 }
             }
@@ -460,6 +457,12 @@ async fn search_agents(app: &AppHandle) -> BTreeMap<String, PathBuf> {
     }
     dbg!(&agents);
     agents
+}
+
+fn validate_app_name(name: &str) -> bool {
+    static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_-]+$").unwrap());
+    const DENY_LIST: [&str; 3] = ["app", "prototype", "constructor"];
+    RE.is_match(&name) && DENY_LIST.iter().all(|&x| x != name)
 }
 
 fn parse_stdout(line: &str) -> (&str, &str) {
@@ -470,6 +473,10 @@ fn parse_stdout(line: &str) -> (&str, &str) {
 fn recieve_config(app: &AppHandle, agent: &str, config: Value) -> Result<()> {
     let settings = app.state::<Mutex<MnemnkSettings>>();
     {
+        if !validate_config(&config) {
+            return Err(anyhow::anyhow!("Invalid config"));
+        }
+
         let mut settings = settings.lock().unwrap();
         if let Some(agent_settings) = settings.agents.get_mut(agent) {
             agent_settings.config = Some(config);
@@ -481,6 +488,33 @@ fn recieve_config(app: &AppHandle, agent: &str, config: Value) -> Result<()> {
     }
     settings::save(app);
     Ok(())
+}
+
+fn validate_config(value: &Value) -> bool {
+    static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_-]+$").unwrap());
+    const DENY_LIST: [&str; 2] = ["prototype", "constructor"];
+
+    match value {
+        Value::Object(map) => {
+            for (key, value) in map {
+                if !RE.is_match(&key) || DENY_LIST.iter().any(|&x| x == key) {
+                    return false;
+                }
+                if !validate_config(value) {
+                    return false;
+                }
+            }
+        }
+        Value::Array(array) => {
+            for value in array {
+                if !validate_config(value) {
+                    return false;
+                }
+            }
+        }
+        _ => {}
+    }
+    true
 }
 
 fn recieve_config_schema(app: &AppHandle, agent: &str, schema: Value) -> Result<()> {
