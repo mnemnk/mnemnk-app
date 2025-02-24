@@ -1,8 +1,8 @@
 import type { MnemnkEvent } from "@/lib/types.js";
 import { find_events_by_ymd } from "@/lib/utils";
 
-export async function load({ params }): Promise<{ date: Date; events: MnemnkEvent[] }> {
-  const d = params["date"] || "";
+export async function load({ url }): Promise<{ date: Date; events: MnemnkEvent[] }> {
+  const d = url.searchParams.get("d") || "";
   // check if params.date is a valid date string
   if (!/^\d{8}$/.test(d)) {
     return {
