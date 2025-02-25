@@ -3531,6 +3531,9 @@ dependencies = [
  "tauri-plugin-window-state",
  "tokio",
  "tonic-build",
+ "unicode-normalization",
+ "unicode-script",
+ "unicode-segmentation",
 ]
 
 [[package]]

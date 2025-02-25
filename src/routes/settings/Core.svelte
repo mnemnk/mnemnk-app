@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
+
   import { Button, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
@@ -25,6 +27,10 @@
       thumbnail_height,
     });
   }
+
+  async function reindex_text() {
+    await invoke("reindex_text_cmd");
+  }
 </script>
 
 <Card title="Core">
@@ -48,4 +54,8 @@
     </Label>
     <Button onclick={save_settings} class="w-fit" outline>Save</Button>
   </form>
+</Card>
+
+<Card title="Search">
+  <Button onclick={reindex_text} class="w-fit" outline>Reindex</Button>
 </Card>
