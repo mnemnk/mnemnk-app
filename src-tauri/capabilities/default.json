@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "core:window:allow-close",
+    "core:window:allow-set-fullscreen",
     "log:default",
     "shell:allow-open",
     "shell:default"

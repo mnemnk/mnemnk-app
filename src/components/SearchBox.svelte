@@ -1,10 +1,16 @@
 <script lang="ts">
+  import type { Action } from "svelte/action";
+
   interface Props {
     query?: string;
     onsearch?: (query: string) => void;
   }
 
   let { query = $bindable(""), onsearch }: Props = $props();
+
+  const focus: Action<HTMLDivElement, undefined> = (node) => {
+    node.focus();
+  };
 
   function onsubmit(event: Event) {
     event.preventDefault();
@@ -21,6 +27,7 @@
       placeholder="Enter a query..."
       autocomplete="off"
       bind:value={query}
+      use:focus
     />
   </form>
 </div>

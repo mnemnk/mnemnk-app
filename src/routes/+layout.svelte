@@ -16,6 +16,13 @@
     if (event.key === "Escape") {
       event.preventDefault();
       await getCurrentWindow().close();
+    } else if (event.key === "F11") {
+      event.preventDefault();
+      if (await getCurrentWindow().isFullscreen()) {
+        await getCurrentWindow().setFullscreen(false);
+      } else {
+        await getCurrentWindow().setFullscreen(true);
+      }
     }
   }
 </script>

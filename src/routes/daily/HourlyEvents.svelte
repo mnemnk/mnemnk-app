@@ -99,6 +99,16 @@
     };
   }
 
+  async function on_keydown(event: KeyboardEvent) {
+    if (event.repeat) {
+      return;
+    }
+    if (event.key === " ") {
+      event.preventDefault();
+      toggleScreenshotOnly();
+    }
+  }
+
   $effect(() => {
     return () => {
       document.body.style.backgroundImage = "";
@@ -108,7 +118,7 @@
 
 <div class="static w-[100vw]">
   <div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/20"}>
-    <div class="min-h-screen relative pt-14">
+    <div class="min-h-screen relative pt-13">
       <h1 class="text-3xl font-bold pb-8">{date_str}</h1>
       {#each rows as row}
         <div
@@ -245,6 +255,8 @@
     </div>
   </div>
 </div>
+
+<svelte:window on:keydown={on_keydown} />
 
 <style>
   .drop-shadow {

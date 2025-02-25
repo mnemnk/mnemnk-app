@@ -2,8 +2,8 @@
   import HourlyEvents from "./HourlyEvents.svelte";
 
   let { data } = $props();
-  let date = $derived(data.date);
-  let events = $derived(data.events);
+  let date = data.date;
+  let events = data.events;
 </script>
 
 <main id="main" class="container">
