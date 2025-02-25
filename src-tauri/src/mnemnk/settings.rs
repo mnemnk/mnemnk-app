@@ -124,27 +124,34 @@ pub fn quit(_app: &AppHandle) {
     // save(app);
 }
 
-#[tauri::command]
-pub fn get_settings_json(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
-    let settings = settings.lock().unwrap();
-    let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
-    Ok(json)
-}
+// #[tauri::command]
+// pub fn get_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
+//     let settings = settings.lock().unwrap();
+//     let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
+//     Ok(json)
+// }
+
+// #[tauri::command]
+// pub fn set_settings_cmd(
+//     app: AppHandle,
+//     settings: State<Mutex<MnemnkSettings>>,
+//     json_str: String,
+// ) -> Result<(), String> {
+//     let new_settings: MnemnkSettings =
+//         serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
+//     {
+//         let mut settings = settings.lock().unwrap();
+//         *settings = new_settings;
+//     }
+//     save(&app);
+//     Ok(())
+// }
 
 #[tauri::command]
-pub fn set_settings_json(
-    app: AppHandle,
-    settings: State<Mutex<MnemnkSettings>>,
-    json_str: String,
-) -> Result<(), String> {
-    let new_settings: MnemnkSettings =
-        serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
-    {
-        let mut settings = settings.lock().unwrap();
-        *settings = new_settings;
-    }
-    save(&app);
-    Ok(())
+pub fn get_core_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
+    let settings = settings.lock().unwrap();
+    let json = serde_json::to_value(&(*settings).core).map_err(|e| e.to_string())?;
+    Ok(json)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -164,7 +171,15 @@ pub fn set_core_settings_cmd(
 }
 
 #[tauri::command]
-pub fn get_settings_filepath(app: AppHandle) -> Result<String, String> {
+pub fn get_agent_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
+    let settings = settings.lock().unwrap();
+    let config = settings.agents.clone();
+    let value = serde_json::to_value(&config).map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub fn get_settings_filepath_cmd(app: AppHandle) -> Result<String, String> {
     let cf = config_file(&app);
     Ok(cf)
 }

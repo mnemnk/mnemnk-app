@@ -1,19 +1,25 @@
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
   import { open } from "@tauri-apps/plugin-shell";
 
   import { Button } from "flowbite-svelte";
 
+  import Card from "@/components/Card.svelte";
   import { get_settings_filepath } from "@/lib/utils";
 
   import Core from "./Core.svelte";
 
   let { data } = $props();
 
-  let core_settings = $state(data.settings.core);
+  let settings = data.settings;
 
   async function open_settings_file() {
     let path = await get_settings_filepath();
     await open(path);
+  }
+
+  async function reindex_text() {
+    await invoke("reindex_text_cmd");
   }
 </script>
 
@@ -22,5 +28,9 @@
     <h1 class="text-xl font-semibold sm:text-2xl">Settings</h1>
     <Button onclick={open_settings_file} class="ml-auto">config.yml</Button>
   </div>
-  <Core settings={core_settings} />
+  <Core {settings} />
+
+  <Card title="Search">
+    <Button onclick={reindex_text} class="w-fit" outline>Reindex</Button>
+  </Card>
 </main>

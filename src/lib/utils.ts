@@ -1,6 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { AgentCatalogEntry, CoreSettings, DailyStats, MnemnkEvent, Settings } from "./types";
+import type {
+  AgentCatalogEntry,
+  AgentSettings,
+  CoreSettings,
+  DailyStats,
+  MnemnkEvent,
+  Settings,
+} from "./types";
 
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
@@ -45,6 +52,10 @@ export async function save_agent_config(agent: string, config: Record<string, an
   await invoke("save_agent_config_cmd", { agent, config });
 }
 
+export async function set_agent_enabled(agent: string, enabled: boolean): Promise<void> {
+  await invoke("set_agent_enabled_cmd", { agent, enabled });
+}
+
 // events
 
 export async function find_events_by_ymd(
@@ -68,17 +79,17 @@ export async function search_events(query: string): Promise<MnemnkEvent[]> {
 // settings
 
 export async function get_settings_filepath(): Promise<string> {
-  return await invoke("get_settings_filepath");
+  return await invoke("get_settings_filepath_cmd");
 }
 
-export async function get_settings_json(): Promise<Settings> {
-  return await invoke("get_settings_json");
+export async function get_core_settings(): Promise<Settings> {
+  return await invoke("get_core_settings_cmd");
 }
 
 export async function set_core_settings(new_settings: CoreSettings): Promise<void> {
   await invoke("set_core_settings_cmd", { new_settings });
 }
 
-export async function set_agent_enabled(agent: string, enabled: boolean): Promise<void> {
-  await invoke("set_agent_enabled_cmd", { agent, enabled });
+export async function get_agent_settings(): Promise<Record<string, AgentSettings>> {
+  return await invoke("get_agent_settings_cmd");
 }
