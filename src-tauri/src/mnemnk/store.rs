@@ -19,7 +19,9 @@ use tauri::{
 
 use crate::mnemnk;
 
-#[derive(Debug, Serialize)]
+use super::tokenize::tokenize_text;
+
+#[derive(Debug, Deserialize, Serialize)]
 struct Event {
     kind: String,
     time: surrealdb::Datetime,
@@ -30,6 +32,7 @@ struct Event {
     local_ymd: i64,
     value: serde_json::Value,
     text: Option<String>,
+    text_tokens: Option<String>,
     // metadata: Option<serde_json::Value>,
 }
 
@@ -48,6 +51,7 @@ pub async fn init(app: &AppHandle) -> Result<()> {
     DB.connect::<RocksDb>(db_path).await?;
     DB.use_ns("mnemnk").use_db("mnemnk").await?;
 
+    log::info!("store::init: initializing tables");
     let _result = DB
         .query("DEFINE TABLE IF NOT EXISTS event SCHEMAFULL")
         // fields
@@ -67,8 +71,11 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .query("DEFINE INDEX IF NOT EXISTS eventKindTimeIndex ON TABLE event COLUMNS kind,time")
         // text
         .query("DEFINE FIELD IF NOT EXISTS text ON TABLE event TYPE option<string>")
-        .query("DEFINE ANALYZER IF NOT EXISTS eventTextAnalyzer TOKENIZERS class,camel FILTERS lowercase,ngram(2,2)")
-        .query("DEFINE INDEX IF NOT EXISTS eventTextIndex ON TABLE event COLUMNS text SEARCH ANALYZER eventTextAnalyzer")
+        .query("REMOVE ANALYZER IF EXISTS eventTextAnalyzer")
+        .query("REMOVE INDEX IF EXISTS eventTextIndex ON TABLE event")
+        .query("DEFINE FIELD IF NOT EXISTS text_tokens ON TABLE event TYPE option<string>")
+        .query("DEFINE ANALYZER IF NOT EXISTS eventTextTokensAnalyzer TOKENIZERS blank")
+        .query("DEFINE INDEX IF NOT EXISTS eventTextTokensIndex ON TABLE event COLUMNS text_tokens SEARCH ANALYZER eventTextTokensAnalyzer")
         .await?;
     log::info!("store::init: {:?}", _result);
 
@@ -106,12 +113,13 @@ pub async fn store(
 
     // extract text from the value if it exists
     let text = if let Some(t) = json_value.get("text").cloned() {
-        // remove timestamp from the value
+        // remove the text from the value
         json_value.as_object_mut().unwrap().remove("text");
         t.as_str().map(|s| s.to_string())
     } else {
         None
     };
+    let text_tokens = text.as_ref().map(|t| tokenize_text(t));
 
     // extract image from the value if it exists
     if let Some(image) = json_value.get("image").cloned() {
@@ -144,6 +152,7 @@ pub async fn store(
             local_ymd,
             value: json_value,
             text,
+            text_tokens,
         })
         .await?;
 
@@ -153,6 +162,8 @@ pub async fn store(
 
     Ok(())
 }
+
+// Image
 
 async fn save_image(
     app: &AppHandle,
@@ -417,7 +428,49 @@ pub async fn find_events_by_ymd_cmd(
     Ok(events)
 }
 
-// Search
+// search
+
+#[derive(Debug, Deserialize)]
+struct TextRecord {
+    id: RecordId,
+    text: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TextTokens {
+    text_tokens: Option<String>,
+}
+
+async fn reindex_text() -> Result<()> {
+    log::info!("store::init: reindexing text");
+    let mut result = DB.query("SELECT id, text FROM event").await?;
+    let texts: Vec<TextRecord> = result.take(0)?;
+    let num_texts = texts.len();
+    let mut i = 0;
+    for rec in texts {
+        i += 1;
+        if i % 100 == 0 {
+            log::info!("store::init: indexed {} / {}", i, num_texts);
+        }
+        if rec.text.is_none() {
+            continue;
+        }
+        let tokenized_text = tokenize_text(&rec.text.unwrap());
+        let _result: Option<Event> = DB
+            .update(rec.id)
+            .merge(TextTokens {
+                text_tokens: Some(tokenized_text),
+            })
+            .await?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn reindex_text_cmd() -> Result<(), String> {
+    reindex_text().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
 
 async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
@@ -430,12 +483,16 @@ async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
         FROM
             event
         WHERE
-            text @@ array::join(search::analyze("eventTextAnalyzer", $query), " ")
+            text_tokens @@ $query
         ORDER BY
             time ASC
         ;
         "#;
-    let mut result = DB.query(sql).bind(("query", query)).await?;
+    let tokenized_query = tokenize_text(&query);
+    if tokenized_query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut result = DB.query(sql).bind(("query", tokenized_query)).await?;
     let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
@@ -464,14 +521,19 @@ mod tests {
 
     #[test]
     fn test_check_mimg_uri() {
-        assert!(check_mimg_path("screen/20210901-123456-abcdef"));
-        assert!(check_mimg_path("screen/20210901-123456-abcdef.t"));
-        assert!(!check_mimg_path("screen/20210901-123456-abcdef.t-t"));
-        assert!(!check_mimg_path("screen/20210901-123456-abcdef.png"));
-        assert!(!check_mimg_path("screen/20210901-123456-abcdef/"));
-        assert!(!check_mimg_path("screen/20210901-123456-abcdef/abc"));
-        assert!(!check_mimg_path("screen/20210901-123456-abcdef/.."));
-        assert!(!check_mimg_path("screen//20210901-123456-abcdef"));
-        assert!(!check_mimg_path("screen/../20210901-123456-abcdef"));
+        // Good
+        assert!(check_mimg_path("/screen/20210901-123456"));
+        assert!(check_mimg_path("/screen/20210901-123456.t"));
+        assert!(check_mimg_path("/screen/20210901-123456-abcdef"));
+        assert!(check_mimg_path("/screen/20210901-123456-abcdef.t"));
+        // Bad
+        assert!(!check_mimg_path("/screen/20210901-123456-abcdef.t-t"));
+        assert!(!check_mimg_path("/screen/20210901-123456-abcdef.png"));
+        assert!(!check_mimg_path("/screen/20210901-123456-abcdef/"));
+        assert!(!check_mimg_path("/screen/20210901-123456-abcdef/abc"));
+        assert!(!check_mimg_path("/screen/20210901-123456-abcdef/.."));
+        assert!(!check_mimg_path("//screen/20210901-123456-abcdef"));
+        assert!(!check_mimg_path("../screen/20210901-123456-abcdef"));
+        assert!(!check_mimg_path("/screen/../20210901-123456-abcdef"));
     }
 }

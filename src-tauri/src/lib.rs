@@ -59,6 +59,7 @@ pub fn run() {
             mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
             mnemnk::store::search_events_cmd,
+            mnemnk::store::reindex_text_cmd,
         ])
         .register_uri_scheme_protocol("mimg", |ctx, request| {
             mnemnk::store::handle_mimg_protocol(ctx.app_handle(), request)
