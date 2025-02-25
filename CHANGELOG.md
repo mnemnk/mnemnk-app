@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.0](https://github.com/mnemnk/mnemnk-app/compare/v0.8.5...v0.9.0) (2025-02-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 Rebuiding the search index is necessary
+
+### Features
+
+* 🎸 custom tokenizer ([#75](https://github.com/mnemnk/mnemnk-app/issues/75)) ([b75a1e3](https://github.com/mnemnk/mnemnk-app/commit/b75a1e35ad39ed5f5456668ee4df204191358956))
+
 ## [0.8.5](https://github.com/mnemnk/mnemnk-app/compare/v0.8.4...v0.8.5) (2025-02-24)
 
 
