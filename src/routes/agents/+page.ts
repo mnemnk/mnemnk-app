@@ -1,6 +1,6 @@
-import type { AgentCatalogEntry, Settings } from "$lib/types";
+import type { AgentCatalogEntry, AgentSettings } from "$lib/types";
 
-import { get_agent_catalog, get_settings_json } from "@/lib/utils";
+import { get_agent_catalog, get_agent_settings } from "@/lib/utils";
 
 export interface AgentProperty {
   value: any;
@@ -24,17 +24,17 @@ export async function load() {
   let catalog: AgentCatalogEntry[] = await get_agent_catalog();
   catalog = catalog.sort((a, b) => a.name.localeCompare(b.name));
 
-  let settings: Settings = await get_settings_json();
+  let settings: Record<string, AgentSettings> = await get_agent_settings();
   let properties: Properties = new Map();
 
   for (let agent of catalog) {
-    if (settings.agents[agent.name]) {
-      if (settings.agents[agent.name].enabled === null) {
-        settings.agents[agent.name].enabled = false;
+    if (settings[agent.name]) {
+      if (settings[agent.name].enabled === null) {
+        settings[agent.name].enabled = false;
       }
-      if (settings.agents[agent.name].config && settings.agents[agent.name].schema) {
-        const c = settings.agents[agent.name].config as Record<string, any>;
-        const s = settings.agents[agent.name].schema as Record<string, any>;
+      if (settings[agent.name].config && settings[agent.name].schema) {
+        const c = settings[agent.name].config as Record<string, any>;
+        const s = settings[agent.name].schema as Record<string, any>;
         properties.set(agent.name, new Map());
         if (s["properties"]) {
           const p = s["properties"] as Record<string, any>;
@@ -82,7 +82,7 @@ export async function load() {
       }
     } else {
       // Add new agent for enabling it
-      settings.agents[agent.name] = {
+      settings[agent.name] = {
         enabled: false,
         config: null,
         schema: null,

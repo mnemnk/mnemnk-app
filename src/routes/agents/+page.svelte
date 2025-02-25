@@ -14,8 +14,8 @@
 
   let { data } = $props();
 
-  let agents = data.settings.agents;
   let catalog = data.catalog;
+  let settings = data.settings;
   let properties = $state(data.properties);
 
   async function open_settings_file() {
@@ -24,12 +24,12 @@
   }
 
   async function toggle_agent(agent_name: string) {
-    if (agents[agent_name].enabled) {
-      agents[agent_name].enabled = false;
+    if (settings[agent_name].enabled) {
+      settings[agent_name].enabled = false;
       await set_agent_enabled(agent_name, false);
       await stop_agent(agent_name);
     } else {
-      agents[agent_name].enabled = true;
+      settings[agent_name].enabled = true;
       await start_agent(agent_name);
       await set_agent_enabled(agent_name, true);
     }
@@ -38,7 +38,7 @@
   async function save(agent_name: string) {
     if (properties.has(agent_name)) {
       const props = properties.get(agent_name);
-      let config = { ...agents[agent_name].config };
+      let config = { ...settings[agent_name].config };
       if (props && config) {
         for (const [key, value] of props.entries()) {
           if (value.type === "boolean") {
@@ -75,7 +75,7 @@
             };
           }
         }
-        agents[agent_name].config = config;
+        settings[agent_name].config = config;
         save_agent_config(agent_name, config);
       }
     }
@@ -92,13 +92,13 @@
     {@const props = properties.get(name)}
     {#if props}
       <Card
-        title={agents[name].schema?.["title"] || name}
-        subtitle={agents[name].schema?.["description"] || ""}
+        title={settings[name].schema?.["title"] || name}
+        subtitle={settings[name].schema?.["description"] || ""}
         tooltip={agent.path}
       >
         <form class="grid grid-cols-6 gap-6">
           <Toggle
-            checked={agents[name].enabled as boolean}
+            checked={settings[name].enabled as boolean}
             onchange={() => toggle_agent(name)}
             class="col-span-6"
           ></Toggle>
@@ -144,12 +144,12 @@
       <Card title={name} tooltip={agent.path}>
         <form class="grid grid-cols-6 gap-6">
           <Toggle
-            checked={agents[name].enabled as boolean}
+            checked={settings[name].enabled as boolean}
             onchange={() => toggle_agent(name)}
             class="col-span-6"
           ></Toggle>
-          {#if agents[name].config}
-            {@const config = agents[name].config as Record<string, any>}
+          {#if settings[name].config}
+            {@const config = settings[name].config as Record<string, any>}
             {#each Object.keys(config) as key}
               <Label class="col-span-6 space-y-2">
                 <span>{key}</span>
