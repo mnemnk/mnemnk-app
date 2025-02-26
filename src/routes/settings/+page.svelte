@@ -9,12 +9,11 @@
 
   import Core from "./Core.svelte";
 
-  let { data } = $props();
-
-  let settings = data.settings;
+  const { data } = $props();
+  const settings = $derived(data.settings);
 
   async function open_settings_file() {
-    let path = await get_settings_filepath();
+    const path = await get_settings_filepath();
     await open(path);
   }
 

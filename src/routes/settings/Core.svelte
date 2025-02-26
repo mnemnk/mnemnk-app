@@ -8,11 +8,12 @@
     settings: Record<string, any>;
   }
 
-  let { settings }: Props = $props();
+  const { settings }: Props = $props();
 
   let autostart = $state(settings["autostart"]);
   let data_dir = $state(settings["data_dir"]);
   let shortcut_key = $state(settings["shortcut_key"]);
+  let shortcut_keys = $state(settings["shortcut_keys"]);
   let thumbnail_width = $state(settings["thumbnail_width"]);
   let thumbnail_height = $state(settings["thumbnail_height"]);
 
@@ -21,6 +22,7 @@
       autostart,
       data_dir,
       shortcut_key,
+      shortcut_keys,
       thumbnail_width,
       thumbnail_height,
     });

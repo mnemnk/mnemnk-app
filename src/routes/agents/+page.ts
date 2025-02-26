@@ -24,10 +24,10 @@ export async function load() {
   let catalog: AgentCatalogEntry[] = await get_agent_catalog();
   catalog = catalog.sort((a, b) => a.name.localeCompare(b.name));
 
-  let settings: Record<string, AgentSettings> = await get_agent_settings();
-  let properties: Properties = new Map();
+  const settings: Record<string, AgentSettings> = await get_agent_settings();
+  const properties: Properties = new Map();
 
-  for (let agent of catalog) {
+  for (const agent of catalog) {
     if (settings[agent.name]) {
       if (settings[agent.name].enabled === null) {
         settings[agent.name].enabled = false;
@@ -39,7 +39,7 @@ export async function load() {
         if (s["properties"]) {
           const p = s["properties"] as Record<string, any>;
           for (let key in c) {
-            let prop: AgentProperty = {
+            const prop: AgentProperty = {
               value: null,
               type: null,
               title: null,

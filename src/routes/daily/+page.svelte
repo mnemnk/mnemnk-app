@@ -1,15 +1,14 @@
 <script lang="ts">
   import HourlyEvents from "./HourlyEvents.svelte";
 
-  let { data } = $props();
-  let date = data.date;
-  let events = data.events;
+  const { data } = $props();
+  const date = data.date;
+  const events = data.events;
+  const shortcut_keys = data.settings.shortcut_keys;
 </script>
 
-<main id="main" class="container">
-  <div class="p-0">
-    <HourlyEvents {date} {events} />
-  </div>
+<main id="main" class="container p-0">
+  <HourlyEvents {date} {events} {shortcut_keys} />
 </main>
 
 <style>

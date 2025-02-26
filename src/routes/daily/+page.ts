@@ -10,11 +10,11 @@ export async function load({ url }): Promise<{ date: Date; events: MnemnkEvent[]
       events: [],
     };
   }
-  let year = parseInt(d.substring(0, 4));
-  let month = parseInt(d.substring(4, 6));
-  let day = parseInt(d.substring(6, 8));
-  let date = new Date(year, month - 1, day);
-  let events = await find_events_by_ymd(year, month, day);
+  const year = parseInt(d.substring(0, 4));
+  const month = parseInt(d.substring(4, 6));
+  const day = parseInt(d.substring(6, 8));
+  const date = new Date(year, month - 1, day);
+  const events = await find_events_by_ymd(year, month, day);
   return {
     date,
     events,
