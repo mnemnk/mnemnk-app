@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.1](https://github.com/mnemnk/mnemnk-app/compare/v0.9.0...v0.9.1) (2025-02-26)
+
+
+### Features
+
+* 🎸 shortcut keys for search ([#78](https://github.com/mnemnk/mnemnk-app/issues/78)) ([8ed5d3f](https://github.com/mnemnk/mnemnk-app/commit/8ed5d3f79467116f07bbf0f706fc97152ec12576))
+* 🎸 shortcuts for screenshot only and fullscreen ([#77](https://github.com/mnemnk/mnemnk-app/issues/77)) ([f2ebb49](https://github.com/mnemnk/mnemnk-app/commit/f2ebb49d1e632c65f456fb227602571e673d8fe5))
+
 ## [0.9.0](https://github.com/mnemnk/mnemnk-app/compare/v0.8.5...v0.9.0) (2025-02-25)
 
 
