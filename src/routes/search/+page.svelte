@@ -1,18 +1,19 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
 
-  import SearchBox from "@/components/SearchBox.svelte";
-  import SearchResults from "@/components/SearchResults.svelte";
+  import SearchBox from "./SearchBox.svelte";
+  import SearchResults from "./SearchResults.svelte";
 
-  let { data } = $props();
+  const { data } = $props();
+
   let query = $derived(data.query);
-  let events = $derived(data.events);
+  const events = $derived(data.events);
 
   function onsearch(query: string) {
     if (!query) {
       return;
     }
-    goto(`search?q=${query}`);
+    goto(`/search?q=${query}`);
   }
 </script>
 

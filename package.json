@@ -23,7 +23,8 @@
     "@tauri-apps/plugin-opener": "^2.2.5",
     "@tauri-apps/plugin-shell": "^2.0.1",
     "@tauri-apps/plugin-store": "^2.1.0",
-    "@tauri-apps/plugin-window-state": "^2.2.0"
+    "@tauri-apps/plugin-window-state": "^2.2.0",
+    "hotkeys-js": "^3.13.9"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.1",

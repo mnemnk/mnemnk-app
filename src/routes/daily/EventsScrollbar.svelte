@@ -5,14 +5,14 @@
     events: MnemnkEvent[];
   }
 
-  let { events }: Props = $props();
+  const { events }: Props = $props();
 
-  let hours: (string[] | null)[] = $derived.by(() => {
-    let hours = new Array(24).fill(null);
+  const hours: (string[] | null)[] = $derived.by(() => {
+    const hours = new Array(24).fill(null);
     let last_h = -1;
     events.forEach((ev) => {
-      let d = new Date(ev.time);
-      let h = d.getHours();
+      const d = new Date(ev.time);
+      const h = d.getHours();
       if (h > last_h) {
         hours[h] = [
           h.toString().padStart(2, "0"),

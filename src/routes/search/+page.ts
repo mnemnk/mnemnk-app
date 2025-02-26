@@ -9,7 +9,7 @@ export async function load({ url }) {
     };
   }
 
-  let events = await search_events(query);
+  const events = await search_events(query);
   return {
     query,
     events,

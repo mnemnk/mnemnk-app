@@ -12,11 +12,11 @@
     stop_agent,
   } from "@/lib/utils";
 
-  let { data } = $props();
+  const { data } = $props();
 
-  let catalog = data.catalog;
-  let settings = data.settings;
-  let properties = $state(data.properties);
+  const catalog = data.catalog;
+  const settings = data.settings;
+  const properties = $state(data.properties);
 
   async function open_settings_file() {
     let path = await get_settings_filepath();

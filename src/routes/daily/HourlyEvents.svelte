@@ -9,24 +9,25 @@
   interface Props {
     date: Date;
     events: MnemnkEvent[]; // assume events are sorted by time
+    shortcut_keys: Record<string, string>;
   }
 
-  let { date, events }: Props = $props();
+  const { date, events, shortcut_keys }: Props = $props();
 
-  let date_str = $derived(
+  const date_str = $derived(
     `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
   );
 
   type EventRow = [number, MnemnkEvent | null, MnemnkEvent[], MnemnkEvent[]];
-  let events_apps: [Map<number, EventRow>, Set<string>] = $derived.by(() => {
-    let events_by_dt = new Map<number, EventRow>();
+  const events_apps: [Map<number, EventRow>, Set<string>] = $derived.by(() => {
+    const events_by_dt = new Map<number, EventRow>();
+    const all_apps = new Set() as Set<string>;
     let last_app = "";
     // let apps = [] as string[];
     // let apps_window = [] as string[];
-    let all_apps = new Set() as Set<string>;
     events.forEach((ev) => {
-      let d = new Date(ev.time);
-      let dt =
+      const d = new Date(ev.time);
+      const dt =
         d.getFullYear() * 100000000 +
         (d.getMonth() + 1) * 1000000 +
         d.getDate() * 10000 +
@@ -59,9 +60,9 @@
     });
     return [events_by_dt, all_apps];
   });
-  let events_by_dt = $derived([...events_apps[0].values()].sort((a, b) => a[0] - b[0]));
-  let rows = $derived(events_by_dt);
-  let all_apps = $derived(events_apps[1]);
+
+  const events_by_dt = $derived([...events_apps[0].values()].sort((a, b) => a[0] - b[0]));
+  const all_apps = $derived(events_apps[1]);
 
   const APP_COLOR_PALLETE = [
     "oklch(100% 0.1303 105.01 / 40%)", // yellow
@@ -73,7 +74,7 @@
     "oklch(100% 0.1303 322.51 / 40%)", // purple
   ];
 
-  let app_colors: Record<string, string> = $derived.by(() => {
+  const app_colors: Record<string, string> = $derived.by(() => {
     const colors = {} as Record<string, string>;
     [...all_apps].forEach((app, i) => {
       colors[app] = APP_COLOR_PALLETE[i % APP_COLOR_PALLETE.length];
@@ -103,7 +104,8 @@
     if (event.repeat) {
       return;
     }
-    if (event.key === " ") {
+    const key_screenshot_only = shortcut_keys["screenshot_only"];
+    if (event.key === key_screenshot_only) {
       event.preventDefault();
       toggleScreenshotOnly();
     }
@@ -120,7 +122,7 @@
   <div class={screenshotOnly ? "bg-transparent/0" : "bg-transparent/20"}>
     <div class="min-h-screen relative pt-13">
       <h1 class="text-3xl font-bold pb-8">{date_str}</h1>
-      {#each rows as row}
+      {#each events_by_dt as row}
         <div
           id="t{row[0]}"
           class="flex flex-cols gap-4 min-h-24"

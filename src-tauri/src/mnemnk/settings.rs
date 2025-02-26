@@ -1,25 +1,13 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, path::PathBuf, sync::Mutex};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{LazyLock, Mutex},
+};
 use tauri::{AppHandle, Manager, State};
 
 const CONFIG_FILENAME: &str = "config.yml";
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CoreSettings {
-    pub autostart: Option<bool>,
-    pub data_dir: Option<String>,
-    pub shortcut_key: Option<String>,
-    pub thumbnail_width: Option<u32>,
-    pub thumbnail_height: Option<u32>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AgentSettings {
-    pub enabled: Option<bool>,
-    pub config: Option<Value>,
-    pub schema: Option<Value>,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MnemnkSettings {
@@ -27,20 +15,60 @@ pub struct MnemnkSettings {
     pub agents: HashMap<String, AgentSettings>,
 }
 
+impl Default for MnemnkSettings {
+    fn default() -> Self {
+        MnemnkSettings {
+            core: CoreSettings::default(),
+            agents: HashMap::default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CoreSettings {
+    pub autostart: Option<bool>,
+    pub data_dir: Option<String>,
+    pub shortcut_key: Option<String>, // global shortcut key. Will be merged into shortcut_keys
+    pub shortcut_keys: Option<HashMap<String, String>>,
+    pub thumbnail_width: Option<u32>,
+    pub thumbnail_height: Option<u32>,
+}
+
 impl Default for CoreSettings {
     fn default() -> Self {
-        let autostart = Some(false);
-        let data_dir = None;
-        let shortcut_key = Some("Alt+Shift+KeyM".to_string());
+        static SHORTCUT_KEYS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+            let mut map = HashMap::new();
+            #[cfg(target_os = "macos")]
+            {
+                map.insert("global_shortcut".into(), "Command+Shift+M".into());
+                map.insert("fullscreen".into(), "".into()); // macOS has its own fullscreen shortcut (Cmd+Ctrl+F)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                map.insert("global_shortcut".into(), "Alt+Shift+M".into());
+                map.insert("fullscreen".into(), "F11".into());
+            }
+            map.insert("screenshot_only".into(), " ".into());
+            map.insert("search".into(), "Ctrl+K, Command+K".into());
+            map
+        });
 
         CoreSettings {
-            autostart,
-            data_dir,
-            shortcut_key,
+            autostart: Some(false),
+            data_dir: None,
+            shortcut_key: Some("Alt+Shift+KeyM".into()),
+            shortcut_keys: Some(SHORTCUT_KEYS.clone()),
             thumbnail_width: None,
             thumbnail_height: None,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AgentSettings {
+    pub enabled: Option<bool>,
+    pub config: Option<Value>,
+    pub schema: Option<Value>,
 }
 
 impl Default for AgentSettings {
@@ -53,20 +81,21 @@ impl Default for AgentSettings {
     }
 }
 
-impl Default for MnemnkSettings {
-    fn default() -> Self {
-        MnemnkSettings {
-            core: CoreSettings::default(),
-            agents: HashMap::default(),
-        }
-    }
-}
-
 pub fn init(app: &AppHandle) {
     let cf = config_file(app);
     log::info!("Config file: {}", cf);
-    let settings: MnemnkSettings =
+    let mut settings: MnemnkSettings =
         confy::load_path(cf).unwrap_or_else(|_| MnemnkSettings::default());
+    if let Some(ref mut shortcut_keys) = settings.core.shortcut_keys {
+        let default_core_settings = CoreSettings::default();
+        for (k, v) in default_core_settings.shortcut_keys.unwrap().iter() {
+            if !shortcut_keys.contains_key(k) {
+                shortcut_keys.insert(k.clone(), v.clone());
+            }
+        }
+    } else {
+        settings.core.shortcut_keys = CoreSettings::default().shortcut_keys;
+    }
     dbg!(&settings);
     app.manage(Mutex::new(settings));
 }
@@ -123,29 +152,6 @@ pub fn data_dir(app: &AppHandle) -> Option<String> {
 pub fn quit(_app: &AppHandle) {
     // save(app);
 }
-
-// #[tauri::command]
-// pub fn get_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
-//     let settings = settings.lock().unwrap();
-//     let json = serde_json::to_value(&*settings).map_err(|e| e.to_string())?;
-//     Ok(json)
-// }
-
-// #[tauri::command]
-// pub fn set_settings_cmd(
-//     app: AppHandle,
-//     settings: State<Mutex<MnemnkSettings>>,
-//     json_str: String,
-// ) -> Result<(), String> {
-//     let new_settings: MnemnkSettings =
-//         serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
-//     {
-//         let mut settings = settings.lock().unwrap();
-//         *settings = new_settings;
-//     }
-//     save(&app);
-//     Ok(())
-// }
 
 #[tauri::command]
 pub fn get_core_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {

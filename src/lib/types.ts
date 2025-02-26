@@ -31,6 +31,7 @@ export type CoreSettings = {
   autostart: boolean;
   data_dir: string;
   shortcut_key: string | null;
+  shortcut_keys: Record<string, string>;
   thumbnail_width: number | null;
   thumbnail_height: number | null;
 };

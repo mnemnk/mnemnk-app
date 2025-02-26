@@ -1,34 +1,38 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
 
+  import type { MnemnkEvent } from "@/lib/types";
   import { dateString, formatTime } from "@/lib/utils";
 
   interface Props {
-    events: any;
+    events: MnemnkEvent[];
   }
-  let { events }: Props = $props();
+  const { events }: Props = $props();
 
-  let events_by_date = $derived(
-    events.reduce((acc, ev) => {
-      let d = dateString(new Date(ev.time));
-      if (!acc[d]) {
-        acc[d] = {};
-      }
-      if (!acc[d][ev.kind]) {
-        acc[d][ev.kind] = [];
-      }
-      acc[d][ev.kind].push(ev);
-      return acc;
-    }, {}),
+  const events_by_date = $derived(
+    events.reduce(
+      (acc, ev) => {
+        const d = dateString(new Date(ev.time));
+        if (!acc[d]) {
+          acc[d] = {};
+        }
+        if (!acc[d][ev.kind]) {
+          acc[d][ev.kind] = [];
+        }
+        acc[d][ev.kind].push(ev);
+        return acc;
+      },
+      {} as Record<string, Record<string, MnemnkEvent[]>>,
+    ),
   );
 
-  let dates: string[] = $derived(Object.keys(events_by_date).sort().reverse());
+  const dates: string[] = $derived(Object.keys(events_by_date).sort().reverse());
 
   function gotoItem(time: number) {
-    let d = new Date(time);
-    let date_str = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
-    let time_str = `${d.getHours().toString().padStart(2, "0")}${d.getMinutes().toString().padStart(2, "0")}`;
-    let tag = `t${date_str}${time_str}`;
+    const d = new Date(time);
+    const date_str = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
+    const time_str = `${d.getHours().toString().padStart(2, "0")}${d.getMinutes().toString().padStart(2, "0")}`;
+    const tag = `t${date_str}${time_str}`;
     goto(`/daily?d=${date_str}#${tag}`);
   }
 </script>

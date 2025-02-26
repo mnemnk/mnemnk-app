@@ -37,8 +37,6 @@ pub fn init(app: &AppHandle) -> Result<()> {
                 })
                 .build(),
         )?;
-
-        // app.global_shortcut().register(shortcut.clone())?;
     }
 
     Ok(())
