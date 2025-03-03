@@ -3,22 +3,25 @@
 
   interface Props {
     events: MnemnkEvent[];
+    day_start_hour: number;
   }
 
-  const { events }: Props = $props();
+  const { events, day_start_hour }: Props = $props();
 
   const hours: (string[] | null)[] = $derived.by(() => {
     const hours = new Array(24).fill(null);
-    let last_h = -1;
     events.forEach((ev) => {
       const d = new Date(ev.time);
       const h = d.getHours();
-      if (h > last_h) {
-        hours[h] = [
+      let i = h - day_start_hour;
+      if (i < 0) {
+        i += 24;
+      }
+      if (hours[i] === null) {
+        hours[i] = [
           h.toString().padStart(2, "0"),
           `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}${h.toString().padStart(2, "0")}${d.getMinutes().toString().padStart(2, "0")}`,
         ];
-        last_h = h;
       }
     });
     return hours;

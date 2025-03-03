@@ -58,6 +58,7 @@ pub fn run() {
             mnemnk::settings::get_settings_filepath_cmd,
             mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
+            mnemnk::store::reindex_ymd_cmd,
             mnemnk::store::search_events_cmd,
             mnemnk::store::reindex_text_cmd,
         ])

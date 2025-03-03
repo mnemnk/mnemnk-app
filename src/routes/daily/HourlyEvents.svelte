@@ -10,9 +10,10 @@
     date: Date;
     events: MnemnkEvent[]; // assume events are sorted by time
     shortcut_keys: Record<string, string>;
+    day_start_hour: number;
   }
 
-  const { date, events, shortcut_keys }: Props = $props();
+  const { date, events, shortcut_keys, day_start_hour }: Props = $props();
 
   const date_str = $derived(
     `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
@@ -253,7 +254,7 @@
       {/each}
     </div>
     <div class="fixed top-0 right-0 z-10">
-      <EventsScrollbar {events} />
+      <EventsScrollbar {events} {day_start_hour} />
     </div>
   </div>
 </div>

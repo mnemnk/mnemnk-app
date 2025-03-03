@@ -30,6 +30,6 @@
   <Core {settings} />
 
   <Card title="Search">
-    <Button onclick={reindex_text} class="w-fit" outline>Reindex</Button>
+    <Button onclick={reindex_text} class="w-fit m-2" outline>Reindex Text</Button>
   </Card>
 </main>
