@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.2](https://github.com/mnemnk/mnemnk-app/compare/v0.9.1...v0.9.2) (2025-03-03)
+
+
+### Features
+
+* 🎸 day start hour setting for daily page ([#80](https://github.com/mnemnk/mnemnk-app/issues/80)) ([2c6df12](https://github.com/mnemnk/mnemnk-app/commit/2c6df1237b97a630214c85938b0b66c689fc8420)), closes [#79](https://github.com/mnemnk/mnemnk-app/issues/79)
+
 ## [0.9.1](https://github.com/mnemnk/mnemnk-app/compare/v0.9.0...v0.9.1) (2025-02-26)
 
 
