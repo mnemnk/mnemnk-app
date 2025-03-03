@@ -28,12 +28,12 @@
 
   const dates: string[] = $derived(Object.keys(events_by_date).sort().reverse());
 
-  function gotoItem(time: number) {
+  function gotoItem(local_ymd: number, time: number) {
     const d = new Date(time);
     const date_str = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, "0")}${d.getDate().toString().padStart(2, "0")}`;
     const time_str = `${d.getHours().toString().padStart(2, "0")}${d.getMinutes().toString().padStart(2, "0")}`;
     const tag = `t${date_str}${time_str}`;
-    goto(`/daily?d=${date_str}#${tag}`);
+    goto(`/daily?d=${local_ymd}#${tag}`);
   }
 </script>
 
@@ -46,9 +46,9 @@
       {#each Object.keys(events_by_date[date]) as kind}
         <div class="mb-4">
           <h4 class="text-lg font-bold mt-1 mb-1">{kind}</h4>
-          {#each events_by_date[date][kind] as ev}
+          {#each events_by_date[date][kind].reverse() as ev}
             <div>
-              <button class="text-left clip-text" onclick={() => gotoItem(ev.time)}>
+              <button class="text-left clip-text" onclick={() => gotoItem(ev.local_ymd, ev.time)}>
                 {formatTime(new Date(ev.time))}
                 {#if ev.kind === "application"}
                   {ev.value.name} / {ev.value.title}

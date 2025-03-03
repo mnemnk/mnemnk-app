@@ -32,6 +32,7 @@ pub struct CoreSettings {
     pub shortcut_keys: Option<HashMap<String, String>>,
     pub thumbnail_width: Option<u32>,
     pub thumbnail_height: Option<u32>,
+    pub day_start_hour: Option<u32>,
 }
 
 impl Default for CoreSettings {
@@ -60,6 +61,7 @@ impl Default for CoreSettings {
             shortcut_keys: Some(SHORTCUT_KEYS.clone()),
             thumbnail_width: None,
             thumbnail_height: None,
+            day_start_hour: None,
         }
     }
 }

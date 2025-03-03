@@ -11,6 +11,8 @@ export type MnemnkEvent = {
   id: string;
   kind: string;
   time: number;
+  local_offset: number;
+  local_ymd: number;
   value: any;
 };
 
@@ -34,6 +36,7 @@ export type CoreSettings = {
   shortcut_keys: Record<string, string>;
   thumbnail_width: number | null;
   thumbnail_height: number | null;
+  day_start_hour: number | null;
 };
 
 export type AgentSettings = {

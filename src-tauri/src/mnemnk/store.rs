@@ -2,7 +2,7 @@ use std::sync::{LazyLock, Mutex};
 
 use anyhow::{Context as _, Result};
 use base64::{self, Engine as _};
-use chrono::{DateTime, Datelike, Local, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use image::RgbaImage;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -14,12 +14,12 @@ use surrealdb::{
 };
 use tauri::{
     http::{self, request::Request, response::Response, StatusCode},
-    AppHandle, Manager,
+    AppHandle, Manager, State,
 };
 
 use crate::mnemnk;
 
-use super::tokenize::tokenize_text;
+use super::{settings::MnemnkSettings, tokenize::tokenize_text};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Event {
@@ -107,9 +107,22 @@ pub async fn store(
         .context("Failed to parse timestamp")?;
     let local_dt: DateTime<Local> = DateTime::from(utc_dt);
     let local_offset = local_dt.offset().local_minus_utc() as i64;
-    let local_y = local_dt.year() as i64;
-    let local_ym = local_y * 100 + (local_dt.month() as i64);
-    let local_ymd = local_ym * 100 + (local_dt.day() as i64);
+
+    let day_start_hour: u32 = {
+        let settings = app.state::<Mutex<MnemnkSettings>>();
+        let settings = settings.lock().unwrap();
+        settings.core.day_start_hour.unwrap_or(0)
+    };
+    let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
+    // let adjusted_dt = if local_dt.hour() < day_start_hour {
+    //     local_dt - chrono::Duration::days(1)
+    // } else {
+    //     local_dt
+    // };
+
+    // let local_y = adjusted_dt.year() as i64;
+    // let local_ym = local_y * 100 + (adjusted_dt.month() as i64);
+    // let local_ymd = local_ym * 100 + (adjusted_dt.day() as i64);
 
     // extract text from the value if it exists
     let text = if let Some(t) = json_value.get("text").cloned() {
@@ -372,6 +385,7 @@ struct EventRecordInternal {
     kind: String,
     time: surrealdb::Datetime,
     local_offset: i64,
+    local_ymd: i64,
     value: serde_json::Value,
 }
 
@@ -381,6 +395,7 @@ pub struct EventRecord {
     kind: String,
     time: surrealdb::Datetime,
     local_offset: i64,
+    local_ymd: i64,
     value: serde_json::Value,
 }
 
@@ -391,6 +406,7 @@ async fn find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<Event
             kind,
             time,
             local_offset,
+            local_ymd,
             value
         FROM
             event
@@ -422,10 +438,77 @@ pub async fn find_events_by_ymd_cmd(
             kind: e.kind.clone(),
             time: e.time.clone(),
             local_offset: e.local_offset,
+            local_ymd: e.local_ymd,
             value: e.value.clone(),
         })
         .collect();
     Ok(events)
+}
+
+#[tauri::command]
+pub async fn reindex_ymd_cmd(settings: State<'_, Mutex<MnemnkSettings>>) -> Result<(), String> {
+    let day_start_hour;
+    {
+        let settings = settings.lock().unwrap();
+        day_start_hour = settings.core.day_start_hour.unwrap_or(0);
+    }
+    reindex_ymd(day_start_hour)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct TimestampRecord {
+    id: RecordId,
+    timestamp: i64,
+}
+
+#[derive(Debug, Serialize)]
+struct LocalYmd {
+    local_y: i64,
+    local_ym: i64,
+    local_ymd: i64,
+}
+
+async fn reindex_ymd(day_start_hour: u32) -> Result<()> {
+    log::info!("store: reindexing local_ymd...");
+    let mut result = DB
+        .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
+        .await?;
+    let events: Vec<TimestampRecord> = result.take(0)?;
+    let num_events = events.len();
+    let mut i = 0;
+    for rec in events {
+        i += 1;
+        if i % 100 == 0 {
+            log::info!("store: indexed {} / {}", i, num_events);
+        }
+        let dt = DateTime::from_timestamp(rec.timestamp, 0).unwrap_or_default();
+        let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt, day_start_hour);
+        let _result: Option<Event> = DB
+            .update(rec.id)
+            .merge(LocalYmd {
+                local_y,
+                local_ym,
+                local_ymd,
+            })
+            .await?;
+    }
+    log::info!("store: reindexed local_ymd");
+    Ok(())
+}
+
+fn adjust_local_ymd(dt: DateTime<impl TimeZone>, day_start_hour: u32) -> (i64, i64, i64) {
+    let adjusted_dt = if dt.hour() < day_start_hour {
+        dt - chrono::Duration::days(1)
+    } else {
+        dt
+    };
+    let local_y = adjusted_dt.year() as i64;
+    let local_ym = local_y * 100 + (adjusted_dt.month() as i64);
+    let local_ymd = local_ym * 100 + (adjusted_dt.day() as i64);
+    (local_y, local_ym, local_ymd)
 }
 
 // search
@@ -479,6 +562,7 @@ async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
             kind,
             time,
             local_offset,
+            local_ymd,
             value
         FROM
             event
@@ -507,6 +591,7 @@ pub async fn search_events_cmd(query: String) -> Result<Vec<EventRecord>, String
             kind: e.kind.clone(),
             time: e.time.clone(),
             local_offset: e.local_offset,
+            local_ymd: e.local_ymd,
             value: e.value.clone(),
         })
         .collect();
