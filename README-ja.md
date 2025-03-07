@@ -6,9 +6,11 @@
 
 ![Mnemnk logo](docs/img/mnemnk_title.png)
 
+<br>
+
 ![Badge Workflow]
-[![Badge License]][License] 
 ![Badge Language] 
+[![Badge License]][License] 
 
 <br>
 
@@ -75,3 +77,13 @@ coreの設定はそのままでも使い始めることができます。
 - エージェントの開発
 - バグ報告
 - ドキュメントの改善
+
+<!----------------------------------------------------------------------------->
+
+[License]: LICENSE
+
+<!----------------------------------{ Badges }--------------------------------->
+
+[Badge Workflow]: https://github.com/mnemnk/mnemnk-app/actions/workflows/publish.yml/badge.svg
+[Badge Language]: https://img.shields.io/github/languages/top/mnemnk/mnemnk-app
+[Badge License]: https://img.shields.io/github/license/mnemnk/mnemnk-app
