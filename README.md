@@ -1,6 +1,6 @@
 <div align="center">
 
-[ English | [日本語](README-ja) ]
+[ English | [日本語](README-ja.md) ]
 
 <br>
 
@@ -9,8 +9,8 @@
 <br>
 
 ![Badge Workflow]
-[![Badge License]][License] 
 ![Badge Language] 
+[![Badge License]][License] 
 
 <br>
 
@@ -70,3 +70,13 @@ Agents can be enabled from the agent settings.
 - Agent development
 - Bug reporting
 - Documentation improvement
+
+<!----------------------------------------------------------------------------->
+
+[License]: LICENSE
+
+<!----------------------------------{ Badges }--------------------------------->
+
+[Badge Workflow]: https://github.com/mnemnk/mnemnk-app/actions/workflows/publish.yml/badge.svg
+[Badge Language]: https://img.shields.io/github/languages/top/mnemnk/mnemnk-app
+[Badge License]: https://img.shields.io/github/license/mnemnk/mnemnk-app
