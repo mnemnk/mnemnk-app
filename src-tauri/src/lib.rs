@@ -7,8 +7,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Info)
-                // .level(log::LevelFilter::Debug)
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Debug
+                } else {
+                    log::LevelFilter::Info
+                })
                 .build(),
         )
         .plugin(tauri_plugin_window_state::Builder::new().build())

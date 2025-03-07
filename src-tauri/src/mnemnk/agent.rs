@@ -91,13 +91,13 @@ pub async fn init(app: &AppHandle) {
                     let mut agent_commands = agent_commands.lock().unwrap();
                     let child = agent_commands.agents.get_mut(&agent).unwrap();
                     if let Some(value) = value {
-                        if let Err(e) =
-                            child.write(format!("READ {} {}\n", kind, value.to_string()).as_bytes())
+                        if let Err(e) = child
+                            .write(format!(".READ_RET {} {}\n", kind, value.to_string()).as_bytes())
                         {
                             log::error!("Failed to write: {} {}", agent, e);
                         }
                     } else {
-                        if let Err(e) = child.write(format!("READ {}\n", kind).as_bytes()) {
+                        if let Err(e) = child.write(format!(".READ_RET {}\n", kind).as_bytes()) {
                             log::error!("Failed to write: {} {}", agent, e);
                         }
                     }
@@ -110,7 +110,6 @@ pub async fn init(app: &AppHandle) {
                     }
                 }
                 Write { agent, kind, value } => {
-                    // log::debug!("write {} {} {}", agent, kind, value.to_string());
                     write_board(&app_handle, &agent, &kind, &value);
                     publish(&app_handle, &agent, &kind, &value);
                 }
@@ -186,12 +185,21 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stdout(line_bytes) => {
+                    if line_bytes.is_empty() || line_bytes[0] != b'.' {
+                        log::debug!(
+                            "non-command stdout from {}: {:.200}",
+                            &agent,
+                            String::from_utf8_lossy(&line_bytes)
+                        );
+                        continue;
+                    }
+
                     let line = String::from_utf8_lossy(&line_bytes);
-                    log::debug!("stdout from {}: {:.200}", &agent, &line);
+                    // log::debug!("stdout from {}: {:.200}", &agent, &line);
 
                     let (cmd, args) = parse_stdout(&line);
                     match cmd {
-                        "CONFIG" => {
+                        ".CONFIG" => {
                             let value = serde_json::from_str::<Value>(args);
                             if let Err(e) = value {
                                 log::error!("Failed to parse config: {}", e);
@@ -203,7 +211,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                 },
                             )
                         }
-                        "CONFIG_SCHEMA" => {
+                        ".CONFIG_SCHEMA" => {
                             let value = serde_json::from_str::<Value>(args);
                             if let Err(e) = value {
                                 log::error!("Failed to parse config schema: {}", e);
@@ -214,7 +222,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                     log::error!("Failed to receive config schema: {}", e);
                                 })
                         }
-                        "READ" => {
+                        ".READ" => {
                             let kind = args.to_string();
                             if kind.is_empty() {
                                 log::error!("Invalid READ command: {:.40}", &line);
@@ -230,7 +238,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                     log::error!("Failed to send message: {}", e);
                                 });
                         }
-                        "STORE" => {
+                        ".STORE" => {
                             let kind_value = args.split_once(" ");
                             if kind_value.is_none() {
                                 log::error!("Invalid STORE command: {:.40}", &line);
@@ -253,20 +261,20 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                     log::error!("Failed to send message: {}", e);
                                 });
                         }
-                        "SUBSCRIBE" => {
+                        ".SUBSCRIBE" => {
                             let kind = args.to_string();
                             subscribe(&app_handle, &agent, &kind);
                         }
-                        "WRITE" => {
+                        ".WRITE" => {
                             let kind_value = args.split_once(" ");
                             if kind_value.is_none() {
-                                log::error!("Invalid WRITE command: {}", line);
+                                log::error!("Invalid WRITE command: {:.40}", &line);
                                 continue;
                             }
                             let (kind, value) = kind_value.unwrap();
                             let value = serde_json::from_str::<Value>(value);
                             if value.is_err() {
-                                log::error!("Failed to parse value: {}", line);
+                                log::error!("Failed to parse value: {:.40}", &line);
                                 continue;
                             }
                             main_tx
@@ -288,7 +296,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
 
                 CommandEvent::Stderr(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
-                    log::error!("{} {}", agent, line);
+                    log::debug!("stderr from {}: {:.200}", agent, line);
                 }
 
                 CommandEvent::Terminated(status) => {
@@ -303,11 +311,11 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                 }
 
                 CommandEvent::Error(e) => {
-                    log::error!("Error: {} {}", agent, e);
+                    log::error!("CommandEvent Error {}: {}", agent, e);
                 }
 
                 _ => {
-                    log::error!("Unknown event: {} {:?}", agent, event);
+                    log::error!("Unknown CommandEvent: {} {:?}", agent, event);
                 }
             }
         }
@@ -321,7 +329,7 @@ pub fn stop_agent(app: &AppHandle, agent: &str) -> Result<()> {
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let mut agent_commands = agent_commands.lock().unwrap();
     if let Some(child) = agent_commands.agents.get_mut(agent) {
-        child.write("QUIT\n".as_bytes()).unwrap_or_else(|e| {
+        child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
             log::error!("Failed to write to {}: {}", agent, e);
         });
     }
@@ -342,7 +350,7 @@ pub fn quit(app: &AppHandle) {
             log::info!("Stopping agent: {}", agent);
             // we cannot use stop_agent here because it will also try to lock aget_commands.
             if let Some(child) = agent_commands.agents.get_mut(&agent) {
-                child.write("QUIT\n".as_bytes()).unwrap_or_else(|e| {
+                child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
                     log::error!("Failed to write to {}: {}", agent, e);
                 });
             }
@@ -551,7 +559,6 @@ fn read_board(app: &AppHandle, agent: &str) -> Option<Value> {
 }
 
 fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
-    log::debug!("publish {} {}", agent, kind);
     let agent_board = app.state::<Mutex<AgentBoard>>();
     let subscribers;
     {
@@ -566,9 +573,10 @@ fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
             }
             let mut agent_commands = agent_commands.lock().unwrap();
             if let Some(child) = agent_commands.agents.get_mut(&subscriber) {
-                log::debug!("PUBLISH {} {} {}", agent, kind, value.to_string());
                 child
-                    .write(format!("PUBLISH {} {} {}\n", agent, kind, value.to_string()).as_bytes())
+                    .write(
+                        format!(".PUBLISH {} {} {}\n", agent, kind, value.to_string()).as_bytes(),
+                    )
                     .unwrap_or_else(|e| {
                         log::error!("Failed to write to {}: {}", subscriber, e);
                     });
@@ -578,7 +586,6 @@ fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
 }
 
 fn subscribe(app: &AppHandle, agent: &str, kind: &str) {
-    log::debug!("subscribe {} {}", agent, kind);
     let agent_board = app.state::<Mutex<AgentBoard>>();
     {
         let mut agent_board = agent_board.lock().unwrap();
