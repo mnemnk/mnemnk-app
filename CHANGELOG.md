@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.0](https://github.com/mnemnk/mnemnk-app/compare/v0.9.2...v0.10.0) (2025-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 all commands must start with dot
+* 🧨 update icons
+
+### Features
+
+* 🎸 add dot prefix to command names ([#85](https://github.com/mnemnk/mnemnk-app/issues/85)) ([637e619](https://github.com/mnemnk/mnemnk-app/commit/637e61975896ce5c6d26da5e051402ff7b650d72)), closes [#81](https://github.com/mnemnk/mnemnk-app/issues/81)
+* 🎸 update icons ([#82](https://github.com/mnemnk/mnemnk-app/issues/82)) ([134a0ff](https://github.com/mnemnk/mnemnk-app/commit/134a0ff65832c6375d9494dee0a278d9a0a61270)), closes [#48](https://github.com/mnemnk/mnemnk-app/issues/48)
+
+
+### Bug Fixes
+
+* 🐛 unsubscribe agent on terminate ([#84](https://github.com/mnemnk/mnemnk-app/issues/84)) ([aa727a5](https://github.com/mnemnk/mnemnk-app/commit/aa727a585aeb5ccc28abf585f5bec398fc494b1a)), closes [#83](https://github.com/mnemnk/mnemnk-app/issues/83)
+
 ## [0.9.2](https://github.com/mnemnk/mnemnk-app/compare/v0.9.1...v0.9.2) (2025-03-03)
 
 
