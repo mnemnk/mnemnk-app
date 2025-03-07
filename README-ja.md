@@ -18,7 +18,7 @@ Mnemnkは、あなたの活動を記録し、マルチエージェントによ�
 
 <br>
 
-![screenshot-home](docs/img/screenshot-home.png)
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"><img alt="home" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"></a>
 
 </div>
 
@@ -26,12 +26,13 @@ Mnemnkは、あなたの活動を記録し、マルチエージェントによ�
 
 ### アクティビティの自動保存
 
-アプリケーションの使用履歴やブラウザの履歴がスクリーンショットと共に自動保存されます。
+- アプリケーションの使用履歴やブラウザの履歴がスクリーンショットと共に自動保存されます。
+- 保存した情報は時系列で見返すことも、検索することもできます。
 
-![screenshot-daily](docs/img/screenshot-daily.png)
-
-保存した情報は時系列で見返すことも、検索することもできます。
-
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"><img alt="daily" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"></a>
+</div>
 
 ### プライバシー
 
@@ -67,7 +68,11 @@ coreの設定はそのままでも使い始めることができます。
 
 ディスクを複数持っているマシンの場合、SettingsページからData Directoryを指定することで、DBとスクリーンショットの保存場所を変更できます。データは自動では移動しないので、Quitしてデータをコピーしてから再起動してください。
 
-![screenshot-settings](docs/img/screenshot-settings.png)
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-settings.png?raw=true"><img alt="settings" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-settings.png?raw=true"></a>
+</div>
+<br>
 
 エージェントはエージェントの設定からONにできます。
 
