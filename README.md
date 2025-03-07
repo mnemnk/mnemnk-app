@@ -18,7 +18,7 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 <br>
 
-![screenshot-home](docs/img/screenshot-home.png)
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"><img alt="home" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"></a>
 
 </div>
 
@@ -26,11 +26,14 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 ### Automatic Activity Saving
 
-Application usage history and browser history are automatically saved along with screenshots.
+- Application usage history and browser history are automatically saved along with screenshots.
+- Saved information can be reviewed chronologically or searched.
 
-![screenshot-daily](docs/img/screenshot-daily.png)
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"><img alt="daily" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"></a>
+</div>
 
-Saved information can be reviewed chronologically or searched.
 
 ### Privacy
 
@@ -61,7 +64,11 @@ You can start using the core with default settings.
 
 For machines with multiple storages, you can change the storage location for the database and screenshots by specifying the Data Directory from the Settings page. Data is not moved automatically, so quit the application, copy the data, and then restart.
 
-![screenshot-settings](docs/img/screenshot-settings.png)
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-settings.png?raw=true"><img alt="settings" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-settings.png?raw=true"></a>
+</div>
+<br>
 
 Agents can be enabled from the agent settings.
 
