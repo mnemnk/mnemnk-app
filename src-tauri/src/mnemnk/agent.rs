@@ -293,6 +293,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
 
                 CommandEvent::Terminated(status) => {
                     log::info!("Agent exited: {} with status: {:?}", agent, status);
+                    unsubscribe_agent(&app_handle, &agent);
                     let agent_commands = app_handle.state::<Mutex<AgentCommands>>();
                     {
                         let mut agent_commands = agent_commands.lock().unwrap();
@@ -315,6 +316,8 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
 }
 
 pub fn stop_agent(app: &AppHandle, agent: &str) -> Result<()> {
+    unsubscribe_agent(app, agent);
+
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let mut agent_commands = agent_commands.lock().unwrap();
     if let Some(child) = agent_commands.agents.get_mut(agent) {
@@ -585,6 +588,16 @@ fn subscribe(app: &AppHandle, agent: &str, kind: &str) {
             agent_board
                 .subscribers
                 .insert(kind.to_string(), vec![agent.to_string()]);
+        }
+    }
+}
+
+fn unsubscribe_agent(app: &AppHandle, agent: &str) {
+    let agent_board = app.state::<Mutex<AgentBoard>>();
+    {
+        let mut agent_board = agent_board.lock().unwrap();
+        for subscribers in agent_board.subscribers.values_mut() {
+            subscribers.retain(|s| s != agent);
         }
     }
 }
