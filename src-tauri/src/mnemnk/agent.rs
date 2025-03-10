@@ -10,13 +10,15 @@ use anyhow::{Context as _, Result};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::mpsc;
 
 use super::settings::{self, AgentSettings, MnemnkSettings};
 use super::store;
+
+const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
 pub struct AgentCommands {
     agents: HashMap<String, CommandChild>,
@@ -103,14 +105,18 @@ pub async fn init(app: &AppHandle) {
                     }
                 }
                 Store { agent, kind, value } => {
-                    write_board(&app_handle, &agent, &kind, &value);
+                    if let Err(e) = write_board(&app_handle, &agent, &kind, &value) {
+                        log::error!("Failed to write board: {}", e);
+                    }
                     publish(&app_handle, &agent, &kind, &value);
                     if let Err(e) = store::store(&app_handle, agent, kind, value).await {
                         log::error!("Failed to store: {}", e);
                     }
                 }
                 Write { agent, kind, value } => {
-                    write_board(&app_handle, &agent, &kind, &value);
+                    if let Err(e) = write_board(&app_handle, &agent, &kind, &value) {
+                        log::error!("Failed to write board: {}", e);
+                    }
                     publish(&app_handle, &agent, &kind, &value);
                 }
             }
@@ -544,12 +550,32 @@ fn recieve_config_schema(app: &AppHandle, agent: &str, schema: Value) -> Result<
     Ok(())
 }
 
-fn write_board(app: &AppHandle, _agent: &str, kind: &str, value: &Value) {
+#[derive(Clone, Debug, Serialize)]
+struct WriteBoardMessage {
+    agent: String,
+    kind: String,
+    value: Value,
+}
+
+fn write_board(app: &AppHandle, agent: &str, kind: &str, value: &Value) -> Result<()> {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     {
         let mut agent_board = agent_board.lock().unwrap();
         agent_board.board.insert(kind.to_string(), value.clone());
     }
+    // remove image from the value. it's too big to send to frontend
+    let mut value = value.clone();
+    if value.get("image").is_some() {
+        value.as_object_mut().unwrap().remove("image");
+    }
+    // emit the message to frontend
+    let message = WriteBoardMessage {
+        agent: agent.to_string(),
+        kind: kind.to_string(),
+        value,
+    };
+    app.emit(EMIT_PUBLISH, Some(message))?;
+    Ok(())
 }
 
 fn read_board(app: &AppHandle, agent: &str) -> Option<Value> {

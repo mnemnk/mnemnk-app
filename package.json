@@ -24,6 +24,7 @@
     "@tauri-apps/plugin-shell": "^2.0.1",
     "@tauri-apps/plugin-store": "^2.1.0",
     "@tauri-apps/plugin-window-state": "^2.2.0",
+    "@xyflow/svelte": "^0.1.31",
     "hotkeys-js": "^3.13.9"
   },
   "devDependencies": {

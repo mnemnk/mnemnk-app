@@ -49,3 +49,11 @@ export type Settings = {
   core: CoreSettings;
   agents: Record<string, AgentSettings>;
 };
+
+// emit
+
+export type WriteBoardEmit = {
+  agent: string;
+  kind: string;
+  value: any;
+};
