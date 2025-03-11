@@ -1,6 +1,6 @@
 import type { AgentCatalogEntry, AgentSettings } from "$lib/types";
 
-import { get_agent_catalog, get_agent_settings } from "@/lib/utils";
+import { get_agent_catalog, get_agent_flows, get_agent_settings } from "@/lib/utils";
 
 export interface AgentProperty {
   value: any;
@@ -27,13 +27,18 @@ export async function load() {
   const settings: Record<string, AgentSettings> = await get_agent_settings();
   const properties: Properties = new Map();
 
+  const agent_flows = await get_agent_flows();
+  if (agent_flows.length === 0) {
+    agent_flows.push({ nodes: [] });
+  }
+
   for (const agent of catalog) {
     if (settings[agent.name]) {
       if (settings[agent.name].enabled === null) {
         settings[agent.name].enabled = false;
       }
-      if (settings[agent.name].config && settings[agent.name].schema) {
-        const c = settings[agent.name].config as Record<string, any>;
+      if (settings[agent.name].default_config && settings[agent.name].schema) {
+        const c = settings[agent.name].default_config as Record<string, any>;
         const s = settings[agent.name].schema as Record<string, any>;
         properties.set(agent.name, new Map());
         if (s["properties"]) {
@@ -84,13 +89,14 @@ export async function load() {
       // Add new agent for enabling it
       settings[agent.name] = {
         enabled: false,
-        config: null,
+        default_config: null,
         schema: null,
       };
     }
   }
 
   return {
+    agent_flows,
     catalog,
     settings,
     properties,

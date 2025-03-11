@@ -1,169 +1,135 @@
 <script lang="ts">
-  import { open } from "@tauri-apps/plugin-shell";
+  import { get, writable } from "svelte/store";
+  import { type Writable } from "svelte/store";
 
-  import { Button, Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
+  import { SvelteFlow, Controls } from "@xyflow/svelte";
+  import type { Node, NodeTypes } from "@xyflow/svelte";
+  // 👇 this is important! You need to import the styles for Svelte Flow to work
+  import "@xyflow/svelte/dist/style.css";
+  import { Button, Drawer, GradientButton } from "flowbite-svelte";
+  import { nanoid } from "nanoid";
 
-  import Card from "@/components/Card.svelte";
-  import {
-    get_settings_filepath,
-    save_agent_config,
-    set_agent_enabled,
-    start_agent,
-    stop_agent,
-  } from "@/lib/utils";
+  import type { AgentFlow, AgentFlowNodeDataType } from "@/lib/types";
+  import { save_agent_flow } from "@/lib/utils";
+
+  import AgentNode from "./AgentNode.svelte";
 
   const { data } = $props();
 
   const catalog = data.catalog;
   const settings = data.settings;
-  const properties = $state(data.properties);
+  const properties = data.properties;
 
-  async function open_settings_file() {
-    let path = await get_settings_filepath();
-    await open(path);
+  const nodes: Writable<Node[]> = writable([]);
+  const edges = writable([]);
+  const nodeTypes: NodeTypes = {
+    agent: AgentNode,
+  };
+
+  $effect(() => {
+    let new_nodes: Node[] = [];
+    for (const node of data.agent_flows[0].nodes) {
+      const name = node.name;
+      new_nodes.push({
+        id: node.id,
+        type: "agent",
+        data: {
+          name,
+          enabled: node.enabled,
+          config: node.config,
+          schema: settings[name].schema,
+          properties: properties.get(name),
+        },
+        position: {
+          x: node.x,
+          y: node.y,
+        },
+        width: node.width,
+        height: node.height,
+      });
+    }
+    nodes.set(new_nodes);
+  });
+
+  function addNode(agent_name: string) {
+    // TODO: support multiple flows
+
+    nodes.update((nodes) => {
+      nodes.push({
+        id: nanoid(),
+        type: "agent",
+        data: {
+          name: agent_name,
+          enabled: false,
+          config: settings[agent_name].default_config,
+          schema: settings[agent_name].schema,
+          properties: properties.get(agent_name), // can we put the whole properties into a Context?
+        },
+        position: {
+          x: Math.random() * 1000,
+          y: Math.random() * 1000,
+        },
+      });
+      return nodes;
+    });
   }
 
-  async function toggle_agent(agent_name: string) {
-    if (settings[agent_name].enabled) {
-      settings[agent_name].enabled = false;
-      await set_agent_enabled(agent_name, false);
-      await stop_agent(agent_name);
-    } else {
-      settings[agent_name].enabled = true;
-      await start_agent(agent_name);
-      await set_agent_enabled(agent_name, true);
-    }
-  }
-
-  async function save(agent_name: string) {
-    if (properties.has(agent_name)) {
-      const props = properties.get(agent_name);
-      let config = { ...settings[agent_name].config };
-      if (props && config) {
-        for (const [key, value] of props.entries()) {
-          if (value.type === "boolean") {
-            config = {
-              ...config,
-              [key]: value.value === "true",
-            };
-          } else if (value.type === "integer") {
-            config = {
-              ...config,
-              [key]: parseInt(value.value),
-            };
-          } else if (value.type === "number") {
-            config = {
-              ...config,
-              [key]: parseFloat(value.value),
-            };
-          } else if (value.type === "string") {
-            console.log(config);
-            config = {
-              ...config,
-              [key]: value.value,
-            };
-            console.log(config);
-          } else if (value.type === "string[]") {
-            config = {
-              ...config,
-              [key]: value.value.split("\n"),
-            };
-          } else if (value.type === "string?") {
-            config = {
-              ...config,
-              [key]: value.value === "" ? null : value.value,
-            };
-          }
-        }
-        settings[agent_name].config = config;
-        save_agent_config(agent_name, config);
-      }
-    }
+  async function saveFlow() {
+    // await save_agent_flows(flow_nodes[flow_index], flow_index);
+    const flow: AgentFlow = { nodes: [] };
+    get(nodes).forEach((node) => {
+      const data = node.data as AgentFlowNodeDataType;
+      flow.nodes.push({
+        id: node.id,
+        name: data.name as string,
+        enabled: data.enabled,
+        config: data.config,
+        x: node.position.x,
+        y: node.position.y,
+        width: node.width,
+        height: node.height,
+      });
+    });
+    await save_agent_flow(flow, 0);
   }
 </script>
 
-<main class="container mx-auto p-8 space-y-8 mt-20">
-  <div class="flex">
-    <h1 class="text-xl font-semibold sm:text-2xl">Agents</h1>
-    <Button onclick={open_settings_file} class="ml-auto">config.yml</Button>
-  </div>
-  {#each catalog as agent}
-    {@const name = agent.name as string}
-    {@const props = properties.get(name)}
-    {#if props}
-      <Card
-        title={settings[name].schema?.["title"] || name}
-        subtitle={settings[name].schema?.["description"] || ""}
-        tooltip={agent.path}
-      >
-        <form class="grid grid-cols-6 gap-6">
-          <Toggle
-            checked={settings[name].enabled as boolean}
-            onchange={() => toggle_agent(name)}
-            class="col-span-6"
-          ></Toggle>
-          {#each props.keys() as key}
-            {@const prop = props.get(key)}
-            {#if prop}
-              <Label class="col-span-6 space-y-2">
-                <h3>{prop.title || key}</h3>
-                <p class="text-xs text-gray-500">{prop["description"]}</p>
-                {#if prop.type === "boolean"}
-                  <Toggle
-                    bind:checked={() => prop.value, (value) => props.set(key, { ...prop, value })}
-                  />
-                {:else if prop.type === "integer"}
-                  <NumberInput
-                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
-                  />
-                {:else if prop.type === "number"}
-                  <Input
-                    type="text"
-                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
-                  />
-                {:else if prop.type === "string" || prop.type === "string?"}
-                  <Input
-                    type="text"
-                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
-                  />
-                {:else if prop.type === "string[]"}
-                  <Textarea
-                    bind:value={() => prop.value, (value) => props.set(key, { ...prop, value })}
-                    rows={4}
-                  />
-                {:else}
-                  <Input type="text" value={prop.value} disabled />
-                {/if}
-              </Label>
-            {/if}
-          {/each}
-          <Button onclick={() => save(name)} class="w-fit" outline>Save</Button>
-        </form>
-      </Card>
-    {:else}
-      <Card title={name} tooltip={agent.path}>
-        <form class="grid grid-cols-6 gap-6">
-          <Toggle
-            checked={settings[name].enabled as boolean}
-            onchange={() => toggle_agent(name)}
-            class="col-span-6"
-          ></Toggle>
-          {#if settings[name].config}
-            {@const config = settings[name].config as Record<string, any>}
-            {#each Object.keys(config) as key}
-              <Label class="col-span-6 space-y-2">
-                <span>{key}</span>
-                {#if typeof config[key] === "boolean"}
-                  <Toggle checked={config[key]} disabled />
-                {:else}
-                  <Input type="text" value={config[key]} disabled />
-                {/if}
-              </Label>
-            {/each}
-            <Button class="w-fit" outline disabled>Save</Button>
-          {/if}
-        </form>
-      </Card>
-    {/if}
-  {/each}
+<main class="container static min-w-[100vw]">
+  <SvelteFlow
+    {nodes}
+    {nodeTypes}
+    {edges}
+    fitView
+    maxZoom={2}
+    minZoom={0.2}
+    class="relative w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
+  >
+    <Controls />
+  </SvelteFlow>
+
+  <Drawer
+    activateClickOutside={false}
+    backdrop={false}
+    hidden={false}
+    placement="right"
+    class="w-200"
+  >
+    <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={saveFlow}>
+      Save
+    </GradientButton>
+    {#each catalog as agent}
+      <div class="mb-4">
+        <Button class="w-full" outline onclick={() => addNode(agent.name)}>{agent.name}</Button>
+      </div>
+    {/each}
+  </Drawer>
 </main>
+
+<style>
+  :root {
+    --xy-node-background-color: rgb(243, 244, 246);
+    --xy-node-color-default: rgb(17, 17, 17);
+    --xy-node-border-radius: 10px;
+    --xy-node-box-shadow: 10px 0 15px rgba(42, 138, 246, 0.3), -10px 0 15px rgba(233, 42, 103, 0.3);
+  }
+</style>

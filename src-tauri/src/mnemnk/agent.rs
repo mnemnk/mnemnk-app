@@ -15,7 +15,7 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::mpsc;
 
-use super::settings::{self, AgentSettings, MnemnkSettings};
+use super::settings::{self, AgentFlow, AgentFlowNode, AgentSettings, MnemnkSettings};
 use super::store;
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
@@ -65,18 +65,20 @@ pub async fn init(app: &AppHandle) {
     };
     app.manage(Mutex::new(agent_board));
 
-    let agents;
+    let agent_flows;
     let settings = app.state::<Mutex<MnemnkSettings>>();
     {
         let settings = settings.lock().unwrap();
-        agents = settings.agents.clone();
+        agent_flows = settings.agent_flows.clone();
     }
 
-    for (agent, settings) in &agents {
-        if settings.enabled.unwrap_or(false) {
-            start_agent(app, agent).unwrap_or_else(|e| {
-                log::error!("Failed to start agent: {}", e);
-            });
+    for agent_flow in agent_flows {
+        for node in agent_flow.nodes {
+            if node.enabled {
+                start_agent(app, &node.id).unwrap_or_else(|e| {
+                    log::error!("Failed to start agent: {}", e);
+                });
+            }
         }
     }
 
@@ -124,50 +126,40 @@ pub async fn init(app: &AppHandle) {
     });
 }
 
-fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
-    // sanitize the agent name
-    let re = Regex::new(r"[^a-zA-Z0-9_-]").unwrap();
-    if let Some(_) = re.find(agent) {
-        log::error!("Invalid agent name: {}", re.replace_all(agent, "X"));
-        return Err(anyhow::anyhow!("Invalid agent name"));
-    }
-
+fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
+    let agent_name: String;
+    let config: Value;
     let settings = app.state::<Mutex<MnemnkSettings>>();
-    let agent_settings;
     {
         let settings = settings.lock().unwrap();
-        if settings.agents.get(agent).is_none() {
-            agent_settings = AgentSettings::default();
+        if let Some(agent_node) = find_agent_node(&settings, agent_id) {
+            agent_name = agent_node.name.clone();
+            config = agent_node.config.clone().unwrap_or(Value::Null);
         } else {
-            agent_settings = settings.agents.get(agent).unwrap().clone();
+            log::error!("Agent {} not found", agent_id);
+            return Err(anyhow::anyhow!("Agent not found"));
         }
     }
-
-    // if !agent_settings.enabled.unwrap_or(false) {
-    //     log::info!("Agent {} is disabled", agent);
-    //     return Ok(());
-    // }
 
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let agent_path;
     let main_tx;
     {
         let agent_commands = agent_commands.lock().unwrap();
-        if agent_commands.agents.contains_key(agent) {
-            log::error!("Agent {} is already running", agent);
+        if agent_commands.agents.contains_key(agent_id) {
+            log::error!("Agent {} is already running", agent_id);
             return Err(anyhow::anyhow!("Agent is already running"));
         }
         agent_path = agent_commands
             .catalog
-            .get(agent)
+            .get(&agent_name)
             .context("Agent not found")?
             .clone();
         main_tx = agent_commands.tx.clone();
     }
 
-    log::info!("Starting agent: {}", agent);
+    log::info!("Starting agent: {} {}", agent_name, agent_id);
 
-    let config = agent_settings.config.unwrap_or(Value::Null);
     let sidecar_command = if config == Value::Null {
         app.shell().command(agent_path.as_os_str())
     } else {
@@ -181,11 +173,11 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     {
         let mut agent_commands = agent_commands.lock().unwrap();
-        agent_commands.agents.insert(agent.to_string(), child);
+        agent_commands.agents.insert(agent_id.to_string(), child);
     }
 
     let app_handle = app.clone();
-    let agent = agent.to_string();
+    let agent_id = agent_id.to_string();
     tauri::async_runtime::spawn(async move {
         // read events such as stdout
         while let Some(event) = rx.recv().await {
@@ -193,8 +185,9 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                 CommandEvent::Stdout(line_bytes) => {
                     if line_bytes.is_empty() || line_bytes[0] != b'.' {
                         log::debug!(
-                            "non-command stdout from {}: {:.200}",
-                            &agent,
+                            "non-command stdout from {} {}: {:.200}",
+                            &agent_name,
+                            &agent_id,
                             String::from_utf8_lossy(&line_bytes)
                         );
                         continue;
@@ -211,7 +204,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                 log::error!("Failed to parse config: {}", e);
                                 continue;
                             }
-                            recieve_config(&app_handle, &agent, value.unwrap()).unwrap_or_else(
+                            recieve_config(&app_handle, &agent_name, value.unwrap()).unwrap_or_else(
                                 |e| {
                                     log::error!("Failed to receive config: {}", e);
                                 },
@@ -223,7 +216,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                 log::error!("Failed to parse config schema: {}", e);
                                 continue;
                             }
-                            recieve_config_schema(&app_handle, &agent, value.unwrap())
+                            recieve_config_schema(&app_handle, &agent_name, value.unwrap())
                                 .unwrap_or_else(|e| {
                                     log::error!("Failed to receive config schema: {}", e);
                                 })
@@ -236,7 +229,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                             }
                             main_tx
                                 .send(AgentMessage::Read {
-                                    agent: agent.clone(),
+                                    agent: agent_id.clone(),
                                     kind,
                                 })
                                 .await
@@ -258,7 +251,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                             }
                             main_tx
                                 .send(AgentMessage::Store {
-                                    agent: agent.clone(),
+                                    agent: agent_id.clone(),
                                     kind: kind.to_string(),
                                     value: value.unwrap(),
                                 })
@@ -269,7 +262,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                         }
                         ".SUBSCRIBE" => {
                             let kind = args.to_string();
-                            subscribe(&app_handle, &agent, &kind);
+                            subscribe(&app_handle, &agent_id, &kind);
                         }
                         ".WRITE" => {
                             let kind_value = args.split_once(" ");
@@ -285,7 +278,7 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                             }
                             main_tx
                                 .send(AgentMessage::Write {
-                                    agent: agent.clone(),
+                                    agent: agent_id.clone(),
                                     kind: kind.to_string(),
                                     value: value.unwrap(),
                                 })
@@ -295,33 +288,43 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
                                 });
                         }
                         _ => {
-                            log::error!("Unknown command: {} {}", agent, cmd);
+                            log::error!("Unknown command: {} {}", agent_id, cmd);
                         }
                     }
                 }
 
                 CommandEvent::Stderr(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
-                    log::debug!("stderr from {}: {:.200}", agent, line);
+                    log::debug!("stderr from {} {}: {:.200}", agent_name, agent_id, line);
                 }
 
                 CommandEvent::Terminated(status) => {
-                    log::info!("Agent exited: {} with status: {:?}", agent, status);
-                    unsubscribe_agent(&app_handle, &agent);
+                    log::info!(
+                        "Agent exited: {} {} with status: {:?}",
+                        agent_name,
+                        agent_id,
+                        status
+                    );
+                    unsubscribe_agent(&app_handle, &agent_id);
                     let agent_commands = app_handle.state::<Mutex<AgentCommands>>();
                     {
                         let mut agent_commands = agent_commands.lock().unwrap();
-                        agent_commands.agents.remove(&agent);
+                        agent_commands.agents.remove(&agent_id);
                     }
                     break;
                 }
 
                 CommandEvent::Error(e) => {
-                    log::error!("CommandEvent Error {}: {}", agent, e);
+                    log::error!("CommandEvent Error {} {}: {}", agent_name, agent_id, e);
                 }
 
                 _ => {
-                    log::error!("Unknown CommandEvent: {} {:?}", agent, event);
+                    log::error!(
+                        "Unknown CommandEvent: {} {} {:?}",
+                        agent_name,
+                        agent_id,
+                        event
+                    );
                 }
             }
         }
@@ -329,14 +332,14 @@ fn start_agent(app: &AppHandle, agent: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn stop_agent(app: &AppHandle, agent: &str) -> Result<()> {
-    unsubscribe_agent(app, agent);
+pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
+    unsubscribe_agent(app, agent_id);
 
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let mut agent_commands = agent_commands.lock().unwrap();
-    if let Some(child) = agent_commands.agents.get_mut(agent) {
+    if let Some(child) = agent_commands.agents.get_mut(agent_id) {
         child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
-            log::error!("Failed to write to {}: {}", agent, e);
+            log::error!("Failed to write to {}: {}", agent_id, e);
         });
     }
     Ok(())
@@ -347,17 +350,17 @@ pub fn quit(app: &AppHandle) {
     {
         // send QUIT command to all agents
         let mut agent_commands = agent_commands.lock().unwrap();
-        let agents = agent_commands
+        let agent_ids = agent_commands
             .agents
             .keys()
             .cloned()
             .collect::<vec::Vec<String>>();
-        for agent in agents {
-            log::info!("Stopping agent: {}", agent);
+        for agent_id in agent_ids {
+            log::info!("Stopping agent: {}", agent_id);
             // we cannot use stop_agent here because it will also try to lock aget_commands.
-            if let Some(child) = agent_commands.agents.get_mut(&agent) {
+            if let Some(child) = agent_commands.agents.get_mut(&agent_id) {
                 child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
-                    log::error!("Failed to write to {}: {}", agent, e);
+                    log::error!("Failed to write to {}: {}", agent_id, e);
                 });
             }
         }
@@ -496,14 +499,14 @@ fn recieve_config(app: &AppHandle, agent: &str, config: Value) -> Result<()> {
 
         let mut settings = settings.lock().unwrap();
         if let Some(agent_settings) = settings.agents.get_mut(agent) {
-            agent_settings.config = Some(config);
+            agent_settings.default_config = Some(config);
         } else {
             let mut agent_settings = AgentSettings::default();
-            agent_settings.config = Some(config);
+            agent_settings.default_config = Some(config);
             settings.agents.insert(agent.to_string(), agent_settings);
         }
     }
-    settings::save(app);
+    settings::save(app)?;
     Ok(())
 }
 
@@ -546,7 +549,7 @@ fn recieve_config_schema(app: &AppHandle, agent: &str, schema: Value) -> Result<
             settings.agents.insert(agent.to_string(), agent_settings);
         }
     }
-    settings::save(app);
+    settings::save(app)?;
     Ok(())
 }
 
@@ -557,7 +560,7 @@ struct WriteBoardMessage {
     value: Value,
 }
 
-fn write_board(app: &AppHandle, agent: &str, kind: &str, value: &Value) -> Result<()> {
+fn write_board(app: &AppHandle, agent_id: &str, kind: &str, value: &Value) -> Result<()> {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     {
         let mut agent_board = agent_board.lock().unwrap();
@@ -570,7 +573,7 @@ fn write_board(app: &AppHandle, agent: &str, kind: &str, value: &Value) -> Resul
     }
     // emit the message to frontend
     let message = WriteBoardMessage {
-        agent: agent.to_string(),
+        agent: agent_id.to_string(),
         kind: kind.to_string(),
         value,
     };
@@ -578,13 +581,13 @@ fn write_board(app: &AppHandle, agent: &str, kind: &str, value: &Value) -> Resul
     Ok(())
 }
 
-fn read_board(app: &AppHandle, agent: &str) -> Option<Value> {
+fn read_board(app: &AppHandle, agent_id: &str) -> Option<Value> {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     let agent_board = agent_board.lock().unwrap();
-    agent_board.board.get(agent).cloned()
+    agent_board.board.get(agent_id).cloned()
 }
 
-fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
+fn publish(app: &AppHandle, agent_id: &str, kind: &str, value: &Value) {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     let subscribers;
     {
@@ -594,14 +597,15 @@ fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
     if let Some(subscribers) = subscribers {
         let agent_commands = app.state::<Mutex<AgentCommands>>();
         for subscriber in subscribers {
-            if subscriber == agent {
+            if subscriber == agent_id {
                 continue;
             }
             let mut agent_commands = agent_commands.lock().unwrap();
             if let Some(child) = agent_commands.agents.get_mut(&subscriber) {
                 child
                     .write(
-                        format!(".PUBLISH {} {} {}\n", agent, kind, value.to_string()).as_bytes(),
+                        format!(".PUBLISH {} {} {}\n", agent_id, kind, value.to_string())
+                            .as_bytes(),
                     )
                     .unwrap_or_else(|e| {
                         log::error!("Failed to write to {}: {}", subscriber, e);
@@ -611,26 +615,26 @@ fn publish(app: &AppHandle, agent: &str, kind: &str, value: &Value) {
     }
 }
 
-fn subscribe(app: &AppHandle, agent: &str, kind: &str) {
+fn subscribe(app: &AppHandle, agent_id: &str, kind: &str) {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     {
         let mut agent_board = agent_board.lock().unwrap();
         if let Some(subscribers) = agent_board.subscribers.get_mut(kind) {
-            subscribers.push(agent.to_string());
+            subscribers.push(agent_id.to_string());
         } else {
             agent_board
                 .subscribers
-                .insert(kind.to_string(), vec![agent.to_string()]);
+                .insert(kind.to_string(), vec![agent_id.to_string()]);
         }
     }
 }
 
-fn unsubscribe_agent(app: &AppHandle, agent: &str) {
+fn unsubscribe_agent(app: &AppHandle, agent_id: &str) {
     let agent_board = app.state::<Mutex<AgentBoard>>();
     {
         let mut agent_board = agent_board.lock().unwrap();
         for subscribers in agent_board.subscribers.values_mut() {
-            subscribers.retain(|s| s != agent);
+            subscribers.retain(|s| s != agent_id);
         }
     }
 }
@@ -659,62 +663,106 @@ pub fn get_agent_catalog_cmd(
         .collect())
 }
 
-#[tauri::command]
-pub fn start_agent_cmd(app: AppHandle, agent: String) -> Result<(), String> {
-    start_agent(&app, &agent).map_err(|e| e.to_string())
+#[tauri::command(rename_all = "snake_case")]
+pub fn start_agent_cmd(app: AppHandle, agent_id: String) -> Result<(), String> {
+    start_agent(&app, &agent_id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
-pub fn stop_agent_cmd(app: AppHandle, agent: String) -> Result<(), String> {
-    stop_agent(&app, &agent).map_err(|e| e.to_string())
+#[tauri::command(rename_all = "snake_case")]
+pub fn stop_agent_cmd(app: AppHandle, agent_id: String) -> Result<(), String> {
+    stop_agent(&app, &agent_id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn set_agent_enabled_cmd(
     app: AppHandle,
     settings: State<Mutex<MnemnkSettings>>,
-    agent: &str,
+    agent_id: &str,
     enabled: bool,
 ) -> Result<(), String> {
     {
         let mut settings = settings.lock().unwrap();
-        if let Some(agent_settings) = settings.agents.get_mut(agent) {
-            agent_settings.enabled = Some(enabled);
+        if let Some(agent_node) = find_agent_node_mut(&mut settings, agent_id) {
+            agent_node.enabled = enabled;
         } else {
-            settings.agents.insert(
-                agent.to_string(),
-                AgentSettings {
-                    enabled: Some(enabled),
-                    ..Default::default()
-                },
-            );
+            return Err("Agent not found".to_string());
         }
     }
-    settings::save(&app);
+    settings::save(&app).map_err(|e| e.to_string())?;
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn save_agent_config_cmd(
     app: AppHandle,
     settings: State<Mutex<MnemnkSettings>>,
-    agent: &str,
+    agent_id: &str,
     config: Value,
 ) -> Result<(), String> {
     {
         let mut settings = settings.lock().unwrap();
-        if let Some(agent_settings) = settings.agents.get_mut(agent) {
-            agent_settings.config = Some(config);
+        if let Some(agent_node) = find_agent_node_mut(&mut settings, agent_id) {
+            agent_node.config = Some(config.clone());
         } else {
-            settings.agents.insert(
-                agent.to_string(),
-                AgentSettings {
-                    config: Some(config),
-                    ..Default::default()
-                },
-            );
+            return Err("Agent not found".to_string());
         }
     }
-    settings::save(&app);
+    settings::save(&app).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_agent_settings_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
+    let settings = settings.lock().unwrap();
+    let config = settings.agents.clone();
+    let value = serde_json::to_value(&config).map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub fn get_agent_flows_cmd(settings: State<Mutex<MnemnkSettings>>) -> Result<Value, String> {
+    let settings = settings.lock().unwrap();
+    let config = settings.agent_flows.clone();
+    let value = serde_json::to_value(&config).map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn save_agent_flow_cmd(
+    app: AppHandle,
+    settings: State<Mutex<MnemnkSettings>>,
+    agent_flow: AgentFlow,
+    idx: usize,
+) -> Result<(), String> {
+    {
+        let mut settings = settings.lock().unwrap();
+        if idx < settings.agent_flows.len() {
+            settings.agent_flows[idx] = agent_flow;
+        } else {
+            settings.agent_flows.push(agent_flow);
+        }
+    }
+    settings::save(&app).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn find_agent_node<'a>(settings: &'a MnemnkSettings, agent_id: &str) -> Option<&'a AgentFlowNode> {
+    for agent_flow in &settings.agent_flows {
+        if let Some(agent_node) = agent_flow.nodes.iter().find(|x| x.id == agent_id) {
+            return Some(agent_node);
+        }
+    }
+    None
+}
+
+fn find_agent_node_mut<'a>(
+    settings: &'a mut MnemnkSettings,
+    agent_id: &str,
+) -> Option<&'a mut AgentFlowNode> {
+    for agent_flow in &mut settings.agent_flows {
+        if let Some(agent_node) = agent_flow.nodes.iter_mut().find(|x| x.id == agent_id) {
+            return Some(agent_node);
+        }
+    }
+    return None;
 }
