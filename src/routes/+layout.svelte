@@ -40,31 +40,8 @@
       hotkeys.unbind(key_search);
     };
   });
-
-  // async function on_keydown(event: KeyboardEvent) {
-  //   if (event.repeat) {
-  //     return;
-  //   }
-  //   console.log(event.key);
-  //   if (event.key === "Escape") {
-  //     event.preventDefault();
-  //     await getCurrentWindow().close();
-  //   } else if (event.key === key_fullscreen) {
-  //     event.preventDefault();
-  //     if (await getCurrentWindow().isFullscreen()) {
-  //       await getCurrentWindow().setFullscreen(false);
-  //     } else {
-  //       await getCurrentWindow().setFullscreen(true);
-  //     }
-  //   } else if (event.key === key_search) {
-  //     event.preventDefault();
-  //     goto("/search");
-  //   }
-  // }
 </script>
 
 <NavBar />
 {@render children?.()}
 <Attribution />
-
-<!-- <svelte:window on:keydown={on_keydown} /> -->
