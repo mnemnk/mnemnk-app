@@ -5,6 +5,35 @@ export type AgentCatalogEntry = {
   path: string;
 };
 
+export type AgentSettings = {
+  // enabled: boolean | null;
+  default_config: Record<string, any> | null;
+  schema: Record<string, any> | null;
+};
+
+export type AgentFlowNode = {
+  id: string;
+  name: string;
+  config: Record<string, any> | null;
+  enabled: boolean;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+};
+
+export type AgentFlow = {
+  nodes: AgentFlowNode[];
+};
+
+export type AgentFlowNodeDataType = {
+  name: string;
+  enabled: boolean;
+  config?: Record<string, any>;
+  schema?: Record<string, any>;
+  props?: Map<string, any>;
+};
+
 // events
 
 export type MnemnkEvent = {
@@ -39,15 +68,10 @@ export type CoreSettings = {
   day_start_hour: number | null;
 };
 
-export type AgentSettings = {
-  enabled: boolean | null;
-  config: Record<string, any> | null;
-  schema: Record<string, any> | null;
-};
-
 export type Settings = {
   core: CoreSettings;
   agents: Record<string, AgentSettings>;
+  agent_flows: AgentFlow[];
 };
 
 // emit

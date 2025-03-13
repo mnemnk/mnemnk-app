@@ -12,8 +12,6 @@
     board: BoardNode,
     message: MessageNode,
   };
-
-  const snapGrid = [25, 25];
 </script>
 
 <main class="container min-w-[100vw]">
@@ -21,9 +19,7 @@
     {nodes}
     {nodeTypes}
     {edges}
-    snapGrid={[snapGrid[0], snapGrid[1]]}
     fitView
-    on:nodeclick={(event) => console.log("on node click", event.detail.node)}
     class="w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
   >
     <Controls />

@@ -14,6 +14,7 @@ pub fn run() {
                 })
                 .build(),
         )
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             log::info!("show main window");
@@ -25,13 +26,17 @@ pub fn run() {
         .setup(|app| {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                mnemnk::settings::init(&app_handle);
+                mnemnk::settings::init(&app_handle).unwrap_or_else(|e| {
+                    log::error!("Failed to initialize settings: {}", e);
+                    app_handle.exit(1);
+                });
+                mnemnk::store::init(&app_handle).await.unwrap_or_else(|e| {
+                    log::error!("Failed to initialize store: {}", e);
+                    app_handle.exit(1);
+                });
                 mnemnk::tray::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize tray: {}", e);
                 });
-                mnemnk::store::init(&app_handle)
-                    .await
-                    .unwrap_or_else(|e| log::error!("Failed to initialize store: {}", e));
                 mnemnk::agent::init(&app_handle).await;
                 mnemnk::autostart::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize autostart: {}", e);
@@ -51,14 +56,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             mnemnk::agent::get_agent_catalog_cmd,
+            mnemnk::agent::get_agent_flows_cmd,
+            mnemnk::agent::get_agent_settings_cmd,
             mnemnk::agent::start_agent_cmd,
             mnemnk::agent::stop_agent_cmd,
             mnemnk::agent::set_agent_enabled_cmd,
             mnemnk::agent::save_agent_config_cmd,
-            mnemnk::settings::get_agent_settings_cmd,
+            mnemnk::agent::save_agent_flow_cmd,
             mnemnk::settings::get_core_settings_cmd,
             mnemnk::settings::set_core_settings_cmd,
-            mnemnk::settings::get_settings_filepath_cmd,
             mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
             mnemnk::store::reindex_ymd_cmd,
