@@ -1,96 +1,62 @@
 <script lang="ts">
   import { get, writable } from "svelte/store";
-  import { type Writable } from "svelte/store";
+  import type { Writable } from "svelte/store";
 
-  import { SvelteFlow, Controls } from "@xyflow/svelte";
-  import type { Node, NodeTypes } from "@xyflow/svelte";
+  import { SvelteFlow, Controls, type NodeTypes } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
   import { Button, Drawer, GradientButton } from "flowbite-svelte";
   import { nanoid } from "nanoid";
 
-  import type { AgentFlow, AgentFlowNodeDataType } from "@/lib/types";
-  import { save_agent_flow } from "@/lib/utils";
+  import {
+    deserializeAgentFlow,
+    deserializeAgentFlowNode,
+    save_agent_flow,
+    serializeAgentFlow,
+    setAgentSettingsContext,
+  } from "@/lib/agent";
+  import type { SAgentNode } from "@/lib/types";
 
   import AgentNode from "./AgentNode.svelte";
 
   const { data } = $props();
 
   const catalog = data.catalog;
-  const settings = data.settings;
-  const properties = data.properties;
+  setAgentSettingsContext(data.settings);
 
-  const nodes: Writable<Node[]> = writable([]);
+  const nodes: Writable<SAgentNode[]> = writable([]);
   const edges = writable([]);
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
   };
 
+  const flow_index = $state(0);
+
   $effect(() => {
-    let new_nodes: Node[] = [];
-    for (const node of data.agent_flows[0].nodes) {
-      const name = node.name;
-      new_nodes.push({
-        id: node.id,
-        type: "agent",
-        data: {
-          name,
-          enabled: node.enabled,
-          config: node.config,
-          schema: settings[name].schema,
-          properties: properties.get(name),
-        },
-        position: {
-          x: node.x,
-          y: node.y,
-        },
-        width: node.width,
-        height: node.height,
-      });
-    }
-    nodes.set(new_nodes);
+    nodes.set(deserializeAgentFlow(data.agent_flows[flow_index], data.settings));
   });
 
   function addNode(agent_name: string) {
-    // TODO: support multiple flows
-
+    const id = nanoid();
+    const default_config = data.settings[agent_name]?.default_config || {};
+    const node_data = {
+      id,
+      name: agent_name,
+      enabled: true,
+      config: {
+        ...default_config,
+      },
+      x: Math.random() * 1000,
+      y: Math.random() * 1000,
+    };
     nodes.update((nodes) => {
-      nodes.push({
-        id: nanoid(),
-        type: "agent",
-        data: {
-          name: agent_name,
-          enabled: false,
-          config: settings[agent_name].default_config,
-          schema: settings[agent_name].schema,
-          properties: properties.get(agent_name), // can we put the whole properties into a Context?
-        },
-        position: {
-          x: Math.random() * 1000,
-          y: Math.random() * 1000,
-        },
-      });
-      return nodes;
+      return [...nodes, deserializeAgentFlowNode(node_data, data.settings)];
     });
   }
 
-  async function saveFlow() {
-    // await save_agent_flows(flow_nodes[flow_index], flow_index);
-    const flow: AgentFlow = { nodes: [] };
-    get(nodes).forEach((node) => {
-      const data = node.data as AgentFlowNodeDataType;
-      flow.nodes.push({
-        id: node.id,
-        name: data.name as string,
-        enabled: data.enabled,
-        config: data.config,
-        x: node.position.x,
-        y: node.position.y,
-        width: node.width,
-        height: node.height,
-      });
-    });
-    await save_agent_flow(flow, 0);
+  async function updateAgentFlow() {
+    const flow = serializeAgentFlow(get(nodes));
+    await save_agent_flow(flow, flow_index);
   }
 </script>
 
@@ -114,8 +80,8 @@
     placement="right"
     class="w-200"
   >
-    <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={saveFlow}>
-      Save
+    <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={updateAgentFlow}>
+      Update
     </GradientButton>
     {#each catalog as agent}
       <div class="mb-4">

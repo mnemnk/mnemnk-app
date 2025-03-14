@@ -1,13 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type {
-  AgentCatalogEntry,
-  AgentFlow,
-  AgentSettings,
-  CoreSettings,
-  DailyStats,
-  MnemnkEvent,
-} from "./types";
+import type { CoreSettings, DailyStats, MnemnkEvent } from "./types";
 
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
@@ -32,43 +25,6 @@ export function formatTime(date: Date): string {
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
-}
-
-// agent
-
-export async function get_agent_catalog(): Promise<AgentCatalogEntry[]> {
-  return await invoke("get_agent_catalog_cmd");
-}
-
-export async function start_agent(agent_id: string): Promise<void> {
-  await invoke("start_agent_cmd", { agent_id });
-}
-
-export async function stop_agent(agent_id: string): Promise<void> {
-  await invoke("stop_agent_cmd", { agent_id });
-}
-
-export async function save_agent_config(
-  agent_id: string,
-  config: Record<string, any>,
-): Promise<void> {
-  await invoke("save_agent_config_cmd", { agent_id, config });
-}
-
-export async function set_agent_enabled(agent_id: string, enabled: boolean): Promise<void> {
-  await invoke("set_agent_enabled_cmd", { agent_id, enabled });
-}
-
-export async function get_agent_settings(): Promise<Record<string, AgentSettings>> {
-  return await invoke("get_agent_settings_cmd");
-}
-
-export async function get_agent_flows(): Promise<AgentFlow[]> {
-  return await invoke("get_agent_flows_cmd");
-}
-
-export async function save_agent_flow(agent_flow: AgentFlow, idx: number): Promise<void> {
-  await invoke("save_agent_flow_cmd", { agent_flow, idx });
 }
 
 // events

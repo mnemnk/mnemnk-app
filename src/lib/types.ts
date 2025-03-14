@@ -1,14 +1,19 @@
-// agent
+import type { Writable } from "svelte/store";
+
+import type { Node } from "@xyflow/svelte";
 
 export type AgentCatalogEntry = {
   name: string;
   path: string;
 };
 
+export type AgentDefaultConfig = Record<string, any>;
+export type AgentSchema = Record<string, any>;
+
 export type AgentSettings = {
   // enabled: boolean | null;
-  default_config: Record<string, any> | null;
-  schema: Record<string, any> | null;
+  default_config: AgentDefaultConfig | null;
+  schema: AgentSchema | null;
 };
 
 export type AgentFlowNode = {
@@ -26,12 +31,27 @@ export type AgentFlow = {
   nodes: AgentFlowNode[];
 };
 
-export type AgentFlowNodeDataType = {
+export type AgentConfig = {
+  value: Writable<any>;
+  type: string | null;
+  title: string | null;
+  description: string | null;
+};
+
+// agent name -> key -> schema
+export type AgentProperties = Record<string, Record<string, AgentConfig>>;
+
+export type SAgentNodeData = {
   name: string;
-  enabled: boolean;
-  config?: Record<string, any>;
-  schema?: Record<string, any>;
-  props?: Map<string, any>;
+  enabled: Writable<boolean>;
+  // config: AgentDefaultConfig | null;
+  // schema: AgentSchema | null;
+  // properties: AgentProperties | null;
+  config: Record<string, AgentConfig> | null;
+};
+
+export type SAgentNode = Node & {
+  data: SAgentNodeData;
 };
 
 // events
