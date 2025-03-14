@@ -10,7 +10,7 @@ export async function load() {
 
   const agent_flows = await get_agent_flows();
   if (agent_flows.length === 0) {
-    agent_flows.push({ nodes: [] });
+    agent_flows.push({ nodes: [], edges: [] });
   }
 
   return {

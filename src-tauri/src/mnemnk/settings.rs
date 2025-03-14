@@ -68,6 +68,7 @@ pub struct AgentSettings {
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlow {
     pub nodes: Vec<AgentFlowNode>,
+    pub edges: Vec<AgentFlowEdge>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -80,6 +81,13 @@ pub struct AgentFlowNode {
     pub y: Option<f64>,
     pub width: Option<f64>,
     pub height: Option<f64>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct AgentFlowEdge {
+    pub id: String,
+    pub source: String,
+    pub target: String,
 }
 
 pub fn init(app: &AppHandle) -> Result<()> {

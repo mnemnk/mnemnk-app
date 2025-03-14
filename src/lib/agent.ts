@@ -7,11 +7,14 @@ import type {
   AgentCatalogEntry,
   AgentConfig,
   AgentDefaultConfig,
-  AgentFlow,
-  AgentFlowNode,
+  SAgentFlow,
+  SAgentFlowEdge,
+  SAgentFlowNode,
   AgentSchema,
   AgentSettings,
-  SAgentNode,
+  AgentFlowEdge,
+  AgentFlow,
+  AgentFlowNode,
 } from "./types";
 
 export async function get_agent_catalog(): Promise<AgentCatalogEntry[]> {
@@ -41,11 +44,11 @@ export async function get_agent_settings(): Promise<Record<string, AgentSettings
   return await invoke("get_agent_settings_cmd");
 }
 
-export async function get_agent_flows(): Promise<AgentFlow[]> {
+export async function get_agent_flows(): Promise<SAgentFlow[]> {
   return await invoke("get_agent_flows_cmd");
 }
 
-export async function save_agent_flow(agent_flow: AgentFlow, idx: number): Promise<void> {
+export async function save_agent_flow(agent_flow: SAgentFlow, idx: number): Promise<void> {
   await invoke("save_agent_flow_cmd", { agent_flow, idx });
 }
 
@@ -61,26 +64,22 @@ export function getAgentSettingsContext(): Record<string, AgentSettings> {
 
 // Agent Flow
 
-// deserialize: AgentFlow -> SAgentNode[]
-
-export function deserializeAgentFlows(
-  flows: AgentFlow[],
-  agent_settings: Record<string, AgentSettings>,
-): SAgentNode[][] {
-  return flows.map((flow) => deserializeAgentFlow(flow, agent_settings));
-}
+// deserialize: SAgentFlow -> AgentFlow
 
 export function deserializeAgentFlow(
-  flow: AgentFlow,
+  flow: SAgentFlow,
   agent_settings: Record<string, AgentSettings>,
-): SAgentNode[] {
-  return flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings));
+): AgentFlow {
+  return {
+    nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
+    edges: flow.edges.map((edge) => deserializeAgentFlowEdge(edge)),
+  };
 }
 
 export function deserializeAgentFlowNode(
-  node: AgentFlowNode,
+  node: SAgentFlowNode,
   agent_settings: Record<string, AgentSettings>,
-): SAgentNode {
+): AgentFlowNode {
   if (node.name === "$board") {
     return {
       id: node.id,
@@ -120,7 +119,7 @@ export function deserializeAgentFlowNode(
     data: {
       name: node.name,
       enabled: writable(node.enabled),
-      config: deserializeAgentFlowNodeConfig(node.config, default_config, schema_properties),
+      config: deserializeAgentConfig(node.config, default_config, schema_properties),
     },
     position: {
       x: node.x,
@@ -131,7 +130,7 @@ export function deserializeAgentFlowNode(
   };
 }
 
-function deserializeAgentFlowNodeConfig(
+function deserializeAgentConfig(
   node_config: Record<string, any> | null,
   default_config: AgentDefaultConfig | null,
   schema_properties: AgentSchema | null,
@@ -202,19 +201,24 @@ function isArrayString(t: any, items_t: any): boolean {
   return t === "array" && items_t === "string";
 }
 
-// serialize: SAgentNode[] -> AgentFlow
-
-export function serializeAgentFlows(flows: SAgentNode[][]): AgentFlow[] {
-  return flows.map((flow) => serializeAgentFlow(flow));
-}
-
-export function serializeAgentFlow(flow: SAgentNode[]): AgentFlow {
+function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
   return {
-    nodes: flow.map((node) => serializeAgentFlowNode(node)),
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
   };
 }
 
-export function serializeAgentFlowNode(node: SAgentNode): AgentFlowNode {
+// serialize: AgentFlow -> SAgentFlow
+
+export function serializeAgentFlow(nodes: AgentFlowNode[], edges: AgentFlowEdge[]): SAgentFlow {
+  return {
+    nodes: nodes.map((node) => serializeAgentFlowNode(node)),
+    edges: edges.map((edge) => serializeAgentFlowEdge(edge)),
+  };
+}
+
+export function serializeAgentFlowNode(node: AgentFlowNode): SAgentFlowNode {
   return {
     id: node.id,
     name: node.data.name,
@@ -254,4 +258,12 @@ function serializeAgentFlowNodeConfig(
     }
   }
   return config;
+}
+
+export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
+  return {
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+  };
 }

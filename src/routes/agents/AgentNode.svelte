@@ -2,7 +2,7 @@
   import { get } from "svelte/store";
   import type { Writable } from "svelte/store";
 
-  import { useNodes } from "@xyflow/svelte";
+  import { Handle, Position, useNodes } from "@xyflow/svelte";
   import type { NodeProps } from "@xyflow/svelte";
   import { Button, Card, Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
   import { CloseOutline } from "flowbite-svelte-icons";
@@ -32,6 +32,7 @@
 </script>
 
 <div>
+  <Handle type="target" position={Position.Left} />
   <Card padding="none">
     <div class="flex justify-between items-center pl-4 pr-0 mb-2">
       <h3 class="text-xl pt-2">{agent_schema?.["title"] || data.name}</h3>
@@ -63,4 +64,5 @@
       {/each}
     </form>
   </Card>
+  <Handle type="source" position={Position.Right} />
 </div>
