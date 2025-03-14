@@ -223,6 +223,5 @@ function serializeAgentFlowNodeConfig(
       config[key] = value;
     }
   }
-  console.log("config: ", config);
   return config;
 }
