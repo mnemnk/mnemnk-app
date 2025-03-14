@@ -64,7 +64,7 @@ export function getAgentSettingsContext(): Record<string, AgentSettings> {
 
 // Agent Flow
 
-// deserialize: AgentFlow -> SAgentNode[]
+// deserialize: SAgentFlow -> AgentFlow
 
 export function deserializeAgentFlow(
   flow: SAgentFlow,
@@ -209,7 +209,7 @@ function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
   };
 }
 
-// serialize: SAgentFlow -> AgentFlow
+// serialize: AgentFlow -> SAgentFlow
 
 export function serializeAgentFlow(nodes: AgentFlowNode[], edges: AgentFlowEdge[]): SAgentFlow {
   return {
