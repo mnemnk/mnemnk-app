@@ -81,6 +81,36 @@ export function deserializeAgentFlowNode(
   node: AgentFlowNode,
   agent_settings: Record<string, AgentSettings>,
 ): SAgentNode {
+  if (node.name === "$board") {
+    return {
+      id: node.id,
+      type: "board",
+      data: {
+        name: node.name,
+        enabled: writable(node.enabled),
+        config: {
+          board_name: {
+            value: writable(""),
+            type: "string",
+            title: "Board Name",
+            description: null,
+          },
+          persistent: {
+            value: writable(false),
+            type: "boolean",
+            title: "Persistent",
+            description: "Store messages into DB if true",
+          },
+        },
+      },
+      position: {
+        x: node.x,
+        y: node.y,
+      },
+      width: node.width,
+      height: node.height,
+    };
+  }
   const settings = agent_settings[node.name];
   const default_config = settings?.default_config;
   const schema_properties = settings?.schema?.properties;

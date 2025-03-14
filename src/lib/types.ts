@@ -44,9 +44,6 @@ export type AgentProperties = Record<string, Record<string, AgentConfig>>;
 export type SAgentNodeData = {
   name: string;
   enabled: Writable<boolean>;
-  // config: AgentDefaultConfig | null;
-  // schema: AgentSchema | null;
-  // properties: AgentProperties | null;
   config: Record<string, AgentConfig> | null;
 };
 
