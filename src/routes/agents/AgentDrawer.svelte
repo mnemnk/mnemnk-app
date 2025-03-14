@@ -2,21 +2,22 @@
   import { get } from "svelte/store";
   import type { Writable } from "svelte/store";
 
-  import type { NodeProps } from "@xyflow/svelte";
+  import type { Edge, NodeProps } from "@xyflow/svelte";
   import { Button, Drawer, GradientButton } from "flowbite-svelte";
   import { nanoid } from "nanoid";
 
   import { deserializeAgentFlowNode, save_agent_flow, serializeAgentFlow } from "@/lib/agent";
-  import type { AgentCatalogEntry, AgentSettings, SAgentNode } from "@/lib/types";
+  import type { AgentCatalogEntry, AgentSettings, AgentFlowNode } from "@/lib/types";
 
   type Props = NodeProps & {
-    catalog: AgentCatalogEntry[];
+    nodes: Writable<AgentFlowNode[]>;
+    edges: Writable<Edge[]>;
     flow_index: number;
-    nodes: Writable<SAgentNode[]>;
+    catalog: AgentCatalogEntry[];
     settings: Record<string, AgentSettings>;
   };
 
-  const { catalog, flow_index, nodes, settings }: Props = $props();
+  const { nodes, edges, flow_index, catalog, settings }: Props = $props();
 
   function addAgentNode(agent_name: string) {
     const id = nanoid();
@@ -55,7 +56,7 @@
   }
 
   async function updateAgentFlow() {
-    const flow = serializeAgentFlow(get(nodes));
+    const flow = serializeAgentFlow(get(nodes), get(edges));
     await save_agent_flow(flow, flow_index);
   }
 </script>

@@ -7,7 +7,7 @@
   import "@xyflow/svelte/dist/style.css";
 
   import { deserializeAgentFlow, setAgentSettingsContext } from "@/lib/agent";
-  import type { SAgentNode } from "@/lib/types";
+  import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   import AgentDrawer from "./AgentDrawer.svelte";
   import AgentNode from "./AgentNode.svelte";
@@ -18,8 +18,8 @@
   const catalog = data.catalog;
   setAgentSettingsContext(data.settings);
 
-  const nodes: Writable<SAgentNode[]> = writable([]);
-  const edges = writable([]);
+  const nodes: Writable<AgentFlowNode[]> = writable([]);
+  const edges: Writable<AgentFlowEdge[]> = writable([]);
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
     board: BoardNode,
@@ -28,7 +28,9 @@
   const flow_index = $state(0);
 
   $effect(() => {
-    nodes.set(deserializeAgentFlow(data.agent_flows[flow_index], data.settings));
+    const flow = deserializeAgentFlow(data.agent_flows[flow_index], data.settings);
+    nodes.set(flow.nodes);
+    edges.set(flow.edges);
   });
 </script>
 
@@ -37,6 +39,7 @@
     {nodes}
     {nodeTypes}
     {edges}
+    colorMode="dark"
     fitView
     maxZoom={2}
     minZoom={0.2}
@@ -45,7 +48,7 @@
     <Controls />
   </SvelteFlow>
 
-  <AgentDrawer {catalog} {flow_index} {nodes} settings={data.settings} />
+  <AgentDrawer {catalog} {flow_index} {nodes} {edges} settings={data.settings} />
 </main>
 
 <style>
