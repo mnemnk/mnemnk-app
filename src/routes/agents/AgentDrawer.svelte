@@ -2,56 +2,38 @@
   import { get } from "svelte/store";
   import type { Writable } from "svelte/store";
 
-  import type { Edge, NodeProps } from "@xyflow/svelte";
+  import type { NodeProps } from "@xyflow/svelte";
   import { Button, Drawer, GradientButton } from "flowbite-svelte";
-  import { nanoid } from "nanoid";
 
-  import { deserializeAgentFlowNode, save_agent_flow, serializeAgentFlow } from "@/lib/agent";
-  import type { AgentCatalogEntry, AgentSettings, AgentFlowNode } from "@/lib/types";
+  import {
+    newAgentFlowBoardNode,
+    newAgentFlowNode,
+    save_agent_flow,
+    serializeAgentFlow,
+  } from "@/lib/agent";
+  import type { AgentCatalog, AgentSetting, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   type Props = NodeProps & {
     nodes: Writable<AgentFlowNode[]>;
-    edges: Writable<Edge[]>;
+    edges: Writable<AgentFlowEdge[]>;
     flow_index: number;
-    catalog: AgentCatalogEntry[];
-    settings: Record<string, AgentSettings>;
+    catalog: AgentCatalog;
+    settings: Record<string, AgentSetting>;
   };
 
   const { nodes, edges, flow_index, catalog, settings }: Props = $props();
 
   function addAgentNode(agent_name: string) {
-    const id = nanoid();
-    const default_config = settings[agent_name]?.default_config || {};
-    const node_data = {
-      id,
-      name: agent_name,
-      enabled: true,
-      config: {
-        ...default_config,
-      },
-      x: Math.random() * 1000,
-      y: Math.random() * 1000,
-    };
+    const new_node = newAgentFlowNode(agent_name, settings);
     nodes.update((nodes) => {
-      return [...nodes, deserializeAgentFlowNode(node_data, settings)];
+      return [...nodes, new_node];
     });
   }
 
   function addBoardNode() {
-    const id = nanoid();
-    const node_data = {
-      id,
-      name: "$board",
-      enabled: true,
-      config: {
-        board_name: "",
-        persistent: false,
-      },
-      x: Math.random() * 1000,
-      y: Math.random() * 1000,
-    };
+    const new_node = newAgentFlowBoardNode(settings);
     nodes.update((nodes) => {
-      return [...nodes, deserializeAgentFlowNode(node_data, settings)];
+      return [...nodes, new_node];
     });
   }
 
