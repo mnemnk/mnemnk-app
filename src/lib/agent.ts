@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { getContext, setContext } from "svelte";
 import { get, writable } from "svelte/store";
+import type { Writable } from "svelte/store";
 
 import { nanoid } from "nanoid";
 
@@ -68,6 +69,40 @@ export function getAgentSettingsContext(): Record<string, AgentSetting> {
 
 // Agent Flow
 
+export function addAgentNode(
+  agent_name: string,
+  nodes: Writable<AgentFlowNode[]>,
+  settings: AgentSettings,
+) {
+  const new_node = newAgentFlowNode(agent_name, settings);
+  nodes.update((nodes) => {
+    return [...nodes, new_node];
+  });
+}
+
+export function addBoardNode(nodes: Writable<AgentFlowNode[]>, settings: AgentSettings) {
+  const new_node = newAgentFlowBoardNode(settings);
+  nodes.update((nodes) => {
+    return [...nodes, new_node];
+  });
+}
+
+export function addDatabaseNode(nodes: Writable<AgentFlowNode[]>, settings: AgentSettings) {
+  const new_node = newAgentFlowDatabaseNode(settings);
+  nodes.update((nodes) => {
+    return [...nodes, new_node];
+  });
+}
+
+export async function updateAgentFlow(
+  nodes: Writable<AgentFlowNode[]>,
+  edges: Writable<AgentFlowEdge[]>,
+  flow_index: number,
+) {
+  const flow = serializeAgentFlow(get(nodes), get(edges));
+  await save_agent_flow(flow, flow_index);
+}
+
 // deserialize: SAgentFlow -> AgentFlow
 
 export function deserializeAgentFlow(
@@ -93,18 +128,29 @@ export function deserializeAgentFlowNode(
         enabled: writable(node.enabled),
         config: {
           board_name: {
-            value: writable(""),
+            value: writable(node.config?.board_name),
             type: "string",
             title: "Board Name",
             description: null,
           },
-          persistent: {
-            value: writable(false),
-            type: "boolean",
-            title: "Persistent",
-            description: "Store messages into DB if true",
-          },
         },
+      },
+      position: {
+        x: node.x,
+        y: node.y,
+      },
+      width: node.width,
+      height: node.height,
+    };
+  }
+  if (node.name === "$database") {
+    return {
+      id: node.id,
+      type: "database",
+      data: {
+        name: node.name,
+        enabled: writable(node.enabled),
+        config: {},
       },
       position: {
         x: node.x,
@@ -275,6 +321,9 @@ export function newAgentFlowNode(agent_name: string, settings: AgentSettings): A
   if (agent_name === "$board") {
     return newAgentFlowBoardNode(settings);
   }
+  if (agent_name === "$database") {
+    return newAgentFlowDatabaseNode(settings);
+  }
 
   const id = newNodeId(agent_name);
   const default_config = settings[agent_name].default_config ?? {};
@@ -283,8 +332,8 @@ export function newAgentFlowNode(agent_name: string, settings: AgentSettings): A
     name: agent_name,
     enabled: true,
     config: { ...default_config },
-    x: Math.random() * 1000,
-    y: Math.random() * 1000,
+    x: 0,
+    y: 0,
   };
   return deserializeAgentFlowNode(node_data, settings);
 }
@@ -297,10 +346,22 @@ export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
     enabled: true,
     config: {
       board_name: "",
-      persistent: false,
     },
-    x: Math.random() * 1000,
-    y: Math.random() * 1000,
+    x: 0,
+    y: 0,
+  };
+  return deserializeAgentFlowNode(node_data, settings);
+}
+
+export function newAgentFlowDatabaseNode(settings: AgentSettings): AgentFlowNode {
+  const id = newNodeId("$database");
+  const node_data = {
+    id,
+    name: "$database",
+    enabled: true,
+    config: {},
+    x: 0,
+    y: 0,
   };
   return deserializeAgentFlowNode(node_data, settings);
 }
