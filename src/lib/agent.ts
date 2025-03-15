@@ -276,7 +276,7 @@ export function newAgentFlowNode(agent_name: string, settings: AgentSettings): A
     return newAgentFlowBoardNode(settings);
   }
 
-  const id = new_node_id(agent_name);
+  const id = newNodeId(agent_name);
   const default_config = settings[agent_name].default_config ?? {};
   const node_data = {
     id,
@@ -290,7 +290,7 @@ export function newAgentFlowNode(agent_name: string, settings: AgentSettings): A
 }
 
 export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
-  const id = new_node_id("$board");
+  const id = newNodeId("$board");
   const node_data = {
     id,
     name: "$board",
@@ -305,6 +305,6 @@ export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
   return deserializeAgentFlowNode(node_data, settings);
 }
 
-function new_node_id(prefix: string) {
+function newNodeId(prefix: string) {
   return `${prefix}_${nanoid()}`;
 }
