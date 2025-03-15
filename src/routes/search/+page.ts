@@ -1,7 +1,7 @@
 import { search_events } from "$lib/utils.js";
 
 export async function load({ url }) {
-  const query = url.searchParams.get("q") || "";
+  const query = url.searchParams.get("q") ?? "";
   if (!query) {
     return {
       query: "",

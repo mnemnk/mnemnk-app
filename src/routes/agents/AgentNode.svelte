@@ -14,7 +14,7 @@
     data: {
       name: string;
       enabled: Writable<boolean>;
-      config: Record<string, AgentConfig>;
+      config: AgentConfig;
     };
   };
 
@@ -35,10 +35,10 @@
   <Handle type="target" position={Position.Left} />
   <Card padding="none">
     <div class="flex justify-between items-center pl-4 pr-0 mb-2">
-      <h3 class="text-xl pt-2">{agent_schema?.["title"] || data.name}</h3>
+      <h3 class="text-xl pt-2">{agent_schema?.["title"] ?? data.name}</h3>
       <Button onclick={deleteNode}><CloseOutline /></Button>
     </div>
-    <h4 class="text-sm pl-4 pb-4">{agent_schema?.["description"] || ""}</h4>
+    <h4 class="text-sm pl-4 pb-4">{agent_schema?.["description"] ?? ""}</h4>
     <form class="grid grid-cols-6 gap-4 p-4">
       <Toggle bind:checked={() => get(data.enabled), (v) => data.enabled.set(v)} class="col-span-6"
       ></Toggle>

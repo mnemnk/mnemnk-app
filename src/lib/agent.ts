@@ -3,21 +3,25 @@ import { invoke } from "@tauri-apps/api/core";
 import { getContext, setContext } from "svelte";
 import { get, writable } from "svelte/store";
 
+import { nanoid } from "nanoid";
+
 import type {
-  AgentCatalogEntry,
+  AgentCatalog,
   AgentConfig,
+  AgentConfigEntry,
   AgentDefaultConfig,
   SAgentFlow,
   SAgentFlowEdge,
   SAgentFlowNode,
   AgentSchema,
+  AgentSetting,
   AgentSettings,
-  AgentFlowEdge,
   AgentFlow,
+  AgentFlowEdge,
   AgentFlowNode,
 } from "./types";
 
-export async function get_agent_catalog(): Promise<AgentCatalogEntry[]> {
+export async function get_agent_catalog(): Promise<AgentCatalog> {
   return await invoke("get_agent_catalog_cmd");
 }
 
@@ -40,7 +44,7 @@ export async function set_agent_enabled(agent_id: string, enabled: boolean): Pro
   await invoke("set_agent_enabled_cmd", { agent_id, enabled });
 }
 
-export async function get_agent_settings(): Promise<Record<string, AgentSettings>> {
+export async function get_agent_settings(): Promise<Record<string, AgentSetting>> {
   return await invoke("get_agent_settings_cmd");
 }
 
@@ -54,11 +58,11 @@ export async function save_agent_flow(agent_flow: SAgentFlow, idx: number): Prom
 
 const agentSettingsKey = Symbol("agentSettings");
 
-export function setAgentSettingsContext(settings: Record<string, AgentSettings>): void {
+export function setAgentSettingsContext(settings: Record<string, AgentSetting>): void {
   setContext(agentSettingsKey, settings);
 }
 
-export function getAgentSettingsContext(): Record<string, AgentSettings> {
+export function getAgentSettingsContext(): Record<string, AgentSetting> {
   return getContext(agentSettingsKey);
 }
 
@@ -68,7 +72,7 @@ export function getAgentSettingsContext(): Record<string, AgentSettings> {
 
 export function deserializeAgentFlow(
   flow: SAgentFlow,
-  agent_settings: Record<string, AgentSettings>,
+  agent_settings: Record<string, AgentSetting>,
 ): AgentFlow {
   return {
     nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
@@ -78,7 +82,7 @@ export function deserializeAgentFlow(
 
 export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
-  agent_settings: Record<string, AgentSettings>,
+  agent_settings: Record<string, AgentSetting>,
 ): AgentFlowNode {
   if (node.name === "$board") {
     return {
@@ -110,6 +114,7 @@ export function deserializeAgentFlowNode(
       height: node.height,
     };
   }
+
   const settings = agent_settings[node.name];
   const default_config = settings?.default_config;
   const schema_properties = settings?.schema?.properties;
@@ -134,7 +139,7 @@ function deserializeAgentConfig(
   node_config: Record<string, any> | null,
   default_config: AgentDefaultConfig | null,
   schema_properties: AgentSchema | null,
-): Record<string, AgentConfig> {
+): AgentConfig {
   if (!node_config) {
     node_config = {};
   }
@@ -145,9 +150,9 @@ function deserializeAgentConfig(
       }
     }
   }
-  const agent_config: Record<string, AgentConfig> = {};
+  const agent_config: AgentConfig = {};
   for (const key of Object.keys(node_config)) {
-    const config: AgentConfig = {
+    const entry: AgentConfigEntry = {
       value: writable(null),
       type: null,
       title: null,
@@ -157,38 +162,38 @@ function deserializeAgentConfig(
     if (property) {
       const t = property.type;
       if (t === "boolean") {
-        config.type = "boolean";
-        config.value = writable(node_config[key]);
+        entry.type = "boolean";
+        entry.value = writable(node_config[key]);
       } else if (t === "integer") {
-        config.type = "integer";
-        config.value = writable(node_config[key]);
+        entry.type = "integer";
+        entry.value = writable(node_config[key]);
       } else if (t === "number") {
-        config.type = "number";
-        config.value = writable(node_config[key].toString());
+        entry.type = "number";
+        entry.value = writable(node_config[key].toString());
       } else if (t === "string") {
-        config.type = "string";
-        config.value = writable(node_config[key]);
+        entry.type = "string";
+        entry.value = writable(node_config[key]);
       } else if (isOptionString(t)) {
-        config.type = "string?";
-        config.value = writable(node_config[key] === null ? "" : node_config[key]);
+        entry.type = "string?";
+        entry.value = writable(node_config[key] === null ? "" : node_config[key]);
       } else if (isArrayString(t, property.items?.type)) {
-        config.type = "string[]";
-        config.value = writable((node_config[key] as string[]).join("\n"));
+        entry.type = "string[]";
+        entry.value = writable((node_config[key] as string[]).join("\n"));
       } else {
-        config.type = `unknown (${t})`;
-        config.value = writable(node_config[key]);
+        entry.type = `unknown (${t})`;
+        entry.value = writable(node_config[key]);
       }
       if (property.title) {
-        config.title = property.title;
+        entry.title = property.title;
       }
       if (property.description) {
-        config.description = property.description;
+        entry.description = property.description;
       }
     } else {
-      config.type = "unknown";
-      config.value = writable(node_config[key]);
+      entry.type = "unknown";
+      entry.value = writable(node_config[key]);
     }
-    agent_config[key] = config;
+    agent_config[key] = entry;
   }
   return agent_config;
 }
@@ -231,9 +236,7 @@ export function serializeAgentFlowNode(node: AgentFlowNode): SAgentFlowNode {
   };
 }
 
-function serializeAgentFlowNodeConfig(
-  node_config: Record<string, AgentConfig> | null,
-): Record<string, any> | null {
+function serializeAgentFlowNodeConfig(node_config: AgentConfig | null): Record<string, any> | null {
   if (node_config === null) {
     return null;
   }
@@ -266,4 +269,42 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
     source: edge.source,
     target: edge.target,
   };
+}
+
+export function newAgentFlowNode(agent_name: string, settings: AgentSettings): AgentFlowNode {
+  if (agent_name === "$board") {
+    return newAgentFlowBoardNode(settings);
+  }
+
+  const id = new_node_id(agent_name);
+  const default_config = settings[agent_name].default_config ?? {};
+  const node_data = {
+    id,
+    name: agent_name,
+    enabled: true,
+    config: { ...default_config },
+    x: Math.random() * 1000,
+    y: Math.random() * 1000,
+  };
+  return deserializeAgentFlowNode(node_data, settings);
+}
+
+export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
+  const id = new_node_id("$board");
+  const node_data = {
+    id,
+    name: "$board",
+    enabled: true,
+    config: {
+      board_name: "",
+      persistent: false,
+    },
+    x: Math.random() * 1000,
+    y: Math.random() * 1000,
+  };
+  return deserializeAgentFlowNode(node_data, settings);
+}
+
+function new_node_id(prefix: string) {
+  return `${prefix}_${nanoid()}`;
 }

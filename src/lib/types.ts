@@ -2,6 +2,8 @@ import type { Writable } from "svelte/store";
 
 import type { Edge, Node } from "@xyflow/svelte";
 
+export type AgentCatalog = AgentCatalogEntry[];
+
 export type AgentCatalogEntry = {
   name: string;
   path: string;
@@ -10,11 +12,13 @@ export type AgentCatalogEntry = {
 export type AgentDefaultConfig = Record<string, any>;
 export type AgentSchema = Record<string, any>;
 
-export type AgentSettings = {
+export type AgentSetting = {
   // enabled: boolean | null;
   default_config: AgentDefaultConfig | null;
   schema: AgentSchema | null;
 };
+
+export type AgentSettings = Record<string, AgentSetting>;
 
 export type SAgentFlow = {
   nodes: SAgentFlowNode[];
@@ -53,10 +57,12 @@ export type AgentFlowNode = Node & {
 export type AgentFlowNodeData = {
   name: string;
   enabled: Writable<boolean>;
-  config: Record<string, AgentConfig> | null;
+  config: AgentConfig | null;
 };
 
-export type AgentConfig = {
+export type AgentConfig = Record<string, AgentConfigEntry>;
+
+export type AgentConfigEntry = {
   value: Writable<any>;
   type: string | null;
   title: string | null;
@@ -101,7 +107,7 @@ export type CoreSettings = {
 
 export type Settings = {
   core: CoreSettings;
-  agents: Record<string, AgentSettings>;
+  agents: Record<string, AgentSetting>;
   agent_flows: SAgentFlow[];
 };
 

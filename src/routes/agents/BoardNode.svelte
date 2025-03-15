@@ -16,10 +16,7 @@
     data: {
       name: string;
       enabled: Writable<boolean>;
-      config: {
-        board_name: AgentConfig;
-        persistent: AgentConfig;
-      };
+      config: AgentConfig;
     };
   };
 

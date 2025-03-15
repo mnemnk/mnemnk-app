@@ -30,7 +30,7 @@ function addMessage(agent: string, kind: string, value: any) {
       ];
     });
   }
-  let messages = boards.get(kind) || [];
+  let messages = boards.get(kind) ?? [];
   messages.push({ agent, kind, value });
   //   messages = messages.slice(-MAX_MESSAGES);
   boards.set(kind, messages);
