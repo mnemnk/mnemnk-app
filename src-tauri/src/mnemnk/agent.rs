@@ -96,6 +96,7 @@ fn sync_agent_flows(app: &AppHandle) {
     let mut edges = HashMap::<String, Vec<String>>::new();
     let mut board_names = HashMap::<String, String>::new();
     let mut subscribers = HashMap::<String, Vec<String>>::new();
+    let mut new_agents = HashSet::new();
     for agent_flow in &agent_flows {
         for node in &agent_flow.nodes {
             if !node.enabled {
@@ -118,10 +119,7 @@ fn sync_agent_flows(app: &AppHandle) {
                 log::error!("Unknown node: {}", node.name);
                 continue;
             } else {
-                if let Err(e) = start_agent(app, &node.id) {
-                    log::error!("Failed to start agent: {}", e);
-                    continue;
-                };
+                new_agents.insert(node.id.clone());
             }
             enabled_nodes.insert(node.id.clone());
         }
@@ -152,7 +150,37 @@ fn sync_agent_flows(app: &AppHandle) {
             }
         }
     }
+
+    // sync agents
+    let old_agents;
     let agent_commands = app.state::<Mutex<AgentCommands>>();
+    {
+        let agent_commands = agent_commands.lock().unwrap();
+        old_agents = agent_commands
+            .agents
+            .keys()
+            .cloned()
+            .collect::<HashSet<String>>();
+    }
+    // check if any agents need to be stopped
+    for agent in old_agents.difference(&new_agents) {
+        if let Err(e) = stop_agent(app, agent) {
+            log::error!("Failed to stop agent: {}", e);
+        }
+    }
+    // update config for running agents
+    for agent in new_agents.intersection(&old_agents) {
+        if let Err(e) = update_agent_config(app, agent) {
+            log::error!("Failed to sync agent: {}", e);
+        }
+    }
+    // start new agents
+    for agent in new_agents.difference(&old_agents) {
+        if let Err(e) = start_agent(app, agent) {
+            log::error!("Failed to start agent: {}", e);
+        }
+    }
+
     {
         let mut agent_commands = agent_commands.lock().unwrap();
         agent_commands.enabled_nodes = enabled_nodes;
@@ -166,6 +194,37 @@ fn sync_agent_flows(app: &AppHandle) {
     }
 }
 
+fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
+    let config: Value;
+    let settings = app.state::<Mutex<MnemnkSettings>>();
+    {
+        let settings = settings.lock().unwrap();
+        if let Some(agent_node) = find_agent_node(&settings, agent_id) {
+            config = agent_node.config.clone().unwrap_or(Value::Null);
+        } else {
+            log::error!("Agent setting for {} not found", agent_id);
+            return Err(anyhow::anyhow!("Agent setting not found"));
+        }
+    }
+
+    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    {
+        let mut agent_commands = agent_commands.lock().unwrap();
+        if agent_commands.agents.contains_key(agent_id) {
+            // the agent is already running, so update the config
+            if let Some(child) = agent_commands.agents.get_mut(agent_id) {
+                if let Err(e) = child.write(format!(".CONFIG {}\n", config.to_string()).as_bytes())
+                {
+                    log::error!("Failed to set config to {}: {}", agent_id, e);
+                    return Err(anyhow::anyhow!("Failed to set config to agent"));
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let agent_name: String;
     let config: Value;
@@ -176,8 +235,8 @@ fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
             agent_name = agent_node.name.clone();
             config = agent_node.config.clone().unwrap_or(Value::Null);
         } else {
-            log::error!("Agent {} not found", agent_id);
-            return Err(anyhow::anyhow!("Agent not found"));
+            log::error!("Agent setting for {} not found", agent_id);
+            return Err(anyhow::anyhow!("Agent setting not found"));
         }
     }
 
@@ -870,6 +929,7 @@ pub fn save_agent_flow_cmd(
         }
     }
     settings::save(&app).map_err(|e| e.to_string())?;
+    sync_agent_flows(&app);
     Ok(())
 }
 
