@@ -33,17 +33,17 @@
     />
     <Tooltip arrow={false}>Monitor</Tooltip>
   </BottomNavItem>
-  <BottomNavItem btnName="Search" href="/search" appBtnPosition="middle">
-    <SearchOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
-    />
-    <Tooltip arrow={false}>Search</Tooltip>
-  </BottomNavItem>
   <BottomNavItem btnName="Agents" href="/agents" appBtnPosition="middle">
     <UsersOutline
       class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
     />
     <Tooltip arrow={false}>Agents</Tooltip>
+  </BottomNavItem>
+  <BottomNavItem btnName="Search" href="/search" appBtnPosition="middle">
+    <SearchOutline
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+    />
+    <Tooltip arrow={false}>Search</Tooltip>
   </BottomNavItem>
   <BottomNavItem btnName="Settings" href="/settings" appBtnPosition="right">
     <CogOutline

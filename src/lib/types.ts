@@ -118,3 +118,10 @@ export type WriteBoardEmit = {
   kind: string;
   value: any;
 };
+
+export type BoardMessage = {
+  agent: string;
+  kind: string;
+  value: any;
+  time: number;
+};

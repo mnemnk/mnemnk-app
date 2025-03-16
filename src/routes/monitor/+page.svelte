@@ -20,6 +20,9 @@
     {nodeTypes}
     {edges}
     fitView
+    maxZoom={2}
+    minZoom={0.2}
+    attributionPosition="bottom-left"
     class="w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
   >
     <Controls />
