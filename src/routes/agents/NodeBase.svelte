@@ -1,7 +1,7 @@
-<script lang="ts" generics="T">
+<script lang="ts">
   import type { Snippet } from "svelte";
 
-  import { Handle, Position, useNodes } from "@xyflow/svelte";
+  import { Handle, Position, useSvelteFlow } from "@xyflow/svelte";
   import type { NodeProps } from "@xyflow/svelte";
   import { Button, Card } from "flowbite-svelte";
   import { CloseOutline } from "flowbite-svelte-icons";
@@ -13,13 +13,14 @@
 
   let { id, title, contents }: Props = $props();
 
-  const nodes = useNodes();
+  const { deleteElements, getNode } = useSvelteFlow();
 
-  function deleteNode() {
-    nodes.update((nodes) => {
-      nodes = nodes.filter((node) => node.id !== id);
-      return nodes;
-    });
+  async function deleteNode(event: MouseEvent) {
+    event.preventDefault();
+    const node = getNode(id);
+    if (node !== undefined) {
+      await deleteElements({ nodes: [node] });
+    }
   }
 </script>
 
