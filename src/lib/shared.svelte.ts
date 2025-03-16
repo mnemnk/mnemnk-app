@@ -33,14 +33,14 @@ function addMessage(agent: string, kind: string, value: any, time: number) {
     });
   }
   let messages = boards.get(kind) ?? [];
-  const timeout_threshold = Date.now() - MESSAGES_TIMEOUT;
-  messages = messages.filter((m) => m.time > timeout_threshold);
+  const timeoutThreshold = Date.now() - MESSAGES_TIMEOUT;
+  messages = messages.filter((m) => m.time > timeoutThreshold);
   messages.push({ agent, kind, value, time });
   boards.set(kind, messages);
 
   nodes.update((nodes) => {
     return [
-      ...nodes.filter((n) => !n.data.time || ((n.data.time as number) ?? 0) > timeout_threshold),
+      ...nodes.filter((n) => !n.data.time || ((n.data.time as number) ?? 0) > timeoutThreshold),
       {
         id: Math.random().toString(),
         type: "message",
