@@ -210,18 +210,6 @@ pub fn find_agent_node<'a>(
     None
 }
 
-pub fn find_agent_node_mut<'a>(
-    agent_flows: &'a mut AgentFlows,
-    agent_id: &str,
-) -> Option<&'a mut AgentFlowNode> {
-    for agent_flow in agent_flows {
-        if let Some(agent_node) = agent_flow.nodes.iter_mut().find(|x| x.id == agent_id) {
-            return Some(agent_node);
-        }
-    }
-    return None;
-}
-
 #[tauri::command]
 pub fn get_agent_flows_cmd(agent_flows: State<Mutex<AgentFlows>>) -> Result<Value, String> {
     let agent_flows = agent_flows.lock().unwrap();
