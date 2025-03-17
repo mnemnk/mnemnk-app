@@ -4,14 +4,14 @@ use anyhow::Result;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 
-use crate::mnemnk::settings::MnemnkSettings;
+use crate::mnemnk::settings::CoreSettings;
 
 pub fn init(app: &AppHandle) -> Result<()> {
-    let setting = app.state::<Mutex<MnemnkSettings>>();
+    let setting = app.state::<Mutex<CoreSettings>>();
     let is_autostart;
     {
         let setting = setting.lock().unwrap();
-        is_autostart = setting.core.autostart;
+        is_autostart = setting.autostart;
     }
 
     app.plugin(tauri_plugin_autostart::init(

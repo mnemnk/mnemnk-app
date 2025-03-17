@@ -1,12 +1,9 @@
-import type { AgentCatalogEntry, AgentSetting } from "$lib/types";
+import type { SAgentConfigs } from "$lib/types";
 
-import { get_agent_catalog, get_agent_flows, get_agent_settings } from "@/lib/agent";
+import { get_agent_flows, get_agent_configs } from "@/lib/agent";
 
 export async function load() {
-  let catalog: AgentCatalogEntry[] = await get_agent_catalog();
-  catalog = catalog.sort((a, b) => a.name.localeCompare(b.name));
-
-  const settings: Record<string, AgentSetting> = await get_agent_settings();
+  const agent_configs: SAgentConfigs = await get_agent_configs();
 
   const agent_flows = await get_agent_flows();
   if (agent_flows.length === 0) {
@@ -14,8 +11,7 @@ export async function load() {
   }
 
   return {
+    agent_configs,
     agent_flows,
-    catalog,
-    settings,
   };
 }

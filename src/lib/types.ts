@@ -2,23 +2,17 @@ import type { Writable } from "svelte/store";
 
 import type { Edge, Node } from "@xyflow/svelte";
 
-export type AgentCatalog = AgentCatalogEntry[];
-
-export type AgentCatalogEntry = {
-  name: string;
-  path: string;
-};
-
 export type AgentDefaultConfig = Record<string, any>;
 export type AgentSchema = Record<string, any>;
 
-export type AgentSetting = {
-  // enabled: boolean | null;
+export type SAgentConfig = {
+  name: string;
+  path: string;
   default_config: AgentDefaultConfig | null;
   schema: AgentSchema | null;
 };
 
-export type AgentSettings = Record<string, AgentSetting>;
+export type SAgentConfigs = Record<string, SAgentConfig>;
 
 export type SAgentFlow = {
   nodes: SAgentFlowNode[];
@@ -43,7 +37,6 @@ export type SAgentFlowEdge = {
 };
 
 // agent name -> key -> schema
-// export type AgentProperties = Record<string, Record<string, SAgentConfig>>;
 
 export type AgentFlow = {
   nodes: AgentFlowNode[];
@@ -107,7 +100,7 @@ export type CoreSettings = {
 
 export type Settings = {
   core: CoreSettings;
-  agents: Record<string, AgentSetting>;
+  agents: Record<string, SAgentConfig>;
   agent_flows: SAgentFlow[];
 };
 

@@ -16,8 +16,7 @@
 
   const { data } = $props();
 
-  const catalog = data.catalog;
-  setAgentSettingsContext(data.settings);
+  setAgentSettingsContext(data.agent_configs);
 
   const nodes: Writable<AgentFlowNode[]> = writable([]);
   const edges: Writable<AgentFlowEdge[]> = writable([]);
@@ -30,7 +29,7 @@
   const flow_index = $state(0);
 
   $effect(() => {
-    const flow = deserializeAgentFlow(data.agent_flows[flow_index], data.settings);
+    const flow = deserializeAgentFlow(data.agent_flows[flow_index], data.agent_configs);
     nodes.set(flow.nodes);
     edges.set(flow.edges);
   });
@@ -51,7 +50,7 @@
     <Controls />
   </SvelteFlow>
 
-  <AgentDrawer {catalog} {flow_index} {nodes} {edges} settings={data.settings} />
+  <AgentDrawer {flow_index} {nodes} {edges} agent_configs={data.agent_configs} />
 </main>
 
 <style>
