@@ -17,9 +17,8 @@ use tauri::{
     AppHandle, Manager, State,
 };
 
-use crate::mnemnk;
-
-use super::{settings::MnemnkSettings, tokenize::tokenize_text};
+use super::tokenize::tokenize_text;
+use crate::mnemnk::settings::{data_dir, CoreSettings};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Event {
@@ -45,7 +44,7 @@ struct Record {
 static DB: LazyLock<Surreal<Db>> = LazyLock::new(Surreal::init);
 
 pub async fn init(app: &AppHandle) -> Result<()> {
-    let data_dir = mnemnk::settings::data_dir(app).context("data_dir is not set")?;
+    let data_dir = data_dir(app).context("data_dir is not set")?;
     let db_path = PathBuf::from(data_dir).join("store.db");
 
     DB.connect::<RocksDb>(db_path).await?;
@@ -109,9 +108,9 @@ pub async fn store(
     let local_offset = local_dt.offset().local_minus_utc() as i64;
 
     let day_start_hour: u32 = {
-        let settings = app.state::<Mutex<MnemnkSettings>>();
+        let settings = app.state::<Mutex<CoreSettings>>();
         let settings = settings.lock().unwrap();
-        settings.core.day_start_hour.unwrap_or(0)
+        settings.day_start_hour.unwrap_or(0)
     };
     let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
     // let adjusted_dt = if local_dt.hour() < day_start_hour {
@@ -201,13 +200,13 @@ async fn save_image(
         .save(ymd_dir.join(filename).with_extension("png"))
         .context("Failed to save image")?;
 
-    let settings = app.state::<Mutex<mnemnk::settings::MnemnkSettings>>();
+    let settings = app.state::<Mutex<CoreSettings>>();
     let thumbnail_width;
     let thumbnail_height;
     {
         let settings = settings.lock().unwrap();
-        thumbnail_width = settings.core.thumbnail_width.clone();
-        thumbnail_height = settings.core.thumbnail_height.clone();
+        thumbnail_width = settings.thumbnail_width.clone();
+        thumbnail_height = settings.thumbnail_height.clone();
     }
     let thumbnail = make_thumbnail(&rgba_image, thumbnail_width, thumbnail_height);
     thumbnail
@@ -225,7 +224,7 @@ fn base64_to_rgba_image(base64_str: &str) -> Result<RgbaImage> {
 }
 
 fn image_dir(app: &AppHandle, kind: &str) -> Result<PathBuf> {
-    if let Some(data_dir) = mnemnk::settings::data_dir(app) {
+    if let Some(data_dir) = data_dir(app) {
         let image_dir = PathBuf::from(data_dir).join(kind).join("image");
         if !image_dir.exists() {
             std::fs::create_dir_all(&image_dir).context("Failed to create image directory")?;
@@ -446,11 +445,11 @@ pub async fn find_events_by_ymd_cmd(
 }
 
 #[tauri::command]
-pub async fn reindex_ymd_cmd(settings: State<'_, Mutex<MnemnkSettings>>) -> Result<(), String> {
+pub async fn reindex_ymd_cmd(settings: State<'_, Mutex<CoreSettings>>) -> Result<(), String> {
     let day_start_hour;
     {
         let settings = settings.lock().unwrap();
-        day_start_hour = settings.core.day_start_hour.unwrap_or(0);
+        day_start_hour = settings.day_start_hour.unwrap_or(0);
     }
     reindex_ymd(day_start_hour)
         .await

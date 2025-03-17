@@ -7,46 +7,22 @@ import type { Writable } from "svelte/store";
 import { nanoid } from "nanoid";
 
 import type {
-  AgentCatalog,
   AgentConfig,
   AgentConfigEntry,
   AgentDefaultConfig,
   SAgentFlow,
   SAgentFlowEdge,
   SAgentFlowNode,
+  SAgentConfigs,
+  SAgentConfig,
   AgentSchema,
-  AgentSetting,
-  AgentSettings,
   AgentFlow,
   AgentFlowEdge,
   AgentFlowNode,
 } from "./types";
 
-export async function get_agent_catalog(): Promise<AgentCatalog> {
-  return await invoke("get_agent_catalog_cmd");
-}
-
-export async function start_agent(agent_id: string): Promise<void> {
-  await invoke("start_agent_cmd", { agent_id });
-}
-
-export async function stop_agent(agent_id: string): Promise<void> {
-  await invoke("stop_agent_cmd", { agent_id });
-}
-
-export async function save_agent_config(
-  agent_id: string,
-  config: Record<string, any>,
-): Promise<void> {
-  await invoke("save_agent_config_cmd", { agent_id, config });
-}
-
-export async function set_agent_enabled(agent_id: string, enabled: boolean): Promise<void> {
-  await invoke("set_agent_enabled_cmd", { agent_id, enabled });
-}
-
-export async function get_agent_settings(): Promise<Record<string, AgentSetting>> {
-  return await invoke("get_agent_settings_cmd");
+export async function get_agent_configs(): Promise<SAgentConfigs> {
+  return await invoke("get_agent_configs_cmd");
 }
 
 export async function get_agent_flows(): Promise<SAgentFlow[]> {
@@ -59,11 +35,11 @@ export async function save_agent_flow(agent_flow: SAgentFlow, idx: number): Prom
 
 const agentSettingsKey = Symbol("agentSettings");
 
-export function setAgentSettingsContext(settings: Record<string, AgentSetting>): void {
+export function setAgentSettingsContext(settings: SAgentConfigs): void {
   setContext(agentSettingsKey, settings);
 }
 
-export function getAgentSettingsContext(): Record<string, AgentSetting> {
+export function getAgentSettingsContext(): SAgentConfigs {
   return getContext(agentSettingsKey);
 }
 
@@ -72,7 +48,7 @@ export function getAgentSettingsContext(): Record<string, AgentSetting> {
 export function addAgentNode(
   agent_name: string,
   nodes: Writable<AgentFlowNode[]>,
-  settings: AgentSettings,
+  settings: SAgentConfigs,
 ) {
   const new_node = newAgentFlowNode(agent_name, settings);
   nodes.update((nodes) => {
@@ -80,14 +56,14 @@ export function addAgentNode(
   });
 }
 
-export function addBoardNode(nodes: Writable<AgentFlowNode[]>, settings: AgentSettings) {
+export function addBoardNode(nodes: Writable<AgentFlowNode[]>, settings: SAgentConfigs) {
   const new_node = newAgentFlowBoardNode(settings);
   nodes.update((nodes) => {
     return [...nodes, new_node];
   });
 }
 
-export function addDatabaseNode(nodes: Writable<AgentFlowNode[]>, settings: AgentSettings) {
+export function addDatabaseNode(nodes: Writable<AgentFlowNode[]>, settings: SAgentConfigs) {
   const new_node = newAgentFlowDatabaseNode(settings);
   nodes.update((nodes) => {
     return [...nodes, new_node];
@@ -107,7 +83,7 @@ export async function updateAgentFlow(
 
 export function deserializeAgentFlow(
   flow: SAgentFlow,
-  agent_settings: Record<string, AgentSetting>,
+  agent_settings: Record<string, SAgentConfig>,
 ): AgentFlow {
   return {
     nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
@@ -117,7 +93,7 @@ export function deserializeAgentFlow(
 
 export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
-  agent_settings: Record<string, AgentSetting>,
+  agent_settings: Record<string, SAgentConfig>,
 ): AgentFlowNode {
   if (node.name === "$board") {
     return {
@@ -317,7 +293,7 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
   };
 }
 
-export function newAgentFlowNode(agent_name: string, settings: AgentSettings): AgentFlowNode {
+export function newAgentFlowNode(agent_name: string, settings: SAgentConfigs): AgentFlowNode {
   if (agent_name === "$board") {
     return newAgentFlowBoardNode(settings);
   }
@@ -338,7 +314,7 @@ export function newAgentFlowNode(agent_name: string, settings: AgentSettings): A
   return deserializeAgentFlowNode(node_data, settings);
 }
 
-export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
+export function newAgentFlowBoardNode(settings: SAgentConfigs): AgentFlowNode {
   const id = newNodeId("$board");
   const node_data = {
     id,
@@ -353,7 +329,7 @@ export function newAgentFlowBoardNode(settings: AgentSettings): AgentFlowNode {
   return deserializeAgentFlowNode(node_data, settings);
 }
 
-export function newAgentFlowDatabaseNode(settings: AgentSettings): AgentFlowNode {
+export function newAgentFlowDatabaseNode(settings: SAgentConfigs): AgentFlowNode {
   const id = newNodeId("$database");
   const node_data = {
     id,

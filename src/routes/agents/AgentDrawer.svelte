@@ -5,28 +5,29 @@
   import { Button, Drawer, GradientButton } from "flowbite-svelte";
 
   import { addAgentNode, addBoardNode, addDatabaseNode, updateAgentFlow } from "@/lib/agent";
-  import type { AgentCatalog, AgentSetting, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
+  import type { SAgentConfigs, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   type Props = NodeProps & {
     nodes: Writable<AgentFlowNode[]>;
     edges: Writable<AgentFlowEdge[]>;
     flow_index: number;
-    catalog: AgentCatalog;
-    settings: Record<string, AgentSetting>;
+    agent_configs: SAgentConfigs;
   };
 
-  const { nodes, edges, flow_index, catalog, settings }: Props = $props();
+  const { nodes, edges, flow_index, agent_configs }: Props = $props();
+
+  const agent_names = Object.keys(agent_configs).sort();
 
   function addAgent(agent_name: string) {
-    addAgentNode(agent_name, nodes, settings);
+    addAgentNode(agent_name, nodes, agent_configs);
   }
 
   function addBoard() {
-    addBoardNode(nodes, settings);
+    addBoardNode(nodes, agent_configs);
   }
 
   function addDatabase() {
-    addDatabaseNode(nodes, settings);
+    addDatabaseNode(nodes, agent_configs);
   }
 
   async function update() {
@@ -44,9 +45,9 @@
   <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={update}>Update</GradientButton>
   <Button class="w-full mb-4" color="blue" outline onclick={addBoard}>Board</Button>
   <Button class="w-full mb-4" color="blue" outline onclick={addDatabase}>Database</Button>
-  {#each catalog as agent}
+  {#each agent_names as agent_name}
     <div class="mb-4">
-      <Button class="w-full" outline onclick={() => addAgent(agent.name)}>{agent.name}</Button>
+      <Button class="w-full" outline onclick={() => addAgent(agent_name)}>{agent_name}</Button>
     </div>
   {/each}
 </Drawer>
