@@ -69,20 +69,19 @@ fn read_agent_configs(app: &AppHandle, agent_configs: &mut AgentConfigs) -> Resu
                 continue;
             }
         };
-        match serde_json::from_str(&content) {
-            Ok(config) => {
-                agent_configs.insert(name, config);
-            }
+        let config = match serde_json::from_str(&content) {
+            Ok(config) => config,
             Err(e) => {
                 log::warn!("Failed to parse agent config file: {}", e);
                 continue;
             }
-        }
+        };
+        agent_configs.insert(name, config);
     }
     Ok(())
 }
 
-fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
+pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
     let mnemnk_dir = settings::mnemnk_dir(app);
     if mnemnk_dir.is_none() {
         return None;
