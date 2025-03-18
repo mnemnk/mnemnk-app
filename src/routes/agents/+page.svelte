@@ -12,9 +12,6 @@
   import AgentDrawer from "./AgentDrawer.svelte";
   import AgentNode from "./AgentNode.svelte";
 
-  // import BoardNode from "./BoardNode.svelte";
-  // import DatabaseNode from "./DatabaseNode.svelte";
-
   const { data } = $props();
 
   setAgentConfigsContext(data.agent_configs);
@@ -23,8 +20,6 @@
   const edges: Writable<AgentFlowEdge[]> = writable([]);
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
-    // board: BoardNode,
-    // database: DatabaseNode,
   };
 
   const flow_index = $state(0);

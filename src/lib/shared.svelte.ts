@@ -10,8 +10,6 @@ import type { BoardMessage, WriteBoardEmit } from "@/lib/types";
 export const boards = $state(new SvelteMap<string, BoardMessage[]>());
 
 export const nodes: Writable<Node[]> = writable([]);
-
-// same for edges
 export const edges = writable([]);
 
 export const MESSAGES_TIMEOUT = 10 * 60 * 1000;
