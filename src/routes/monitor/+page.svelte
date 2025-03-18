@@ -30,12 +30,3 @@
     <!-- <MiniMap /> -->
   </SvelteFlow>
 </main>
-
-<style>
-  :root {
-    --xy-node-background-color: rgb(243, 244, 246);
-    --xy-node-color-default: rgb(17, 17, 17);
-    --xy-node-border-radius: 10px;
-    --xy-node-box-shadow: 10px 0 15px rgba(42, 138, 246, 0.3), -10px 0 15px rgba(233, 42, 103, 0.3);
-  }
-</style>
