@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
+use super::bultin::builtin_agent_configs;
 use crate::mnemnk::settings;
 
 static AGENT_CONFIG_DIR: &str = "agents";
@@ -14,38 +15,66 @@ static AGENT_CONFIG_DIR: &str = "agents";
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentConfig {
     pub name: String,
-    pub path: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub path: Option<String>,
     pub inputs: Option<Vec<String>>,
     pub outputs: Option<Vec<String>>,
-    pub default_config: Option<Value>,
-    pub schema: Option<Value>,
+    pub default_config: Option<HashMap<String, AgentDefaultConfigEntry>>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct AgentDefaultConfigEntry {
+    pub value: Value,
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub scope: Option<String>,
 }
 
 pub type AgentConfigs = HashMap<String, AgentConfig>;
 
 pub(super) fn init_agent_configs(app: &AppHandle) -> Result<()> {
-    let agent_configs = read_agent_configs(app)?;
+    let mut agent_configs = builtin_agent_configs();
+    read_agent_configs(app, &mut agent_configs)?;
     app.manage(Mutex::new(agent_configs));
     Ok(())
 }
 
-fn read_agent_configs(app: &AppHandle) -> Result<AgentConfigs> {
+fn read_agent_configs(app: &AppHandle, agent_configs: &mut AgentConfigs) -> Result<()> {
     let dir = agents_dir(app);
     if dir.is_none() {
         return Err(anyhow::anyhow!("Agents directory not found"));
     }
-    let mut agents = HashMap::new();
     for entry in std::fs::read_dir(dir.unwrap())? {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
             let name = path.file_stem().unwrap().to_string_lossy().to_string();
-            let content = std::fs::read_to_string(&path)?;
-            let config: AgentConfig = serde_json::from_str(&content)?;
-            agents.insert(name, config);
+            if agent_configs.contains_key(&name) {
+                log::warn!("Duplicate agent name: {}", name);
+                continue;
+            }
+            let content = match std::fs::read_to_string(&path) {
+                Ok(ret) => ret,
+                Err(e) => {
+                    log::warn!("Failed to read agent config file: {}", e);
+                    continue;
+                }
+            };
+            match serde_json::from_str(&content) {
+                Ok(config) => {
+                    agent_configs.insert(name, config);
+                }
+                Err(e) => {
+                    log::warn!("Failed to parse agent config file: {}", e);
+                    continue;
+                }
+            }
         }
     }
-    Ok(agents)
+    Ok(())
 }
 
 fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -62,11 +91,11 @@ fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
 
 #[tauri::command]
 pub fn get_agent_configs_cmd(agent_configs: State<Mutex<AgentConfigs>>) -> Result<Value, String> {
-    let agent_flows;
+    let configs;
     {
         let agent_configs = agent_configs.lock().unwrap();
-        agent_flows = agent_configs.clone();
+        configs = agent_configs.clone();
     }
-    let value = serde_json::to_value(&agent_flows).map_err(|e| e.to_string())?;
+    let value = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
     Ok(value)
 }

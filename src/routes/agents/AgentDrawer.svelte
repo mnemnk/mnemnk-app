@@ -4,7 +4,7 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Button, Drawer, GradientButton } from "flowbite-svelte";
 
-  import { addAgentNode, addBoardNode, addDatabaseNode, updateAgentFlow } from "@/lib/agent";
+  import { addAgentNode, updateAgentFlow } from "@/lib/agent";
   import type { SAgentConfigs, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   type Props = NodeProps & {
@@ -22,16 +22,16 @@
     addAgentNode(agent_name, nodes, agent_configs);
   }
 
-  function addBoard() {
-    addBoardNode(nodes, agent_configs);
-  }
+  // function addBoard() {
+  //   addBoardNode(nodes, agent_configs);
+  // }
 
-  function addDatabase() {
-    addDatabaseNode(nodes, agent_configs);
-  }
+  // function addDatabase() {
+  //   addDatabaseNode(nodes, agent_configs);
+  // }
 
   async function update() {
-    await updateAgentFlow(nodes, edges, flow_index);
+    await updateAgentFlow(nodes, edges, flow_index, agent_configs);
   }
 </script>
 
@@ -43,11 +43,16 @@
   class="w-200"
 >
   <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={update}>Update</GradientButton>
-  <Button class="w-full mb-4" color="blue" outline onclick={addBoard}>Board</Button>
-  <Button class="w-full mb-4" color="blue" outline onclick={addDatabase}>Database</Button>
+  <!-- <Button class="w-full mb-4" color="blue" outline onclick={addBoard}>Board</Button>
+  <Button class="w-full mb-4" color="blue" outline onclick={addDatabase}>Database</Button> -->
   {#each agent_names as agent_name}
     <div class="mb-4">
-      <Button class="w-full" outline onclick={() => addAgent(agent_name)}>{agent_name}</Button>
+      <Button
+        class="w-full"
+        color={agent_name.startsWith("$") ? "blue" : "primary"}
+        outline
+        onclick={() => addAgent(agent_name)}>{agent_configs[agent_name].title ?? agent_name}</Button
+      >
     </div>
   {/each}
 </Drawer>

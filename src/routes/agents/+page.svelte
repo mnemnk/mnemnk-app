@@ -6,24 +6,25 @@
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
 
-  import { deserializeAgentFlow, setAgentSettingsContext } from "@/lib/agent";
+  import { deserializeAgentFlow, setAgentConfigsContext } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   import AgentDrawer from "./AgentDrawer.svelte";
   import AgentNode from "./AgentNode.svelte";
-  import BoardNode from "./BoardNode.svelte";
-  import DatabaseNode from "./DatabaseNode.svelte";
+
+  // import BoardNode from "./BoardNode.svelte";
+  // import DatabaseNode from "./DatabaseNode.svelte";
 
   const { data } = $props();
 
-  setAgentSettingsContext(data.agent_configs);
+  setAgentConfigsContext(data.agent_configs);
 
   const nodes: Writable<AgentFlowNode[]> = writable([]);
   const edges: Writable<AgentFlowEdge[]> = writable([]);
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
-    board: BoardNode,
-    database: DatabaseNode,
+    // board: BoardNode,
+    // database: DatabaseNode,
   };
 
   const flow_index = $state(0);

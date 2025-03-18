@@ -2,19 +2,27 @@ import type { Writable } from "svelte/store";
 
 import type { Edge, Node } from "@xyflow/svelte";
 
-export type AgentDefaultConfig = Record<string, any>;
-export type AgentSchema = Record<string, any>;
+export type SAgentConfigs = Record<string, SAgentConfig>;
 
 export type SAgentConfig = {
   name: string;
+  title: string | null;
+  description: string | null;
   path: string;
   inputs: string[] | null;
   outputs: string[] | null;
-  default_config: AgentDefaultConfig | null;
-  schema: AgentSchema | null;
+  default_config: SAgentDefaultConfig | null;
 };
 
-export type SAgentConfigs = Record<string, SAgentConfig>;
+export type SAgentDefaultConfig = Record<string, SAgentDefaultConfigEntry>;
+
+export type SAgentDefaultConfigEntry = {
+  value: any;
+  type: string | null;
+  title?: string | null;
+  description?: string | null;
+  scope?: string | null;
+};
 
 export type SAgentFlow = {
   nodes: SAgentFlowNode[];
@@ -40,8 +48,6 @@ export type SAgentFlowEdge = {
   target_handle: string | null;
 };
 
-// agent name -> key -> schema
-
 export type AgentFlow = {
   nodes: AgentFlowNode[];
   edges: AgentFlowEdge[];
@@ -54,17 +60,10 @@ export type AgentFlowNode = Node & {
 export type AgentFlowNodeData = {
   name: string;
   enabled: Writable<boolean>;
-  config: AgentConfig | null;
+  config: AgentFlowNodeConfig | null;
 };
 
-export type AgentConfig = Record<string, AgentConfigEntry>;
-
-export type AgentConfigEntry = {
-  value: Writable<any>;
-  type: string | null;
-  title: string | null;
-  description: string | null;
-};
+export type AgentFlowNodeConfig = Record<string, Writable<any>>;
 
 export type AgentFlowEdge = Edge;
 
