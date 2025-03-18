@@ -50,27 +50,32 @@ fn read_agent_configs(app: &AppHandle, agent_configs: &mut AgentConfigs) -> Resu
     for entry in std::fs::read_dir(dir.unwrap())? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let name = path.file_stem().unwrap().to_string_lossy().to_string();
-            if agent_configs.contains_key(&name) {
-                log::warn!("Duplicate agent name: {}", name);
+        if !path.is_dir() {
+            continue;
+        }
+        let mnemnk_json = path.join("mnemnk.json");
+        if !mnemnk_json.exists() {
+            continue;
+        }
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        if agent_configs.contains_key(&name) {
+            log::warn!("Duplicate agent name: {}", name);
+            continue;
+        }
+        let content = match std::fs::read_to_string(&mnemnk_json) {
+            Ok(ret) => ret,
+            Err(e) => {
+                log::warn!("Failed to read agent config file: {}", e);
                 continue;
             }
-            let content = match std::fs::read_to_string(&path) {
-                Ok(ret) => ret,
-                Err(e) => {
-                    log::warn!("Failed to read agent config file: {}", e);
-                    continue;
-                }
-            };
-            match serde_json::from_str(&content) {
-                Ok(config) => {
-                    agent_configs.insert(name, config);
-                }
-                Err(e) => {
-                    log::warn!("Failed to parse agent config file: {}", e);
-                    continue;
-                }
+        };
+        match serde_json::from_str(&content) {
+            Ok(config) => {
+                agent_configs.insert(name, config);
+            }
+            Err(e) => {
+                log::warn!("Failed to parse agent config file: {}", e);
+                continue;
             }
         }
     }
