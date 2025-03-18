@@ -4,6 +4,7 @@ use tauri::AppHandle;
 use tokio::sync::mpsc;
 
 pub mod board;
+pub mod bultin;
 pub mod command;
 pub mod config;
 pub mod flow;

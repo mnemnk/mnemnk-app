@@ -25,12 +25,14 @@ pub struct AgentFlowNode {
     pub id: String,
     pub name: String,
     pub enabled: bool,
-    pub config: Option<Value>,
+    pub config: Option<AgentFlowNodeConfig>,
     pub x: Option<f64>,
     pub y: Option<f64>,
     pub width: Option<f64>,
     pub height: Option<f64>,
 }
+
+pub type AgentFlowNodeConfig = HashMap<String, Value>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlowEdge {
@@ -57,9 +59,21 @@ fn read_agent_flows(app: &AppHandle) -> Result<AgentFlows> {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = std::fs::read_to_string(&path)?;
-            let flow: AgentFlow = serde_json::from_str(&content)?;
-            flows.push(flow);
+            let content = match std::fs::read_to_string(&path) {
+                Ok(c) => c,
+                Err(e) => {
+                    log::warn!("Failed to read agent flow file: {}", e);
+                    continue;
+                }
+            };
+            match serde_json::from_str(&content) {
+                Ok(flow) => {
+                    flows.push(flow);
+                }
+                Err(e) => {
+                    log::warn!("Failed to parse agent flow file: {}", e);
+                }
+            }
         }
     }
     Ok(flows)

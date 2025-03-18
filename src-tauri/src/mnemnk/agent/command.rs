@@ -40,13 +40,13 @@ pub fn init_agent_commands(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> R
 
 pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let agent_name: String;
-    let config: Value;
+    let config;
     let flows = app.state::<Mutex<AgentFlows>>();
     {
         let flows = flows.lock().unwrap();
         if let Some(agent_node) = find_agent_node(&flows, agent_id) {
             agent_name = agent_node.name.clone();
-            config = agent_node.config.clone().unwrap_or(Value::Null);
+            config = agent_node.config.clone();
         } else {
             log::error!("Agent setting for {} not found", agent_id);
             return Err(anyhow::anyhow!("Agent setting not found"));
@@ -64,6 +64,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
             return Err(anyhow::anyhow!("Agent not found"));
         }
     }
+    let agent_path = agent_path.unwrap_or(agent_name.clone());
 
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let main_tx;
@@ -74,7 +75,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
     log::info!("Starting agent: {} {}", agent_name, agent_id);
 
-    let sidecar_command = if config == Value::Null {
+    let sidecar_command = if config.is_none() {
         app.shell().command(agent_path)
     } else {
         app.shell()
@@ -244,17 +245,18 @@ pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 }
 
 pub fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
-    let config: Value;
+    let config;
     let flows = app.state::<Mutex<AgentFlows>>();
     {
         let flows = flows.lock().unwrap();
         if let Some(agent_node) = find_agent_node(&flows, agent_id) {
-            config = agent_node.config.clone().unwrap_or(Value::Null);
+            config = agent_node.config.clone().unwrap_or(HashMap::new());
         } else {
             log::error!("Agent setting for {} not found", agent_id);
             return Err(anyhow::anyhow!("Agent setting not found"));
         }
     }
+    let json_config = serde_json::to_value(config).context("Failed to serialize config")?;
 
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     {
@@ -262,7 +264,8 @@ pub fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
         if agent_commands.commands.contains_key(agent_id) {
             // the agent is already running, so update the config
             if let Some(child) = agent_commands.commands.get_mut(agent_id) {
-                if let Err(e) = child.write(format!(".CONFIG {}\n", config.to_string()).as_bytes())
+                if let Err(e) =
+                    child.write(format!(".CONFIG {}\n", json_config.to_string()).as_bytes())
                 {
                     log::error!("Failed to set config to {}: {}", agent_id, e);
                     return Err(anyhow::anyhow!("Failed to set config to agent"));

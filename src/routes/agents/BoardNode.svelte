@@ -5,8 +5,6 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Input, Label, Toggle } from "flowbite-svelte";
 
-  import type { AgentConfigEntry } from "@/lib/types";
-
   import NodeBase from "./NodeBase.svelte";
 
   const board_name_key = "board_name";
@@ -18,7 +16,7 @@
       inputs: string[];
       outputs: string[];
       config: {
-        board_name: AgentConfigEntry;
+        board_name: Writable<string>;
       };
     };
   };
@@ -39,8 +37,7 @@
       <Input
         type="text"
         bind:value={
-          () => get(data.config[board_name_key].value),
-          (v) => data.config[board_name_key].value.set(v)
+          () => get(data.config[board_name_key]), (v) => data.config[board_name_key].set(v)
         }
       />
     </Label>

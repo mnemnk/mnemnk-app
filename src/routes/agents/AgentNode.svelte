@@ -5,8 +5,8 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
-  import { getAgentSettingsContext } from "@/lib/agent";
-  import type { AgentConfig } from "@/lib/types";
+  import { getAgentConfigsContext } from "@/lib/agent";
+  import type { AgentFlowNodeConfig } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
 
@@ -16,41 +16,44 @@
       enabled: Writable<boolean>;
       inputs: string[];
       outputs: string[];
-      config: AgentConfig;
+      config: AgentFlowNodeConfig;
     };
   };
 
   let { id, data }: Props = $props();
 
-  const agent_schema = getAgentSettingsContext()?.[data.name]?.schema;
+  const agent_default_config = getAgentConfigsContext()?.[data.name]?.default_config;
 </script>
 
 {#snippet title()}
-  <h3 class="text-xl pt-2">{agent_schema?.["title"] ?? data.name}</h3>
+  <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
 {/snippet}
 
 {#snippet contents()}
-  <h4 class="text-sm pl-4 pb-4">{agent_schema?.["description"] ?? ""}</h4>
+  {#if data.description}
+    <h4 class="text-sm pl-4 pb-4">{data.description}</h4>
+  {/if}
   <form class="grid grid-cols-6 gap-4 p-4">
     <Toggle bind:checked={() => get(data.enabled), (v) => data.enabled.set(v)} class="col-span-6"
     ></Toggle>
     {#each Object.keys(data.config) as key}
       {@const config = data.config[key]}
+      {@const default_config = agent_default_config?.[key]}
       <Label class="col-span-6 space-y-2">
-        <h3>{config.title || key}</h3>
-        <p class="text-xs text-gray-500">{config["description"]}</p>
-        {#if config.type === "boolean"}
-          <Toggle bind:checked={() => get(config.value), (v) => config.value.set(v)} />
-        {:else if config.type === "integer"}
-          <NumberInput bind:value={() => get(config.value), (v) => config.value.set(v)} />
-        {:else if config.type === "number"}
-          <Input type="text" bind:value={() => get(config.value), (v) => config.value.set(v)} />
-        {:else if config.type === "string" || config.type === "string?"}
-          <Input type="text" bind:value={() => get(config.value), (v) => config.value.set(v)} />
-        {:else if config.type === "string[]"}
-          <Textarea bind:value={() => get(config.value), (v) => config.value.set(v)} rows={4} />
+        <h3>{default_config?.title || key}</h3>
+        <p class="text-xs text-gray-500">{default_config?.description}</p>
+        {#if default_config?.type === "boolean"}
+          <Toggle bind:checked={() => get(config), (v) => config.set(v)} />
+        {:else if default_config?.type === "integer"}
+          <NumberInput bind:value={() => get(config), (v) => config.set(v)} />
+        {:else if default_config?.type === "number"}
+          <Input type="text" bind:value={() => get(config), (v) => config.set(v)} />
+        {:else if default_config?.type === "string" || default_config?.type === "string?"}
+          <Input type="text" bind:value={() => get(config), (v) => config.set(v)} />
+        {:else if default_config?.type === "string[]"}
+          <Textarea bind:value={() => get(config), (v) => config.set(v)} rows={4} />
         {:else}
-          <Input type="text" value={get(config.value)} disabled />
+          <Input type="text" value={JSON.stringify(get(config))} disabled />
         {/if}
       </Label>
     {/each}
