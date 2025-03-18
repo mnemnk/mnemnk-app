@@ -129,8 +129,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
                 {
                     if let Some(board_name_str) = board_name.as_str() {
                         board_names.insert(node.id.clone(), board_name_str.to_string());
-                    } else {
-                        log::error!("Invalid board_name for node: {}", node.id);
                     }
                 }
             } else if node.name == "$database" {
