@@ -15,6 +15,8 @@ static AGENT_CONFIG_DIR: &str = "agents";
 pub struct AgentConfig {
     pub name: String,
     pub path: String,
+    pub inputs: Option<Vec<String>>,
+    pub outputs: Option<Vec<String>>,
     pub default_config: Option<Value>,
     pub schema: Option<Value>,
 }
@@ -68,36 +70,3 @@ pub fn get_agent_configs_cmd(agent_configs: State<Mutex<AgentConfigs>>) -> Resul
     let value = serde_json::to_value(&agent_flows).map_err(|e| e.to_string())?;
     Ok(value)
 }
-
-// fn validate_app_name(name: &str) -> bool {
-//     static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_-]+$").unwrap());
-//     const DENY_LIST: [&str; 3] = ["app", "prototype", "constructor"];
-//     RE.is_match(&name) && DENY_LIST.iter().all(|&x| x != name)
-// }
-
-// fn validate_config(value: &Value) -> bool {
-//     static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_-]+$").unwrap());
-//     const DENY_LIST: [&str; 2] = ["prototype", "constructor"];
-
-//     match value {
-//         Value::Object(map) => {
-//             for (key, value) in map {
-//                 if !RE.is_match(&key) || DENY_LIST.iter().any(|&x| x == key) {
-//                     return false;
-//                 }
-//                 if !validate_config(value) {
-//                     return false;
-//                 }
-//             }
-//         }
-//         Value::Array(array) => {
-//             for value in array {
-//                 if !validate_config(value) {
-//                     return false;
-//                 }
-//             }
-//         }
-//         _ => {}
-//     }
-//     true
-// }

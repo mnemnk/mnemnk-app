@@ -14,6 +14,8 @@
     data: {
       name: string;
       enabled: Writable<boolean>;
+      inputs: string[];
+      outputs: string[];
       config: AgentConfig;
     };
   };
@@ -55,4 +57,4 @@
   </form>
 {/snippet}
 
-<NodeBase {id} {title} {contents} />
+<NodeBase {id} inputs={data.inputs} outputs={data.outputs} {title} {contents} />

@@ -32,93 +32,136 @@ pub(super) fn init_agent_boards(app: &AppHandle) {
     app.manage(Mutex::new(agent_boards));
 }
 
-pub async fn board_message(app: &AppHandle, kind: String, value: Value) {
+pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, value: Value) {
     let subscribers;
     let agent_boards = app.state::<Mutex<AgentBoards>>();
     {
         let agent_board = agent_boards.lock().unwrap();
-        subscribers = agent_board.subscribers.get(&kind).cloned(); // TODO: use board_name instead of kind
+        subscribers = agent_board.subscribers.get(&kind).cloned();
+    }
+    let enabled_nodes;
+    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    {
+        let agent_commands = agent_commands.lock().unwrap();
+        enabled_nodes = agent_commands.enabled_nodes.clone();
     }
     if let Some(subscribers) = subscribers {
-        let enabled_nodes;
-        let agent_commands = app.state::<Mutex<AgentCommands>>();
-        {
-            let agent_commands = agent_commands.lock().unwrap();
-            enabled_nodes = agent_commands.enabled_nodes.clone();
-        }
         for subscriber in subscribers {
-            if !enabled_nodes.contains(&subscriber) {
+            let (sub_node, sub_handle) = subscriber.split_once("/").unwrap_or((&subscriber, "*"));
+            if !enabled_nodes.contains(sub_node) {
                 continue;
             }
-            if subscriber.starts_with("$") {
-                if subscriber.starts_with("$board_") {
+
+            let target_kind = if sub_handle == "*" {
+                kind.clone()
+            } else {
+                sub_handle.to_string()
+            };
+
+            if sub_node.starts_with("$") {
+                if sub_node.starts_with("$board_") {
                     if let Err(e) = write_message_to_board(
                         &app,
-                        subscriber.clone(),
-                        kind.clone(),
+                        source_agent.clone(),
+                        sub_node.to_string(),
+                        target_kind,
                         value.clone(),
                     )
                     .await
                     {
                         log::error!("Failed to write board: {}", e);
                     };
-                } else if subscriber.starts_with("$database_") {
+                } else if sub_node.starts_with("$database_") {
                     if let Err(e) =
-                        store::store(&app, kind.clone(), kind.clone(), value.clone()).await
+                        store::store(&app, source_agent.clone(), target_kind, value.clone()).await
                     {
                         log::error!("Failed to store: {}", e);
                     }
                 } else {
-                    log::error!("Unknown subscriber: {}", subscriber);
+                    log::error!("Unknown subscriber: {}", sub_node);
                 }
             } else {
-                write_message_to_agent(&agent_commands, &kind, &subscriber, &kind, &value);
+                write_message_to_agent(
+                    &agent_commands,
+                    &source_agent,
+                    &sub_node,
+                    &target_kind,
+                    &value,
+                );
             }
         }
     }
 }
 
-pub async fn write_message(app: &AppHandle, agent_id: String, kind: String, value: Value) {
+// Processing .WRITE $agent_id $kind $value
+pub async fn write_message(app: &AppHandle, source_agent: String, kind: String, value: Value) {
+    // Retrieve targets and enabled_nodes from agent_commands
+    // Nodes that are not enabled should have been removed from targets in sync_agent_flow,
+    // but consider the possibility that enabled_nodes may have changed since then.
     let targets;
     let enabled_nodes;
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     {
         let agent_commands = agent_commands.lock().unwrap();
-        targets = agent_commands.edges.get(&agent_id).cloned();
+        targets = agent_commands.edges.get(&source_agent).cloned();
         enabled_nodes = agent_commands.enabled_nodes.clone();
     }
-    if let Some(targets) = targets {
-        for target in targets {
-            if !enabled_nodes.contains(&target) {
-                continue;
-            }
-            if target.starts_with("$") {
-                if target.starts_with("$board_") {
-                    if let Err(e) =
-                        write_message_to_board(&app, target.clone(), kind.clone(), value.clone())
-                            .await
-                    {
-                        log::error!("Failed to write board: {}", e);
-                    };
-                } else if target.starts_with("$database_") {
-                    if let Err(e) =
-                        store::store(&app, agent_id.clone(), kind.clone(), value.clone()).await
-                    {
-                        log::error!("Failed to store: {}", e);
-                    }
-                } else {
-                    log::error!("Unknown target: {}", target);
+
+    if targets.is_none() {
+        return;
+    }
+
+    for target in targets.unwrap() {
+        // In reality, targets are normalized to id/source_handle/target_handle in sync_agent_flows,
+        // so unwrap should not fail.
+        let (target_node, handles) = target.split_once("/").unwrap_or((&target, "*/*"));
+        if !enabled_nodes.contains(target_node) {
+            continue;
+        }
+
+        let (source_handle, target_handle) = handles.split_once("/").unwrap_or(("*", "*"));
+        if source_handle != kind && source_handle != "*" {
+            // Skip if source_handle does not match with kind
+            continue;
+        }
+        let kind = if target_handle == "*" {
+            kind.clone()
+        } else {
+            // Use target_handle as kind if it is specified
+            target_handle.to_string()
+        };
+
+        if target_node.starts_with("$") {
+            if target_node.starts_with("$board_") {
+                if let Err(e) = write_message_to_board(
+                    &app,
+                    source_agent.clone(),
+                    target_node.to_string(),
+                    kind.clone(),
+                    value.clone(),
+                )
+                .await
+                {
+                    log::error!("Failed to write board: {}", e);
+                };
+            } else if target_node.starts_with("$database_") {
+                if let Err(e) =
+                    store::store(&app, source_agent.clone(), kind.clone(), value.clone()).await
+                {
+                    log::error!("Failed to store: {}", e);
                 }
             } else {
-                write_message_to_agent(&agent_commands, &agent_id, &target, &kind, &value);
+                log::error!("Unknown target: {}", target_node);
             }
+        } else {
+            write_message_to_agent(&agent_commands, &source_agent, &target_node, &kind, &value);
         }
     }
 }
 
 fn write_message_to_agent(
     agent_commands: &State<Mutex<AgentCommands>>,
-    agent_id: &str,
+    source: &str,
     target: &str,
     kind: &str,
     value: &Value,
@@ -126,7 +169,7 @@ fn write_message_to_agent(
     let mut agent_commands = agent_commands.lock().unwrap();
     if let Some(command) = agent_commands.commands.get_mut(target) {
         command
-            .write(format!(".PUBLISH {} {} {}\n", agent_id, kind, value.to_string()).as_bytes())
+            .write(format!(".PUBLISH {} {} {}\n", source, kind, value.to_string()).as_bytes())
             .unwrap_or_else(|e| {
                 log::error!("Failed to write to {}: {}", target, e);
             });
@@ -144,7 +187,8 @@ struct WriteBoardMessage {
 
 async fn write_message_to_board(
     app: &AppHandle,
-    board_id: String,
+    source_agent: String,
+    target_board: String,
     kind: String,
     value: Value,
 ) -> Result<()> {
@@ -153,7 +197,7 @@ async fn write_message_to_board(
     let agent_boards = app.state::<Mutex<AgentBoards>>();
     {
         let mut agent_boards = agent_boards.lock().unwrap();
-        if let Some(bn) = agent_boards.board_names.get(&board_id) {
+        if let Some(bn) = agent_boards.board_names.get(&target_board) {
             board_name = if bn == "" || bn == "*" {
                 kind.clone()
             } else {
@@ -167,7 +211,13 @@ async fn write_message_to_board(
             .insert(board_name.clone(), value.clone());
     }
 
-    send_board(&app, board_name.clone(), value.clone()).await;
+    send_board(
+        &app,
+        source_agent.clone(),
+        board_name.clone(),
+        value.clone(),
+    )
+    .await;
 
     // remove image from the value. it's too big to send to frontend
     let mut value = value;
@@ -177,7 +227,7 @@ async fn write_message_to_board(
 
     // emit the message to frontend
     let message = WriteBoardMessage {
-        agent: board_id,
+        agent: source_agent,
         kind: board_name,
         value,
     };
@@ -186,7 +236,7 @@ async fn write_message_to_board(
     Ok(())
 }
 
-async fn send_board(app: &AppHandle, kind: String, value: Value) {
+async fn send_board(app: &AppHandle, agent: String, kind: String, value: Value) {
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let main_tx;
     {
@@ -194,7 +244,7 @@ async fn send_board(app: &AppHandle, kind: String, value: Value) {
         main_tx = agent_commands.tx.clone();
     }
     main_tx
-        .send(AgentMessage::Board { kind, value })
+        .send(AgentMessage::Board { agent, kind, value })
         .await
         .unwrap_or_else(|e| {
             log::error!("Failed to send message: {}", e);

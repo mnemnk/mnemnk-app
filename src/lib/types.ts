@@ -8,6 +8,8 @@ export type AgentSchema = Record<string, any>;
 export type SAgentConfig = {
   name: string;
   path: string;
+  inputs: string[] | null;
+  outputs: string[] | null;
   default_config: AgentDefaultConfig | null;
   schema: AgentSchema | null;
 };
@@ -33,7 +35,9 @@ export type SAgentFlowNode = {
 export type SAgentFlowEdge = {
   id: string;
   source: string;
+  source_handle: string | null;
   target: string;
+  target_handle: string | null;
 };
 
 // agent name -> key -> schema

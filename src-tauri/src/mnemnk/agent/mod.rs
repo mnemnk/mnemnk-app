@@ -32,6 +32,8 @@ pub fn quit(app: &AppHandle) {
 #[derive(Clone, Debug)]
 pub enum AgentMessage {
     Board {
+        // original agent id
+        agent: String,
         kind: String,
         value: Value,
     },
@@ -51,8 +53,8 @@ fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>) {
             use AgentMessage::*;
 
             match message {
-                Board { kind, value } => {
-                    board::board_message(&app_handle, kind, value).await;
+                Board { agent, kind, value } => {
+                    board::board_message(&app_handle, agent, kind, value).await;
                 }
                 Write { agent, kind, value } => {
                     board::write_message(&app_handle, agent, kind, value).await;

@@ -143,7 +143,7 @@ pub async fn store(
             let image_id = image_id.as_str().unwrap().to_string();
 
             let app = app.clone();
-            let kind = kind.to_string();
+            let kind = kind.clone();
             tauri::async_runtime::spawn(async move {
                 save_image(&app, kind, image_id, image)
                     .await
