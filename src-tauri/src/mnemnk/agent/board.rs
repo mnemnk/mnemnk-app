@@ -52,7 +52,7 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
                 continue;
             }
 
-            let kind = if sub_handle == "*" {
+            let target_kind = if sub_handle == "*" {
                 kind.clone()
             } else {
                 sub_handle.to_string()
@@ -64,7 +64,7 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
                         &app,
                         source_agent.clone(),
                         sub_node.to_string(),
-                        kind,
+                        target_kind,
                         value.clone(),
                     )
                     .await
@@ -73,7 +73,7 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
                     };
                 } else if sub_node.starts_with("$database_") {
                     if let Err(e) =
-                        store::store(&app, source_agent.clone(), kind, value.clone()).await
+                        store::store(&app, source_agent.clone(), target_kind, value.clone()).await
                     {
                         log::error!("Failed to store: {}", e);
                     }
@@ -81,7 +81,13 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
                     log::error!("Unknown subscriber: {}", sub_node);
                 }
             } else {
-                write_message_to_agent(&agent_commands, &source_agent, &sub_node, &kind, &value);
+                write_message_to_agent(
+                    &agent_commands,
+                    &source_agent,
+                    &sub_node,
+                    &target_kind,
+                    &value,
+                );
             }
         }
     }
