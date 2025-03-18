@@ -22,14 +22,6 @@
     addAgentNode(agent_name, nodes, agent_configs);
   }
 
-  // function addBoard() {
-  //   addBoardNode(nodes, agent_configs);
-  // }
-
-  // function addDatabase() {
-  //   addDatabaseNode(nodes, agent_configs);
-  // }
-
   async function update() {
     await updateAgentFlow(nodes, edges, flow_index, agent_configs);
   }
@@ -43,8 +35,6 @@
   class="w-200"
 >
   <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={update}>Update</GradientButton>
-  <!-- <Button class="w-full mb-4" color="blue" outline onclick={addBoard}>Board</Button>
-  <Button class="w-full mb-4" color="blue" outline onclick={addDatabase}>Database</Button> -->
   {#each agent_names as agent_name}
     <div class="mb-4">
       <Button

@@ -53,20 +53,6 @@ export function addAgentNode(
   });
 }
 
-// export function addBoardNode(nodes: Writable<AgentFlowNode[]>, settings: SAgentConfigs) {
-//   const new_node = newAgentFlowBoardNode(settings);
-//   nodes.update((nodes) => {
-//     return [...nodes, new_node];
-//   });
-// }
-
-// export function addDatabaseNode(nodes: Writable<AgentFlowNode[]>, settings: SAgentConfigs) {
-//   const new_node = newAgentFlowDatabaseNode(settings);
-//   nodes.update((nodes) => {
-//     return [...nodes, new_node];
-//   });
-// }
-
 export async function updateAgentFlow(
   nodes: Writable<AgentFlowNode[]>,
   edges: Writable<AgentFlowEdge[]>,
@@ -90,46 +76,6 @@ export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
   agent_configs: SAgentConfigs,
 ): AgentFlowNode {
-  // if (node.name === "$board") {
-  //   return {
-  //     id: node.id,
-  //     type: "board",
-  //     data: {
-  //       name: node.name,
-  //       enabled: writable(node.enabled),
-  //       inputs: ["*"],
-  //       outputs: ["*"],
-  //       config: {
-  //         board_name: writable(node.config?.board_name),
-  //       },
-  //     },
-  //     position: {
-  //       x: node.x,
-  //       y: node.y,
-  //     },
-  //     width: node.width,
-  //     height: node.height,
-  //   };
-  // }
-  // if (node.name === "$database") {
-  //   return {
-  //     id: node.id,
-  //     type: "database",
-  //     data: {
-  //       name: node.name,
-  //       enabled: writable(node.enabled),
-  //       inputs: ["*"],
-  //       config: {},
-  //     },
-  //     position: {
-  //       x: node.x,
-  //       y: node.y,
-  //     },
-  //     width: node.width,
-  //     height: node.height,
-  //   };
-  // }
-
   const configs = agent_configs[node.name];
   const default_config = configs?.default_config;
   return {
@@ -287,13 +233,6 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
 }
 
 export function newAgentFlowNode(agent_name: string, settings: SAgentConfigs): AgentFlowNode {
-  // if (agent_name === "$board") {
-  //   return newAgentFlowBoardNode(settings);
-  // }
-  // if (agent_name === "$database") {
-  //   return newAgentFlowDatabaseNode(settings);
-  // }
-
   const id = newNodeId(agent_name);
   const default_config = settings[agent_name].default_config ?? {};
   const config: Record<string, any> = {};
@@ -310,34 +249,6 @@ export function newAgentFlowNode(agent_name: string, settings: SAgentConfigs): A
   };
   return deserializeAgentFlowNode(node_data, settings);
 }
-
-// export function newAgentFlowBoardNode(settings: SAgentConfigs): AgentFlowNode {
-//   const id = newNodeId("$board");
-//   const node_data = {
-//     id,
-//     name: "$board",
-//     enabled: true,
-//     config: {
-//       board_name: "",
-//     },
-//     x: 0,
-//     y: 0,
-//   };
-//   return deserializeAgentFlowNode(node_data, settings);
-// }
-
-// export function newAgentFlowDatabaseNode(settings: SAgentConfigs): AgentFlowNode {
-//   const id = newNodeId("$database");
-//   const node_data = {
-//     id,
-//     name: "$database",
-//     enabled: true,
-//     config: {},
-//     x: 0,
-//     y: 0,
-//   };
-//   return deserializeAgentFlowNode(node_data, settings);
-// }
 
 function newNodeId(prefix: string) {
   return `${prefix}_${nanoid()}`;
