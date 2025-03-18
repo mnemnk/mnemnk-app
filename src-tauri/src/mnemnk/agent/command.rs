@@ -1,15 +1,16 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::vec;
+use std::{env, vec};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tokio::sync::mpsc;
 
-use super::config::AgentConfigs;
+use super::config::{agents_dir, AgentConfigs};
 use super::flow::{find_agent_node, AgentFlows};
 use super::AgentMessage;
 
@@ -66,6 +67,28 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     }
     let agent_path = agent_path.unwrap_or(agent_name.clone());
 
+    let dir = agents_dir(app);
+    if dir.is_none() {
+        return Err(anyhow::anyhow!("Agents directory not found"));
+    }
+    let agent_dir = dir.unwrap().join(&agent_name);
+
+    let mut path = PathBuf::from(&agent_path);
+    if path.is_absolute() {
+        if !path.exists() {
+            log::error!("Agent path not found: {}", agent_path);
+            return Err(anyhow::anyhow!("Agent path not found"));
+        }
+    } else {
+        path = agent_dir
+            .join(path)
+            .with_extension(env::consts::EXE_EXTENSION);
+        if !path.exists() {
+            log::error!("Agent path not found: {}", path.display());
+            return Err(anyhow::anyhow!("Agent path not found"));
+        }
+    }
+
     let agent_commands = app.state::<Mutex<AgentCommands>>();
     let main_tx;
     {
@@ -76,11 +99,12 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     log::info!("Starting agent: {} {}", agent_name, agent_id);
 
     let sidecar_command = if config.is_none() {
-        app.shell().command(agent_path)
+        app.shell().command(path).current_dir(agent_dir)
     } else {
         app.shell()
-            .command(agent_path)
+            .command(path)
             .args(vec!["-c", serde_json::to_string(&config).unwrap().as_str()])
+            .current_dir(agent_dir)
     };
 
     let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;
