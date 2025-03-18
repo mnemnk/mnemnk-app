@@ -36,7 +36,9 @@ pub struct AgentFlowNode {
 pub struct AgentFlowEdge {
     pub id: String,
     pub source: String,
+    pub source_handle: Option<String>,
     pub target: String,
+    pub target_handle: Option<String>,
 }
 
 pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
@@ -82,7 +84,7 @@ fn save_agent_flows(app: &AppHandle, flows: &AgentFlows) -> Result<()> {
     }
     for (i, flow) in flows.iter().enumerate() {
         let path = dir.clone().unwrap().join(format!("{}.json", i));
-        let content = serde_json::to_string(flow)?;
+        let content = serde_json::to_string_pretty(flow)?;
         std::fs::write(&path, content)?;
     }
     Ok(())
@@ -133,24 +135,35 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
             if !enabled_nodes.contains(&edge.source) || !enabled_nodes.contains(&edge.target) {
                 continue;
             }
+
             if edge.source.starts_with("$board_") {
                 if let Some(board_name) = board_names.get(&edge.source) {
                     if board_name == "" || board_name == "*" {
+                        // Cannot determine kind if board_name is not set
                         continue;
                     }
+                    // For board, source_handle is always *
+                    let target_p =
+                        format!("{}/{}", edge.target, normalize_handle(&edge.target_handle));
                     if let Some(subs) = subscribers.get_mut(board_name) {
-                        subs.push(edge.target.clone());
+                        subs.push(target_p);
                     } else {
-                        subscribers.insert(board_name.clone(), vec![edge.target.clone()]);
+                        subscribers.insert(board_name.clone(), vec![target_p]);
                     }
                 }
                 continue;
             }
 
+            let target_p = format!(
+                "{}/{}/{}",
+                edge.target,
+                normalize_handle(&edge.source_handle),
+                normalize_handle(&edge.target_handle)
+            );
             if let Some(targets) = edges.get_mut(&edge.source) {
-                targets.push(edge.target.clone());
+                targets.push(target_p);
             } else {
-                edges.insert(edge.source.clone(), vec![edge.target.clone()]);
+                edges.insert(edge.source.clone(), vec![target_p]);
             }
         }
     }
@@ -196,6 +209,18 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
         agent_boards.board_names = board_names;
         agent_boards.subscribers = subscribers;
     }
+}
+
+fn normalize_handle(handle: &Option<String>) -> String {
+    // None -> "*"
+    let mut handle = handle.as_deref().unwrap_or("*");
+
+    // "" -> "*"
+    if handle.is_empty() {
+        handle = "*";
+    }
+
+    handle.to_string()
 }
 
 pub fn find_agent_node<'a>(

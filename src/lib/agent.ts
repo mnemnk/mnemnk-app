@@ -93,7 +93,7 @@ export function deserializeAgentFlow(
 
 export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
-  agent_settings: Record<string, SAgentConfig>,
+  agent_configs: Record<string, SAgentConfig>,
 ): AgentFlowNode {
   if (node.name === "$board") {
     return {
@@ -102,6 +102,8 @@ export function deserializeAgentFlowNode(
       data: {
         name: node.name,
         enabled: writable(node.enabled),
+        inputs: ["*"],
+        outputs: ["*"],
         config: {
           board_name: {
             value: writable(node.config?.board_name),
@@ -126,6 +128,7 @@ export function deserializeAgentFlowNode(
       data: {
         name: node.name,
         enabled: writable(node.enabled),
+        inputs: ["*"],
         config: {},
       },
       position: {
@@ -137,15 +140,17 @@ export function deserializeAgentFlowNode(
     };
   }
 
-  const settings = agent_settings[node.name];
-  const default_config = settings?.default_config;
-  const schema_properties = settings?.schema?.properties;
+  const configs = agent_configs[node.name];
+  const default_config = configs?.default_config;
+  const schema_properties = configs?.schema?.properties;
   return {
     id: node.id,
     type: "agent",
     data: {
       name: node.name,
       enabled: writable(node.enabled),
+      inputs: configs?.inputs ?? [],
+      outputs: configs?.outputs ?? [],
       config: deserializeAgentConfig(node.config, default_config, schema_properties),
     },
     position: {
@@ -232,7 +237,9 @@ function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
   return {
     id: edge.id,
     source: edge.source,
+    sourceHandle: edge.source_handle,
     target: edge.target,
+    targetHandle: edge.target_handle,
   };
 }
 
@@ -289,7 +296,9 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
   return {
     id: edge.id,
     source: edge.source,
+    source_handle: edge.sourceHandle ?? null,
     target: edge.target,
+    target_handle: edge.targetHandle ?? null,
   };
 }
 
