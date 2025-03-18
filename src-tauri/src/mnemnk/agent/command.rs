@@ -76,7 +76,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let mut path = PathBuf::from(&agent_path);
     if path.is_absolute() {
         if !path.exists() {
-            log::error!("Agent path not found: {}", agent_path);
+            log::error!("Agent path (absolute) not found: {}", agent_path);
             return Err(anyhow::anyhow!("Agent path not found"));
         }
     } else {
@@ -84,7 +84,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
             .join(path)
             .with_extension(env::consts::EXE_EXTENSION);
         if !path.exists() {
-            log::error!("Agent path not found: {}", path.display());
+            log::error!("Agent path not found: {} -> {}", agent_path, path.display());
             return Err(anyhow::anyhow!("Agent path not found"));
         }
     }
