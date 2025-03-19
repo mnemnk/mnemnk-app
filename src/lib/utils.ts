@@ -49,10 +49,6 @@ export async function search_events(query: string): Promise<MnemnkEvent[]> {
 
 // settings
 
-export async function get_settings_filepath(): Promise<string> {
-  return await invoke("get_settings_filepath_cmd");
-}
-
 export async function get_core_settings(): Promise<CoreSettings> {
   return await invoke("get_core_settings_cmd");
 }
