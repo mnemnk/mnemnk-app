@@ -24,7 +24,7 @@ pub fn save(app: &AppHandle) -> Result<()> {
         let core_settings = core_settings.lock().unwrap();
         settings_json = serde_json::to_value(&*core_settings)?;
     }
-    store.set("settings", settings_json);
+    store.set("core", settings_json);
     Ok(())
 }
 
