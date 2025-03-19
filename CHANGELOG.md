@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.11.0](https://github.com/mnemnk/mnemnk-app/compare/v0.10.1...v0.11.0) (2025-03-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 message passing based on edges
+* 🧨 configuration file is totally changed.
+
+### Features
+
+* 🎸 add board node ([#96](https://github.com/mnemnk/mnemnk-app/issues/96)) ([403a050](https://github.com/mnemnk/mnemnk-app/commit/403a0509d938bc5704622dfb5edd01e2b6a83727))
+* 🎸 agent configuration by json files ([#107](https://github.com/mnemnk/mnemnk-app/issues/107)) ([a54d000](https://github.com/mnemnk/mnemnk-app/commit/a54d0008c11c68654f4d1d0de35ea3f15ea9e6fb))
+* 🎸 Agents page with SvelteFlow ([#94](https://github.com/mnemnk/mnemnk-app/issues/94)) ([04fa0fd](https://github.com/mnemnk/mnemnk-app/commit/04fa0fd169cba9d92e3c5c85bffd8ad558ad436c))
+* 🎸 change agent protocols ([#112](https://github.com/mnemnk/mnemnk-app/issues/112)) ([132e5bd](https://github.com/mnemnk/mnemnk-app/commit/132e5bd97c97a509249d4b26e6d4fa4533a74f4e))
+* 🎸 message passing based on edges ([#100](https://github.com/mnemnk/mnemnk-app/issues/100)) ([f2ea902](https://github.com/mnemnk/mnemnk-app/commit/f2ea9020e986b4d1bb34fd65c432c7bb59aef0ef))
+* 🎸 move agent config into directory ([#110](https://github.com/mnemnk/mnemnk-app/issues/110)) ([e8f0423](https://github.com/mnemnk/mnemnk-app/commit/e8f0423e1a65a6e5250897d5617bfa54c595d802))
+* 🎸 save and restore flow edges ([#97](https://github.com/mnemnk/mnemnk-app/issues/97)) ([a2ddcb8](https://github.com/mnemnk/mnemnk-app/commit/a2ddcb88c47845e6f07c31c1c56d4516e24e8309))
+* 🎸 separate agent configs and flows from settings ([#103](https://github.com/mnemnk/mnemnk-app/issues/103)) ([f0d09ba](https://github.com/mnemnk/mnemnk-app/commit/f0d09ba929d130daee1a1dbc2d01bcdb087d1f27))
+* 🎸 start agent from agent dir ([#111](https://github.com/mnemnk/mnemnk-app/issues/111)) ([0ca2c9b](https://github.com/mnemnk/mnemnk-app/commit/0ca2c9b75c452a102aee240d7f46cf572843988d))
+* 🎸 update agent status without restarting app ([#101](https://github.com/mnemnk/mnemnk-app/issues/101)) ([43c75f9](https://github.com/mnemnk/mnemnk-app/commit/43c75f986c7284f149ea3234844bd1ef6e70bbef))
+* 🎸 update monitor page ([#102](https://github.com/mnemnk/mnemnk-app/issues/102)) ([d388a4e](https://github.com/mnemnk/mnemnk-app/commit/d388a4e27c395292aacc1ebf3b4917232dd4a66e))
+* 🎸 use SvelteFlow node handle as kind name ([#105](https://github.com/mnemnk/mnemnk-app/issues/105)) ([dfd9fec](https://github.com/mnemnk/mnemnk-app/commit/dfd9fecd2e1dc8f55f3f00bc93a74f830cb9a05b))
+* Monitor page ([4121da7](https://github.com/mnemnk/mnemnk-app/commit/4121da744838fb5081b09952e4357bf9cd43d0a8))
+
+
+### Bug Fixes
+
+* 🐛 remove error log for blank board name ([#109](https://github.com/mnemnk/mnemnk-app/issues/109)) ([fd27a9c](https://github.com/mnemnk/mnemnk-app/commit/fd27a9c49ff1c7ace2077988304f454a1884d03d))
+* 🐛 remove find_agent_node_mut ([#104](https://github.com/mnemnk/mnemnk-app/issues/104)) ([efc6b86](https://github.com/mnemnk/mnemnk-app/commit/efc6b869d3fda2be2ce78edccd14118fe5445ecf))
+* 🐛 remove link to config.yml ([#113](https://github.com/mnemnk/mnemnk-app/issues/113)) ([bfab127](https://github.com/mnemnk/mnemnk-app/commit/bfab1273462ff6ef10ad30bf89b59d786173aaaf))
+* 🐛 remove unused page.ts from monitor ([#93](https://github.com/mnemnk/mnemnk-app/issues/93)) ([ae100a6](https://github.com/mnemnk/mnemnk-app/commit/ae100a62933026de05fc226a0261ef60a2e18d00))
+* 🐛 save and restore agents ([#95](https://github.com/mnemnk/mnemnk-app/issues/95)) ([15f2b85](https://github.com/mnemnk/mnemnk-app/commit/15f2b85c781e498cf15b344f449db095698ca52b))
+
 ## [0.10.1](https://github.com/mnemnk/mnemnk-app/compare/v0.10.0...v0.10.1) (2025-03-07)
 
 ## [0.10.0](https://github.com/mnemnk/mnemnk-app/compare/v0.9.2...v0.10.0) (2025-03-07)
