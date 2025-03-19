@@ -2,7 +2,7 @@ use anyhow::Result;
 use tauri::{AppHandle, Manager};
 
 fn show_window(app: &AppHandle, label: &str) -> Result<()> {
-    if let Some(mut window) = app.get_webview_window(label) {
+    if let Some(window) = app.get_webview_window(label) {
         let mut url = window.url()?;
         url.set_path("/");
         window.navigate(url)?;
