@@ -137,33 +137,10 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
                     let (cmd, args) = parse_stdout(&line);
                     match cmd {
-                        ".CONFIG" => {
-                            // let value = serde_json::from_str::<Value>(args);
-                            // if let Err(e) = value {
-                            //     log::error!("Failed to parse config: {}", e);
-                            //     continue;
-                            // }
-                            // recieve_config(&app_handle, &agent_name, value.unwrap()).unwrap_or_else(
-                            //     |e| {
-                            //         log::error!("Failed to receive config: {}", e);
-                            //     },
-                            // )
-                        }
-                        ".CONFIG_SCHEMA" => {
-                            // let value = serde_json::from_str::<Value>(args);
-                            // if let Err(e) = value {
-                            //     log::error!("Failed to parse config schema: {}", e);
-                            //     continue;
-                            // }
-                            // recieve_config_schema(&app_handle, &agent_name, value.unwrap())
-                            //     .unwrap_or_else(|e| {
-                            //         log::error!("Failed to receive config schema: {}", e);
-                            //     })
-                        }
-                        ".STORE" => {
+                        ".OUT" => {
                             let kind_value = args.split_once(" ");
                             if kind_value.is_none() {
-                                log::error!("Invalid STORE command: {:.40}", &line);
+                                log::error!("Invalid OUT command: {:.40}", &line);
                                 continue;
                             }
                             let (kind, value) = kind_value.unwrap();
@@ -173,34 +150,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
                                 continue;
                             }
                             main_tx
-                                .send(AgentMessage::Write {
-                                    agent: agent_id.clone(),
-                                    kind: kind.to_string(),
-                                    value: value.unwrap(),
-                                })
-                                .await
-                                .unwrap_or_else(|e| {
-                                    log::error!("Failed to send message: {}", e);
-                                });
-                        }
-                        ".SUBSCRIBE" => {
-                            // let kind = args.to_string();
-                            // subscribe(&app_handle, &agent_id, &kind);
-                        }
-                        ".WRITE" => {
-                            let kind_value = args.split_once(" ");
-                            if kind_value.is_none() {
-                                log::error!("Invalid WRITE command: {:.40}", &line);
-                                continue;
-                            }
-                            let (kind, value) = kind_value.unwrap();
-                            let value = serde_json::from_str::<Value>(value);
-                            if value.is_err() {
-                                log::error!("Failed to parse value: {:.40}", &line);
-                                continue;
-                            }
-                            main_tx
-                                .send(AgentMessage::Write {
+                                .send(AgentMessage::Output {
                                     agent: agent_id.clone(),
                                     kind: kind.to_string(),
                                     value: value.unwrap(),
