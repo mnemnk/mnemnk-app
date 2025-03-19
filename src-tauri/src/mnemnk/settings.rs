@@ -9,13 +9,15 @@ use std::{
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 
+const SETTINGS_JSON: &str = "settings.json";
+
 pub fn init(app: &AppHandle) -> Result<()> {
     init_core_settings(app)?;
     Ok(())
 }
 
 pub fn save(app: &AppHandle) -> Result<()> {
-    let store = app.store("store.json")?;
+    let store = app.store(SETTINGS_JSON)?;
     let core_settings = app.state::<Mutex<CoreSettings>>();
     let settings_json;
     {
@@ -110,7 +112,7 @@ impl Default for CoreSettings {
 }
 
 fn init_core_settings(app: &AppHandle) -> Result<()> {
-    let store = app.store("settings.json")?;
+    let store = app.store(SETTINGS_JSON)?;
 
     let mut core_settings: CoreSettings;
     if let Some(value) = store.get("core") {
