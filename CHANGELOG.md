@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.11.1](https://github.com/mnemnk/mnemnk-app/compare/v0.11.0...v0.11.1) (2025-03-19)
+
+
+### Bug Fixes
+
+* 🐛 two store files exist ([#115](https://github.com/mnemnk/mnemnk-app/issues/115)) ([49d6e53](https://github.com/mnemnk/mnemnk-app/commit/49d6e532a2ce76d6f25499aff1af82fe6dddc1ba))
+
 ## [0.11.0](https://github.com/mnemnk/mnemnk-app/compare/v0.10.1...v0.11.0) (2025-03-19)
 
 
