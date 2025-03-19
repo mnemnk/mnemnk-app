@@ -121,21 +121,18 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
         for node in &agent_flow.nodes {
             if !node.enabled {
                 continue;
-            } else if node.name == "$board" {
-                if let Some(board_name) = node
-                    .config
-                    .as_ref()
-                    .and_then(|x| x.get("board_name").cloned())
-                {
-                    if let Some(board_name_str) = board_name.as_str() {
-                        board_names.insert(node.id.clone(), board_name_str.to_string());
+            } else if node.name.starts_with("$") {
+                if node.name == "$board" {
+                    if let Some(board_name) = node
+                        .config
+                        .as_ref()
+                        .and_then(|x| x.get("board_name").cloned())
+                    {
+                        if let Some(board_name_str) = board_name.as_str() {
+                            board_names.insert(node.id.clone(), board_name_str.to_string());
+                        }
                     }
                 }
-            } else if node.name == "$database" {
-                // nothing
-            } else if node.name.starts_with("$") {
-                log::error!("Unknown node: {}", node.name);
-                continue;
             } else {
                 new_agents.insert(node.id.clone());
             }

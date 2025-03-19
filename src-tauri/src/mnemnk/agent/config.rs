@@ -69,13 +69,22 @@ fn read_agent_configs(app: &AppHandle, agent_configs: &mut AgentConfigs) -> Resu
                 continue;
             }
         };
-        let config = match serde_json::from_str(&content) {
+        let config: AgentConfig = match serde_json::from_str(&content) {
             Ok(config) => config,
             Err(e) => {
                 log::warn!("Failed to parse agent config file: {}", e);
                 continue;
             }
         };
+        // check if name and config.name match
+        if config.name != name {
+            log::warn!(
+                "Agent name and config name mismatch: {} != {}",
+                name,
+                config.name
+            );
+            continue;
+        }
         agent_configs.insert(name, config);
     }
     Ok(())

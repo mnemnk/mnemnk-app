@@ -38,7 +38,7 @@ pub enum AgentMessage {
         kind: String,
         value: Value,
     },
-    Write {
+    Output {
         agent: String,
         kind: String,
         value: Value,
@@ -57,7 +57,7 @@ fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>) {
                 Board { agent, kind, value } => {
                     board::board_message(&app_handle, agent, kind, value).await;
                 }
-                Write { agent, kind, value } => {
+                Output { agent, kind, value } => {
                     board::write_message(&app_handle, agent, kind, value).await;
                 }
             }

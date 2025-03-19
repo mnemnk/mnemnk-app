@@ -169,7 +169,7 @@ fn write_message_to_agent(
     let mut agent_commands = agent_commands.lock().unwrap();
     if let Some(command) = agent_commands.commands.get_mut(target) {
         command
-            .write(format!(".PUBLISH {} {} {}\n", source, kind, value.to_string()).as_bytes())
+            .write(format!(".IN {} {} {}\n", source, kind, value.to_string()).as_bytes())
             .unwrap_or_else(|e| {
                 log::error!("Failed to write to {}: {}", target, e);
             });
