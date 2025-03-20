@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use anyhow::Result;
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::command::AgentCommands;
 use super::AgentMessage;
@@ -58,37 +58,14 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
                 sub_handle.to_string()
             };
 
-            if sub_node.starts_with("$") {
-                if sub_node.starts_with("$board_") {
-                    if let Err(e) = write_message_to_board(
-                        &app,
-                        source_agent.clone(),
-                        sub_node.to_string(),
-                        target_kind,
-                        value.clone(),
-                    )
-                    .await
-                    {
-                        log::error!("Failed to write board: {}", e);
-                    };
-                } else if sub_node.starts_with("$database_") {
-                    if let Err(e) =
-                        store::store(&app, source_agent.clone(), target_kind, value.clone()).await
-                    {
-                        log::error!("Failed to store: {}", e);
-                    }
-                } else {
-                    log::error!("Unknown subscriber: {}", sub_node);
-                }
-            } else {
-                write_message_to_agent(
-                    &agent_commands,
-                    &source_agent,
-                    &sub_node,
-                    &target_kind,
-                    &value,
-                );
-            }
+            send_message_to(
+                app,
+                source_agent.clone(),
+                sub_node,
+                target_kind,
+                value.clone(),
+            )
+            .await;
         }
     }
 }
@@ -131,41 +108,39 @@ pub async fn write_message(app: &AppHandle, source_agent: String, kind: String, 
             target_handle.to_string()
         };
 
-        if target_node.starts_with("$") {
-            if target_node.starts_with("$board_") {
-                if let Err(e) = write_message_to_board(
-                    &app,
-                    source_agent.clone(),
-                    target_node.to_string(),
-                    kind.clone(),
-                    value.clone(),
-                )
-                .await
-                {
-                    log::error!("Failed to write board: {}", e);
-                };
-            } else if target_node.starts_with("$database_") {
-                if let Err(e) =
-                    store::store(&app, source_agent.clone(), kind.clone(), value.clone()).await
-                {
-                    log::error!("Failed to store: {}", e);
-                }
-            } else {
-                log::error!("Unknown target: {}", target_node);
-            }
-        } else {
-            write_message_to_agent(&agent_commands, &source_agent, &target_node, &kind, &value);
-        }
+        send_message_to(app, source_agent.clone(), target_node, kind, value.clone()).await;
     }
 }
 
-fn write_message_to_agent(
-    agent_commands: &State<Mutex<AgentCommands>>,
-    source: &str,
-    target: &str,
-    kind: &str,
-    value: &Value,
+async fn send_message_to(
+    app: &AppHandle,
+    source_agent: String,
+    target_node: &str,
+    kind: String,
+    value: Value,
 ) {
+    if target_node.starts_with("$") {
+        if target_node.starts_with("$board_") {
+            if let Err(e) =
+                write_message_to_board(&app, source_agent, target_node.to_string(), kind, value)
+                    .await
+            {
+                log::error!("Failed to write board: {}", e);
+            };
+        } else if target_node.starts_with("$database_") {
+            if let Err(e) = store::store(&app, source_agent, kind, value).await {
+                log::error!("Failed to store: {}", e);
+            }
+        } else {
+            log::error!("Unknown target: {}", target_node);
+        }
+    } else {
+        write_message_to_agent(app, &source_agent, &target_node, &kind, &value);
+    }
+}
+
+fn write_message_to_agent(app: &AppHandle, source: &str, target: &str, kind: &str, value: &Value) {
+    let agent_commands = app.state::<Mutex<AgentCommands>>();
     let mut agent_commands = agent_commands.lock().unwrap();
     if let Some(command) = agent_commands.commands.get_mut(target) {
         command
