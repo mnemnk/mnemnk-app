@@ -75,10 +75,8 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
     let mut path = PathBuf::from(&agent_path);
     if path.is_absolute() {
-        if !path.exists() {
-            log::error!("Agent path (absolute) not found: {}", agent_path);
-            return Err(anyhow::anyhow!("Agent path not found"));
-        }
+        log::error!("Absolute path of agent is not allowed. {}", agent_path);
+        return Err(anyhow::anyhow!("Absolute agent path"));
     } else {
         path = agent_dir
             .join(path)
