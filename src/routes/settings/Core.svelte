@@ -5,7 +5,7 @@
   import { Button, ButtonGroup, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
-  import { exit_app, set_core_settings } from "@/lib/utils";
+  import { exitApp, set_core_settings } from "@/lib/utils";
 
   interface Props {
     settings: Record<string, any>;
@@ -42,7 +42,7 @@
     });
     // confirm restart
     await message("Mnemnk will quit to apply changes.\n\nPlease restart.");
-    await exit_app();
+    await exitApp();
   }
 </script>
 

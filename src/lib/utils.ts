@@ -29,7 +29,7 @@ export function formatTime(date: Date): string {
 
 // app
 
-export async function exit_app(): Promise<void> {
+export async function exitApp(): Promise<void> {
   await invoke("exit_app_cmd");
 }
 
