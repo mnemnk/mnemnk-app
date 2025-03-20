@@ -58,25 +58,22 @@ fn read_agent_flows(app: &AppHandle) -> Result<AgentFlows> {
     for entry in std::fs::read_dir(dir.unwrap())? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            let content = match std::fs::read_to_string(&path) {
-                Ok(c) => c,
-                Err(e) => {
-                    log::warn!("Failed to read agent flow file: {}", e);
-                    continue;
-                }
-            };
-            match serde_json::from_str(&content) {
-                Ok(flow) => {
-                    flows.push(flow);
-                }
-                Err(e) => {
-                    log::warn!("Failed to parse agent flow file: {}", e);
-                }
-            }
+        if !path.is_file() || path.extension().unwrap_or_default() != "json" {
+            continue;
         }
+        let flow = read_agent_flow(&path)?;
+        flows.push(flow);
     }
     Ok(flows)
+}
+
+fn read_agent_flow(path: &PathBuf) -> Result<AgentFlow> {
+    if !path.is_file() || path.extension().unwrap_or_default() != "json" {
+        return Err(anyhow::anyhow!("Invalid file extension"));
+    }
+    let content = std::fs::read_to_string(path)?;
+    let flow = serde_json::from_str(&content)?;
+    Ok(flow)
 }
 
 fn agent_flows_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -272,4 +269,10 @@ pub fn save_agent_flow_cmd(
     save_agent_flows(&app, &flows).map_err(|e| e.to_string())?;
     sync_agent_flows(&app);
     Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub fn read_agent_flow_cmd(path: String) -> Result<AgentFlow, String> {
+    let path = PathBuf::from(path);
+    read_agent_flow(&path).map_err(|e| e.to_string())
 }
