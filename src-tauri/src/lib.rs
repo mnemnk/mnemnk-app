@@ -1,3 +1,4 @@
+use tauri::AppHandle;
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod mnemnk;
@@ -58,6 +59,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            exit_app_cmd,
             mnemnk::agent::config::get_agent_configs_cmd,
             mnemnk::agent::flow::get_agent_flows_cmd,
             mnemnk::agent::flow::read_agent_flow_cmd,
@@ -104,4 +106,12 @@ pub fn run() {
                 mnemnk::settings::quit(app);
             }
         });
+}
+
+#[tauri::command]
+fn exit_app_cmd(app: AppHandle) -> Result<(), String> {
+    // The application will not exit immediately;
+    // the Exit event processing above will be executed.
+    app.exit(0);
+    Ok(())
 }

@@ -13,6 +13,12 @@
     let d = new Date(date);
     goto(`/daily?d=${dateString(d)}`);
   }
+
+  $effect(() => {
+    if (!data.settings.mnemnk_dir) {
+      goto("/settings");
+    }
+  });
 </script>
 
 <main class="container mx-auto p-8 space-y-8 mt-20">

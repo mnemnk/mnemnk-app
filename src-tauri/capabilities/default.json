@@ -9,7 +9,7 @@
     "core:default",
     "core:window:allow-close",
     "core:window:allow-set-fullscreen",
-    "dialog:allow-open",
+    "dialog:default",
     "log:default",
     "shell:allow-open",
     "shell:default"

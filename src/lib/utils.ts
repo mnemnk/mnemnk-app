@@ -27,6 +27,12 @@ export function formatTime(date: Date): string {
     .padStart(2, "0")}`;
 }
 
+// app
+
+export async function exitApp(): Promise<void> {
+  await invoke("exit_app_cmd");
+}
+
 // events
 
 export async function find_events_by_ymd(

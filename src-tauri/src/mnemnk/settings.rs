@@ -85,14 +85,13 @@ impl Default for CoreSettings {
     fn default() -> Self {
         static SHORTCUT_KEYS: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
             let mut map = HashMap::new();
+            map.insert("global_shortcut".into(), "".into());
             #[cfg(target_os = "macos")]
             {
-                map.insert("global_shortcut".into(), "Command+Shift+M".into());
                 map.insert("fullscreen".into(), "".into()); // macOS has its own fullscreen shortcut (Cmd+Ctrl+F)
             }
             #[cfg(not(target_os = "macos"))]
             {
-                map.insert("global_shortcut".into(), "Alt+Shift+M".into());
                 map.insert("fullscreen".into(), "F11".into());
             }
             map.insert("screenshot_only".into(), " ".into());
