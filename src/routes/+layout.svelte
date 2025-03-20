@@ -42,6 +42,8 @@
   });
 </script>
 
-<NavBar />
+{#if data.settings.mnemnk_dir}
+  <NavBar />
+{/if}
 {@render children?.()}
 <Attribution />
