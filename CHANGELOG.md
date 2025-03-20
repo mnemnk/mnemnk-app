@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.11.3](https://github.com/mnemnk/mnemnk-app/compare/v0.11.2...v0.11.3) (2025-03-20)
+
+
+### Features
+
+* 🎸 export and import agent flow ([#118](https://github.com/mnemnk/mnemnk-app/issues/118)) ([9a8792f](https://github.com/mnemnk/mnemnk-app/commit/9a8792f1d712145fa49bb546340e287aa4377e80)), closes [#116](https://github.com/mnemnk/mnemnk-app/issues/116)
+* 🎸 initial settings ([#119](https://github.com/mnemnk/mnemnk-app/issues/119)) ([cfd0d0a](https://github.com/mnemnk/mnemnk-app/commit/cfd0d0a7703102044105c06acbb5ffdb5d502c8c))
+* 🎸 prohibit absolute path in agent config ([#120](https://github.com/mnemnk/mnemnk-app/issues/120)) ([bfaeef2](https://github.com/mnemnk/mnemnk-app/commit/bfaeef273fa6eaff4b63faf5d7ed4742981cc7f2))
+
+
+### Bug Fixes
+
+* 🐛 remove rebuild search index ([#121](https://github.com/mnemnk/mnemnk-app/issues/121)) ([e523f86](https://github.com/mnemnk/mnemnk-app/commit/e523f86fa14be1239672c9b530966a785807af31))
+
 ## [0.11.2](https://github.com/mnemnk/mnemnk-app/compare/v0.11.1...v0.11.2) (2025-03-19)
 
 
