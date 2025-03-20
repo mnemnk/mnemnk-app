@@ -26,6 +26,10 @@ export async function getAgentFlows(): Promise<SAgentFlow[]> {
   return await invoke("get_agent_flows_cmd");
 }
 
+export async function readAgentFlow(path: string): Promise<SAgentFlow> {
+  return await invoke("read_agent_flow_cmd", { path });
+}
+
 export async function saveAgentFlow(agent_flow: SAgentFlow, idx: number): Promise<void> {
   await invoke("save_agent_flow_cmd", { agent_flow, idx });
 }

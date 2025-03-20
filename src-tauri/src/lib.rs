@@ -23,6 +23,7 @@ pub fn run() {
             });
         }))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -59,6 +60,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             mnemnk::agent::config::get_agent_configs_cmd,
             mnemnk::agent::flow::get_agent_flows_cmd,
+            mnemnk::agent::flow::read_agent_flow_cmd,
             mnemnk::agent::flow::save_agent_flow_cmd,
             mnemnk::settings::get_core_settings_cmd,
             mnemnk::settings::set_core_settings_cmd,
