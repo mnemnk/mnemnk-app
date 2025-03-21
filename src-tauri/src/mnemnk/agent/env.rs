@@ -57,10 +57,10 @@ impl AgentEnv {
     pub fn init(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> Result<()> {
         let env = Self::new(tx);
 
-        let agent_configs = init_agent_defs(app)?;
+        let agent_defs = init_agent_defs(app)?;
         {
-            let mut configs = env.defs.lock().unwrap();
-            *configs = agent_configs;
+            let mut defs = env.defs.lock().unwrap();
+            *defs = agent_defs;
         }
 
         app.manage(env);
@@ -69,12 +69,12 @@ impl AgentEnv {
 }
 
 #[tauri::command]
-pub fn get_agent_configs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
-    let configs;
+pub fn get_agent_defs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
+    let defs;
     {
-        let env_configs = env.defs.lock().unwrap();
-        configs = env_configs.clone();
+        let env_defs = env.defs.lock().unwrap();
+        defs = env_defs.clone();
     }
-    let value = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
+    let value = serde_json::to_value(&defs).map_err(|e| e.to_string())?;
     Ok(value)
 }

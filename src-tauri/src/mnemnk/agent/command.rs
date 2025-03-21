@@ -33,9 +33,9 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let env = app.state::<AgentEnv>();
     let agent_path;
     {
-        let env_configs = env.defs.lock().unwrap();
-        if env_configs.contains_key(&agent_name) {
-            agent_path = env_configs.get(&agent_name).unwrap().path.clone();
+        let env_defs = env.defs.lock().unwrap();
+        if env_defs.contains_key(&agent_name) {
+            agent_path = env_defs.get(&agent_name).unwrap().path.clone();
         } else {
             log::error!("Agent {} not found", agent_name);
             return Err(anyhow::anyhow!("Agent not found"));

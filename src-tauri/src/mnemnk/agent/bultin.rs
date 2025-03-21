@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use super::definition::{AgentDefaultConfig, AgentDefinition, AgentDefinitions};
+use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
 
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
@@ -18,7 +18,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             outputs: Some(vec!["*".to_string()]),
             default_config: Some(HashMap::from([(
                 "board_name".to_string(),
-                AgentDefaultConfig {
+                AgentDefaultConfigEntry {
                     value: Value::String("".to_string()),
                     type_: Some("string?".to_string()),
                     title: Some("Board Name".to_string()),

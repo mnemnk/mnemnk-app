@@ -9,7 +9,7 @@ use tauri::AppHandle;
 use super::bultin::builtin_agent_defs;
 use crate::mnemnk::settings;
 
-static AGENT_CONFIG_DIR: &str = "agents";
+static AGENTS_DIR: &str = "agents";
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentDefinition {
@@ -19,11 +19,13 @@ pub struct AgentDefinition {
     pub path: Option<String>,
     pub inputs: Option<Vec<String>>,
     pub outputs: Option<Vec<String>>,
-    pub default_config: Option<HashMap<String, AgentDefaultConfig>>,
+    pub default_config: Option<AgentDefaultConfig>,
 }
 
+pub type AgentDefaultConfig = HashMap<String, AgentDefaultConfigEntry>;
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AgentDefaultConfig {
+pub struct AgentDefaultConfigEntry {
     pub value: Value,
     #[serde(rename = "type")]
     pub type_: Option<String>,
@@ -61,21 +63,21 @@ fn read_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
         let content = match std::fs::read_to_string(&mnemnk_json) {
             Ok(ret) => ret,
             Err(e) => {
-                log::warn!("Failed to read agent config file: {}", e);
+                log::warn!("Failed to read agent definition file: {}", e);
                 continue;
             }
         };
         let def: AgentDefinition = match serde_json::from_str(&content) {
             Ok(def) => def,
             Err(e) => {
-                log::warn!("Failed to parse agent config file: {}", e);
+                log::warn!("Failed to parse agent definition file: {}", e);
                 continue;
             }
         };
         // check if name and def.name match
         if def.name != name {
             log::warn!(
-                "Agent name and config name mismatch: {} != {}",
+                "Agent name and definition name mismatch: {} != {}",
                 name,
                 def.name
             );
@@ -91,7 +93,7 @@ pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
     if mnemnk_dir.is_none() {
         return None;
     }
-    let agents_dir = PathBuf::from(mnemnk_dir.unwrap()).join(AGENT_CONFIG_DIR);
+    let agents_dir = PathBuf::from(mnemnk_dir.unwrap()).join(AGENTS_DIR);
     if !agents_dir.exists() {
         std::fs::create_dir(&agents_dir).expect("Failed to create agents directory");
     }

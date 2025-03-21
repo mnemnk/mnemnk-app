@@ -11,15 +11,15 @@ import type {
   SAgentFlow,
   SAgentFlowEdge,
   SAgentFlowNode,
-  SAgentConfigs,
+  SAgentDefinitions,
   SAgentDefaultConfig,
   AgentFlow,
   AgentFlowEdge,
   AgentFlowNode,
 } from "./types";
 
-export async function getAgentConfigs(): Promise<SAgentConfigs> {
-  return await invoke("get_agent_configs_cmd");
+export async function getAgentDefs(): Promise<SAgentDefinitions> {
+  return await invoke("get_agent_defs_cmd");
 }
 
 export async function getAgentFlows(): Promise<SAgentFlow[]> {
@@ -34,14 +34,14 @@ export async function saveAgentFlow(agent_flow: SAgentFlow, idx: number): Promis
   await invoke("save_agent_flow_cmd", { agent_flow, idx });
 }
 
-const agentConfigsKey = Symbol("agentConfigs");
+const agentDefinitionsKey = Symbol("agentDefinitions");
 
-export function setAgentConfigsContext(settings: SAgentConfigs): void {
-  setContext(agentConfigsKey, settings);
+export function setAgentDefinitionsContext(defs: SAgentDefinitions): void {
+  setContext(agentDefinitionsKey, defs);
 }
 
-export function getAgentConfigsContext(): SAgentConfigs {
-  return getContext(agentConfigsKey);
+export function getAgentDefinitionsContext(): SAgentDefinitions {
+  return getContext(agentDefinitionsKey);
 }
 
 // Agent Flow
@@ -49,7 +49,7 @@ export function getAgentConfigsContext(): SAgentConfigs {
 export function addAgentNode(
   agent_name: string,
   nodes: Writable<AgentFlowNode[]>,
-  settings: SAgentConfigs,
+  settings: SAgentDefinitions,
 ) {
   const new_node = newAgentFlowNode(agent_name, settings);
   nodes.update((nodes) => {
@@ -61,7 +61,7 @@ export async function updateAgentFlow(
   nodes: Writable<AgentFlowNode[]>,
   edges: Writable<AgentFlowEdge[]>,
   flow_index: number,
-  agent_configs: SAgentConfigs,
+  agent_configs: SAgentDefinitions,
 ) {
   const flow = serializeAgentFlow(get(nodes), get(edges), agent_configs);
   await saveAgentFlow(flow, flow_index);
@@ -69,7 +69,10 @@ export async function updateAgentFlow(
 
 // deserialize: SAgentFlow -> AgentFlow
 
-export function deserializeAgentFlow(flow: SAgentFlow, agent_settings: SAgentConfigs): AgentFlow {
+export function deserializeAgentFlow(
+  flow: SAgentFlow,
+  agent_settings: SAgentDefinitions,
+): AgentFlow {
   return {
     nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
     edges: flow.edges.map((edge) => deserializeAgentFlowEdge(edge)),
@@ -78,7 +81,7 @@ export function deserializeAgentFlow(flow: SAgentFlow, agent_settings: SAgentCon
 
 export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
-  agent_configs: SAgentConfigs,
+  agent_configs: SAgentDefinitions,
 ): AgentFlowNode {
   const configs = agent_configs[node.name];
   const default_config = configs?.default_config;
@@ -158,7 +161,7 @@ function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
 export function serializeAgentFlow(
   nodes: AgentFlowNode[],
   edges: AgentFlowEdge[],
-  agent_configs: SAgentConfigs,
+  agent_configs: SAgentDefinitions,
 ): SAgentFlow {
   return {
     nodes: nodes.map((node) => serializeAgentFlowNode(node, agent_configs)),
@@ -168,7 +171,7 @@ export function serializeAgentFlow(
 
 export function serializeAgentFlowNode(
   node: AgentFlowNode,
-  agent_configs: SAgentConfigs,
+  agent_configs: SAgentDefinitions,
 ): SAgentFlowNode {
   return {
     id: node.id,
@@ -236,7 +239,7 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
   };
 }
 
-export function newAgentFlowNode(agent_name: string, settings: SAgentConfigs): AgentFlowNode {
+export function newAgentFlowNode(agent_name: string, settings: SAgentDefinitions): AgentFlowNode {
   const id = newNodeId(agent_name);
   const default_config = settings[agent_name].default_config ?? {};
   const config: Record<string, any> = {};
