@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use super::config::{AgentConfig, AgentConfigs, AgentDefaultConfigEntry};
+use super::definition::{AgentDefaultConfig, AgentDefinition, AgentDefinitions};
 
-pub fn builtin_agent_configs() -> AgentConfigs {
-    let mut configs = HashMap::new();
+pub fn builtin_agent_defs() -> AgentDefinitions {
+    let mut defs: AgentDefinitions = Default::default();
 
-    configs.insert(
+    defs.insert(
         "$board".to_string(),
-        AgentConfig {
+        AgentDefinition {
             name: "$board".to_string(),
             title: Some("Board".to_string()),
             description: None,
@@ -18,7 +18,7 @@ pub fn builtin_agent_configs() -> AgentConfigs {
             outputs: Some(vec!["*".to_string()]),
             default_config: Some(HashMap::from([(
                 "board_name".to_string(),
-                AgentDefaultConfigEntry {
+                AgentDefaultConfig {
                     value: Value::String("".to_string()),
                     type_: Some("string?".to_string()),
                     title: Some("Board Name".to_string()),
@@ -29,9 +29,9 @@ pub fn builtin_agent_configs() -> AgentConfigs {
         },
     );
 
-    configs.insert(
+    defs.insert(
         "$database".to_string(),
-        AgentConfig {
+        AgentDefinition {
             name: "$database".to_string(),
             title: Some("Database".to_string()),
             description: None,
@@ -42,5 +42,5 @@ pub fn builtin_agent_configs() -> AgentConfigs {
         },
     );
 
-    configs
+    defs
 }

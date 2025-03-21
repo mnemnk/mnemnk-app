@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::CommandChild;
 use tokio::sync::mpsc;
 
-use super::config::{init_agent_configs, AgentConfigs};
+use super::definition::{init_agent_defs, AgentDefinitions};
 use super::AgentMessage;
 
 // pub trait Agent {
@@ -17,7 +17,7 @@ use super::AgentMessage;
 // }
 
 pub struct AgentEnv {
-    pub configs: Mutex<AgentConfigs>,
+    pub defs: Mutex<AgentDefinitions>,
 
     // pub nodes: Mutex<HashMap<String, Box<dyn Agent + Send>>>,
 
@@ -43,7 +43,7 @@ pub struct AgentEnv {
 impl AgentEnv {
     pub fn new(tx: mpsc::Sender<AgentMessage>) -> Self {
         Self {
-            configs: Default::default(),
+            defs: Default::default(),
             // nodes: Default::default(),
             enabled_nodes: Default::default(),
             edges: Default::default(),
@@ -57,9 +57,9 @@ impl AgentEnv {
     pub fn init(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> Result<()> {
         let env = Self::new(tx);
 
-        let agent_configs = init_agent_configs(app)?;
+        let agent_configs = init_agent_defs(app)?;
         {
-            let mut configs = env.configs.lock().unwrap();
+            let mut configs = env.defs.lock().unwrap();
             *configs = agent_configs;
         }
 
@@ -72,7 +72,7 @@ impl AgentEnv {
 pub fn get_agent_configs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
     let configs;
     {
-        let env_configs = env.configs.lock().unwrap();
+        let env_configs = env.defs.lock().unwrap();
         configs = env_configs.clone();
     }
     let value = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
