@@ -1,9 +1,9 @@
-import type { SAgentConfigs } from "$lib/types";
+import type { SAgentDefinitions } from "$lib/types";
 
-import { getAgentFlows, getAgentConfigs } from "@/lib/agent";
+import { getAgentFlows, getAgentDefs } from "@/lib/agent";
 
 export async function load() {
-  const agent_configs: SAgentConfigs = await getAgentConfigs();
+  const agent_defs: SAgentDefinitions = await getAgentDefs();
 
   const agent_flows = await getAgentFlows();
   if (agent_flows.length === 0) {
@@ -11,7 +11,7 @@ export async function load() {
   }
 
   return {
-    agent_configs,
+    agent_defs,
     agent_flows,
   };
 }

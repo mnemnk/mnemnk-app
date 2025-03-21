@@ -5,7 +5,7 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
-  import { getAgentConfigsContext } from "@/lib/agent";
+  import { getAgentDefinitionsContext } from "@/lib/agent";
   import type { AgentFlowNodeConfig } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
@@ -22,7 +22,7 @@
 
   let { id, data }: Props = $props();
 
-  const agent_default_config = getAgentConfigsContext()?.[data.name]?.default_config;
+  const agent_default_config = getAgentDefinitionsContext()?.[data.name]?.default_config;
 </script>
 
 {#snippet title()}

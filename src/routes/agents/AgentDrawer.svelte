@@ -14,29 +14,29 @@
     serializeAgentFlow,
     updateAgentFlow,
   } from "@/lib/agent";
-  import type { SAgentConfigs, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
+  import type { SAgentDefinitions, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   type Props = NodeProps & {
     nodes: Writable<AgentFlowNode[]>;
     edges: Writable<AgentFlowEdge[]>;
     flow_index: number;
-    agent_configs: SAgentConfigs;
+    agent_defs: SAgentDefinitions;
   };
 
-  const { nodes, edges, flow_index, agent_configs }: Props = $props();
+  const { nodes, edges, flow_index, agent_defs }: Props = $props();
 
-  const agent_names = Object.keys(agent_configs).sort();
+  const agent_names = Object.keys(agent_defs).sort();
 
   function addAgent(agent_name: string) {
-    addAgentNode(agent_name, nodes, agent_configs);
+    addAgentNode(agent_name, nodes, agent_defs);
   }
 
   async function updateFlow() {
-    await updateAgentFlow(nodes, edges, flow_index, agent_configs);
+    await updateAgentFlow(nodes, edges, flow_index, agent_defs);
   }
 
   function exportFlow() {
-    const flow = serializeAgentFlow(get(nodes), get(edges), agent_configs);
+    const flow = serializeAgentFlow(get(nodes), get(edges), agent_defs);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -54,7 +54,7 @@
     if (!file) return;
     const sflow = await readAgentFlow(file);
     if (!sflow.nodes || !sflow.edges) return;
-    const flow = deserializeAgentFlow(sflow, agent_configs);
+    const flow = deserializeAgentFlow(sflow, agent_defs);
     nodes.set(flow.nodes);
     edges.set(flow.edges);
   }
@@ -82,7 +82,7 @@
         class="w-full"
         color={agent_name.startsWith("$") ? "blue" : "primary"}
         outline
-        onclick={() => addAgent(agent_name)}>{agent_configs[agent_name].title ?? agent_name}</Button
+        onclick={() => addAgent(agent_name)}>{agent_defs[agent_name].title ?? agent_name}</Button
       >
     </div>
   {/each}

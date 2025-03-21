@@ -2,9 +2,9 @@ import type { Writable } from "svelte/store";
 
 import type { Edge, Node } from "@xyflow/svelte";
 
-export type SAgentConfigs = Record<string, SAgentConfig>;
+export type SAgentDefinitions = Record<string, SAgentDefinition>;
 
-export type SAgentConfig = {
+export type SAgentDefinition = {
   name: string;
   title: string | null;
   description: string | null;
@@ -102,7 +102,7 @@ export type CoreSettings = {
 
 export type Settings = {
   core: CoreSettings;
-  agents: Record<string, SAgentConfig>;
+  agents: Record<string, SAgentDefinition>;
   agent_flows: SAgentFlow[];
 };
 

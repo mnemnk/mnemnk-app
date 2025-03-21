@@ -6,7 +6,7 @@
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
 
-  import { deserializeAgentFlow, setAgentConfigsContext } from "@/lib/agent";
+  import { deserializeAgentFlow, setAgentDefinitionsContext } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
   import AgentDrawer from "./AgentDrawer.svelte";
@@ -14,7 +14,7 @@
 
   const { data } = $props();
 
-  setAgentConfigsContext(data.agent_configs);
+  setAgentDefinitionsContext(data.agent_defs);
 
   const nodes: Writable<AgentFlowNode[]> = writable([]);
   const edges: Writable<AgentFlowEdge[]> = writable([]);
@@ -25,7 +25,7 @@
   const flow_index = $state(0);
 
   $effect(() => {
-    const flow = deserializeAgentFlow(data.agent_flows[flow_index], data.agent_configs);
+    const flow = deserializeAgentFlow(data.agent_flows[flow_index], data.agent_defs);
     nodes.set(flow.nodes);
     edges.set(flow.edges);
   });
@@ -48,7 +48,7 @@
     <Controls />
   </SvelteFlow>
 
-  <AgentDrawer {flow_index} {nodes} {edges} agent_configs={data.agent_configs} />
+  <AgentDrawer {flow_index} {nodes} {edges} agent_defs={data.agent_defs} />
 </main>
 
 <style>
