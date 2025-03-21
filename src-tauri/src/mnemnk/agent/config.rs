@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Manager, State};
+use tauri::AppHandle;
 
 use super::bultin::builtin_agent_configs;
 use crate::mnemnk::settings;
@@ -35,11 +34,10 @@ pub struct AgentDefaultConfigEntry {
 
 pub type AgentConfigs = HashMap<String, AgentConfig>;
 
-pub(super) fn init_agent_configs(app: &AppHandle) -> Result<()> {
+pub(super) fn init_agent_configs(app: &AppHandle) -> Result<AgentConfigs> {
     let mut agent_configs = builtin_agent_configs();
     read_agent_configs(app, &mut agent_configs)?;
-    app.manage(Mutex::new(agent_configs));
-    Ok(())
+    Ok(agent_configs)
 }
 
 fn read_agent_configs(app: &AppHandle, agent_configs: &mut AgentConfigs) -> Result<()> {
@@ -100,15 +98,4 @@ pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
         std::fs::create_dir(&agents_dir).expect("Failed to create agents directory");
     }
     Some(agents_dir)
-}
-
-#[tauri::command]
-pub fn get_agent_configs_cmd(agent_configs: State<Mutex<AgentConfigs>>) -> Result<Value, String> {
-    let configs;
-    {
-        let agent_configs = agent_configs.lock().unwrap();
-        configs = agent_configs.clone();
-    }
-    let value = serde_json::to_value(&configs).map_err(|e| e.to_string())?;
-    Ok(value)
 }

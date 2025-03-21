@@ -7,16 +7,14 @@ pub mod board;
 pub mod bultin;
 pub mod command;
 pub mod config;
+pub mod env;
 pub mod flow;
 
+use env::AgentEnv;
+
 pub async fn init(app: &AppHandle) -> Result<()> {
-    config::init_agent_configs(app)?;
-
-    let (tx, rx) = mpsc::channel(128);
-
-    command::init_agent_commands(app, tx.clone())?;
-
-    board::init_agent_boards(app);
+    let (tx, rx) = mpsc::channel(4096);
+    AgentEnv::init(app, tx.clone())?;
 
     flow::init_agent_flows(app)?;
     flow::sync_agent_flows(app);

@@ -1,43 +1,19 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, vec};
 use tauri::{AppHandle, Manager};
-use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
-use tokio::sync::mpsc;
 
-use super::config::{agents_dir, AgentConfigs};
+use crate::mnemnk::agent::env::AgentEnv;
+
+use super::config::agents_dir;
 use super::flow::{find_agent_node, AgentFlows};
 use super::AgentMessage;
-
-pub struct AgentCommands {
-    // node id -> child process
-    pub commands: HashMap<String, CommandChild>,
-
-    // message sender
-    pub tx: mpsc::Sender<AgentMessage>,
-
-    // enabled node ids
-    pub enabled_nodes: HashSet<String>,
-
-    // node id -> node ids
-    pub edges: HashMap<String, Vec<String>>,
-}
-
-pub fn init_agent_commands(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> Result<()> {
-    let agent_commands = AgentCommands {
-        commands: HashMap::new(),
-        tx,
-        enabled_nodes: HashSet::new(),
-        edges: HashMap::new(),
-    };
-    app.manage(Mutex::new(agent_commands));
-    Ok(())
-}
 
 pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let agent_name: String;
@@ -54,12 +30,12 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
         }
     }
 
-    let agent_configs = app.state::<Mutex<AgentConfigs>>();
+    let env = app.state::<AgentEnv>();
     let agent_path;
     {
-        let agent_configs = agent_configs.lock().unwrap();
-        if agent_configs.contains_key(&agent_name) {
-            agent_path = agent_configs.get(&agent_name).unwrap().path.clone();
+        let env_configs = env.configs.lock().unwrap();
+        if env_configs.contains_key(&agent_name) {
+            agent_path = env_configs.get(&agent_name).unwrap().path.clone();
         } else {
             log::error!("Agent {} not found", agent_name);
             return Err(anyhow::anyhow!("Agent not found"));
@@ -87,12 +63,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
         }
     }
 
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
-    let main_tx;
-    {
-        let agent_commands = agent_commands.lock().unwrap();
-        main_tx = agent_commands.tx.clone();
-    }
+    let main_tx = env.tx.clone();
 
     log::info!("Starting agent: {} {}", agent_name, agent_id);
 
@@ -107,10 +78,9 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
     let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;
 
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
     {
-        let mut agent_commands = agent_commands.lock().unwrap();
-        agent_commands.commands.insert(agent_id.to_string(), child);
+        let mut agent_commands = env.commands.lock().unwrap();
+        agent_commands.insert(agent_id.to_string(), child);
     }
 
     let app_handle = app.clone();
@@ -131,8 +101,6 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
                     }
 
                     let line = String::from_utf8_lossy(&line_bytes);
-                    // log::debug!("stdout from {}: {:.200}", &agent, &line);
-
                     let (cmd, args) = parse_stdout(&line);
                     match cmd {
                         ".OUT" => {
@@ -176,12 +144,14 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
                         agent_id,
                         status
                     );
-                    // unsubscribe_agent(&app_handle, &agent_id);
-                    let agent_commands = app_handle.state::<Mutex<AgentCommands>>();
+                    let env = app_handle.state::<AgentEnv>();
                     {
-                        let mut agent_commands = agent_commands.lock().unwrap();
-                        agent_commands.commands.remove(&agent_id);
-                        agent_commands.enabled_nodes.remove(&agent_id);
+                        let mut commands = env.commands.lock().unwrap();
+                        commands.remove(&agent_id);
+                    }
+                    {
+                        let mut enabled_nodes = env.enabled_nodes.lock().unwrap();
+                        enabled_nodes.remove(&agent_id);
                     }
                     break;
                 }
@@ -205,13 +175,18 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 }
 
 pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
-    let mut agent_commands = agent_commands.lock().unwrap();
-    agent_commands.enabled_nodes.remove(agent_id);
-    if let Some(child) = agent_commands.commands.get_mut(agent_id) {
-        child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
-            log::error!("Failed to write to {}: {}", agent_id, e);
-        });
+    let env = app.state::<AgentEnv>();
+    {
+        let mut enable_nodes = env.enabled_nodes.lock().unwrap();
+        enable_nodes.remove(agent_id);
+    }
+    {
+        let mut commands = env.commands.lock().unwrap();
+        if let Some(child) = commands.get_mut(agent_id) {
+            child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
+                log::error!("Failed to write to {}: {}", agent_id, e);
+            });
+        }
     }
     Ok(())
 }
@@ -230,18 +205,15 @@ pub fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
     }
     let json_config = serde_json::to_value(config).context("Failed to serialize config")?;
 
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    let env = app.state::<AgentEnv>();
     {
-        let mut agent_commands = agent_commands.lock().unwrap();
-        if agent_commands.commands.contains_key(agent_id) {
+        let mut agent_commands = env.commands.lock().unwrap();
+        if let Some(child) = agent_commands.get_mut(agent_id) {
             // the agent is already running, so update the config
-            if let Some(child) = agent_commands.commands.get_mut(agent_id) {
-                if let Err(e) =
-                    child.write(format!(".CONFIG {}\n", json_config.to_string()).as_bytes())
-                {
-                    log::error!("Failed to set config to {}: {}", agent_id, e);
-                    return Err(anyhow::anyhow!("Failed to set config to agent"));
-                }
+            if let Err(e) = child.write(format!(".CONFIG {}\n", json_config.to_string()).as_bytes())
+            {
+                log::error!("Failed to set config to {}: {}", agent_id, e);
+                return Err(anyhow::anyhow!("Failed to set config to agent"));
             }
         }
     }
@@ -250,19 +222,15 @@ pub fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
 }
 
 pub fn quit(app: &AppHandle) {
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    let env = app.state::<AgentEnv>();
     {
         // send QUIT command to all agents
-        let mut agent_commands = agent_commands.lock().unwrap();
-        let agent_ids = agent_commands
-            .commands
-            .keys()
-            .cloned()
-            .collect::<vec::Vec<String>>();
+        let mut agent_commands = env.commands.lock().unwrap();
+        let agent_ids = agent_commands.keys().cloned().collect::<vec::Vec<String>>();
         for agent_id in agent_ids {
             log::info!("Stopping agent: {}", agent_id);
             // we cannot use stop_agent here because it will also try to lock aget_commands.
-            if let Some(child) = agent_commands.commands.get_mut(&agent_id) {
+            if let Some(child) = agent_commands.get_mut(&agent_id) {
                 child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
                     log::error!("Failed to write to {}: {}", agent_id, e);
                 });
@@ -273,8 +241,8 @@ pub fn quit(app: &AppHandle) {
     // wait for all agents to exit
     for _ in 0..20 {
         {
-            let agent_commands = agent_commands.lock().unwrap();
-            if agent_commands.commands.is_empty() {
+            let agent_commands = env.commands.lock().unwrap();
+            if agent_commands.is_empty() {
                 return;
             }
         }
@@ -283,15 +251,11 @@ pub fn quit(app: &AppHandle) {
 
     {
         // kill remaining agents
-        let mut agent_commands = agent_commands.lock().unwrap();
-        let programs = agent_commands
-            .commands
-            .keys()
-            .cloned()
-            .collect::<vec::Vec<String>>();
+        let mut agent_commands = env.commands.lock().unwrap();
+        let programs = agent_commands.keys().cloned().collect::<vec::Vec<String>>();
         for program in programs {
             log::warn!("Killing agent: {}", program);
-            if let Some(command) = agent_commands.commands.remove(&program) {
+            if let Some(command) = agent_commands.remove(&program) {
                 command.kill().unwrap_or_else(|e| {
                     log::error!("Failed to kill agent: {} {}", program, e);
                 });
