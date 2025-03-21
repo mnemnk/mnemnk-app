@@ -60,7 +60,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             exit_app_cmd,
-            mnemnk::agent::config::get_agent_configs_cmd,
+            mnemnk::agent::env::get_agent_configs_cmd,
             mnemnk::agent::flow::get_agent_flows_cmd,
             mnemnk::agent::flow::read_agent_flow_cmd,
             mnemnk::agent::flow::save_agent_flow_cmd,

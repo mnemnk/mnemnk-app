@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::vec;
 
@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
-use super::board::AgentBoards;
-use super::command::{start_agent, stop_agent, update_agent_config, AgentCommands};
+use super::command::{start_agent, stop_agent, update_agent_config};
+use super::env::AgentEnv;
 use crate::mnemnk::settings;
 
 pub type AgentFlows = Vec<AgentFlow>;
@@ -44,18 +44,30 @@ pub struct AgentFlowEdge {
 }
 
 pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
-    let agent_flows = read_agent_flows(app)?;
-    app.manage(Mutex::new(agent_flows));
+    if let Some(dir) = agent_flows_dir(app) {
+        let agent_flows = read_agent_flows(&dir)?;
+        app.manage(Mutex::new(agent_flows));
+    } else {
+        return Err(anyhow::anyhow!("Agent flows directory not found"));
+    }
     Ok(())
 }
 
-fn read_agent_flows(app: &AppHandle) -> Result<AgentFlows> {
-    let dir = agent_flows_dir(app);
-    if dir.is_none() {
-        return Err(anyhow::anyhow!("Agent flows directory not found"));
+fn agent_flows_dir(app: &AppHandle) -> Option<PathBuf> {
+    let mnemnk_dir = settings::mnemnk_dir(app);
+    if mnemnk_dir.is_none() {
+        return None;
     }
+    let agent_flows_dir = PathBuf::from(mnemnk_dir.unwrap()).join("agent_flows");
+    if !agent_flows_dir.exists() {
+        std::fs::create_dir(&agent_flows_dir).expect("Failed to create agent flows directory");
+    }
+    Some(agent_flows_dir)
+}
+
+fn read_agent_flows<P: AsRef<Path>>(dir: P) -> Result<AgentFlows> {
     let mut flows = Vec::new();
-    for entry in std::fs::read_dir(dir.unwrap())? {
+    for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
         if !path.is_file() || path.extension().unwrap_or_default() != "json" {
@@ -76,25 +88,9 @@ fn read_agent_flow(path: &PathBuf) -> Result<AgentFlow> {
     Ok(flow)
 }
 
-fn agent_flows_dir(app: &AppHandle) -> Option<PathBuf> {
-    let mnemnk_dir = settings::mnemnk_dir(app);
-    if mnemnk_dir.is_none() {
-        return None;
-    }
-    let agent_flows_dir = PathBuf::from(mnemnk_dir.unwrap()).join("agent_flows");
-    if !agent_flows_dir.exists() {
-        std::fs::create_dir(&agent_flows_dir).expect("Failed to create agent flows directory");
-    }
-    Some(agent_flows_dir)
-}
-
-fn save_agent_flows(app: &AppHandle, flows: &AgentFlows) -> Result<()> {
-    let dir = agent_flows_dir(app);
-    if dir.is_none() {
-        return Err(anyhow::anyhow!("Agent flows directory not found"));
-    }
+fn save_agent_flows(flows: &AgentFlows, dir: &PathBuf) -> Result<()> {
     for (i, flow) in flows.iter().enumerate() {
-        let path = dir.clone().unwrap().join(format!("{}.json", i));
+        let path = dir.join(format!("{}.json", i));
         let content = serde_json::to_string_pretty(flow)?;
         std::fs::write(&path, content)?;
     }
@@ -103,22 +99,21 @@ fn save_agent_flows(app: &AppHandle, flows: &AgentFlows) -> Result<()> {
 
 pub(super) fn sync_agent_flows(app: &AppHandle) {
     let agent_flows;
-    let state = app.state::<Mutex<AgentFlows>>();
     {
-        let state = state.lock().unwrap();
-        agent_flows = state.clone();
+        let state = app.state::<Mutex<AgentFlows>>();
+        agent_flows = state.lock().unwrap().clone();
     }
 
     let mut enabled_nodes = HashSet::new();
-    let mut edges = HashMap::<String, Vec<String>>::new();
     let mut board_names = HashMap::<String, String>::new();
-    let mut subscribers = HashMap::<String, Vec<String>>::new();
     let mut new_agents = HashSet::new();
     for agent_flow in &agent_flows {
         for node in &agent_flow.nodes {
             if !node.enabled {
                 continue;
-            } else if node.name.starts_with("$") {
+            }
+            enabled_nodes.insert(node.id.clone());
+            if node.name.starts_with("$") {
                 if node.name == "$board" {
                     if let Some(board_name) = node
                         .config
@@ -133,57 +128,36 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
             } else {
                 new_agents.insert(node.id.clone());
             }
-            enabled_nodes.insert(node.id.clone());
         }
     }
+
+    let mut edges = HashMap::<String, Vec<(String, String, String)>>::new();
     for agent_flow in &agent_flows {
         for edge in &agent_flow.edges {
             if !enabled_nodes.contains(&edge.source) || !enabled_nodes.contains(&edge.target) {
                 continue;
             }
 
-            if edge.source.starts_with("$board_") {
-                if let Some(board_name) = board_names.get(&edge.source) {
-                    if board_name == "" || board_name == "*" {
-                        // Cannot determine kind if board_name is not set
-                        continue;
-                    }
-                    // For board, source_handle is always *
-                    let target_p =
-                        format!("{}/{}", edge.target, normalize_handle(&edge.target_handle));
-                    if let Some(subs) = subscribers.get_mut(board_name) {
-                        subs.push(target_p);
-                    } else {
-                        subscribers.insert(board_name.clone(), vec![target_p]);
-                    }
-                }
-                continue;
-            }
-
-            let target_p = format!(
-                "{}/{}/{}",
-                edge.target,
+            let target = (
+                edge.target.clone(),
                 normalize_handle(&edge.source_handle),
-                normalize_handle(&edge.target_handle)
+                normalize_handle(&edge.target_handle),
             );
             if let Some(targets) = edges.get_mut(&edge.source) {
-                targets.push(target_p);
+                targets.push(target);
             } else {
-                edges.insert(edge.source.clone(), vec![target_p]);
+                edges.insert(edge.source.clone(), vec![target]);
             }
         }
     }
 
+    let env = app.state::<AgentEnv>();
+
     // sync agents
-    let old_agents;
-    let agent_commands = app.state::<Mutex<AgentCommands>>();
+    let old_agents: HashSet<String>;
     {
-        let agent_commands = agent_commands.lock().unwrap();
-        old_agents = agent_commands
-            .commands
-            .keys()
-            .cloned()
-            .collect::<HashSet<String>>();
+        let agent_commands = env.commands.lock().unwrap();
+        old_agents = agent_commands.keys().cloned().collect();
     }
     // check if any agents need to be stopped
     for agent in old_agents.difference(&new_agents) {
@@ -205,15 +179,16 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     }
 
     {
-        let mut agent_commands = agent_commands.lock().unwrap();
-        agent_commands.enabled_nodes = enabled_nodes;
-        agent_commands.edges = edges;
+        let mut env_enabled_nodes = env.enabled_nodes.lock().unwrap();
+        *env_enabled_nodes = enabled_nodes;
     }
-    let agent_boards = app.state::<Mutex<AgentBoards>>();
     {
-        let mut agent_boards = agent_boards.lock().unwrap();
-        agent_boards.board_names = board_names;
-        agent_boards.subscribers = subscribers;
+        let mut env_edges = env.edges.lock().unwrap();
+        *env_edges = edges;
+    }
+    {
+        let mut env_board_names = env.board_names.lock().unwrap();
+        *env_board_names = board_names;
     }
 }
 
@@ -266,7 +241,11 @@ pub fn save_agent_flow_cmd(
         }
         flows = agent_flows.clone();
     }
-    save_agent_flows(&app, &flows).map_err(|e| e.to_string())?;
+    let dir = agent_flows_dir(&app);
+    if dir.is_none() {
+        return Err("Agent flows directory not found".to_string());
+    }
+    save_agent_flows(&flows, &dir.unwrap()).map_err(|e| e.to_string())?;
     sync_agent_flows(&app);
     Ok(())
 }
