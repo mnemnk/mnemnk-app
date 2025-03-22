@@ -3522,6 +3522,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-store",
  "tauri-plugin-window-state",
+ "thiserror 2.0.12",
  "tokio",
  "tonic-build",
  "unicode-normalization",

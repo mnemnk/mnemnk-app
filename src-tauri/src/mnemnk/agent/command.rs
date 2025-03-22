@@ -1,78 +1,117 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::{env, vec};
+use std::vec;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
+use crate::mnemnk::agent::definition::agents_dir;
 use crate::mnemnk::agent::env::AgentEnv;
+use crate::mnemnk::agent::AgentMessage;
 
-use super::definition::agents_dir;
+use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 use super::flow::{find_agent_node, AgentFlows};
-use super::AgentMessage;
 
-pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
-    let agent_name: String;
-    let config;
-    let flows = app.state::<Mutex<AgentFlows>>();
-    {
-        let flows = flows.lock().unwrap();
-        if let Some(agent_node) = find_agent_node(&flows, agent_id) {
-            agent_name = agent_node.name.clone();
-            config = agent_node.config.clone();
-        } else {
-            log::error!("Agent setting for {} not found", agent_id);
-            return Err(anyhow::anyhow!("Agent setting not found"));
-        }
+pub struct CommandAgent {
+    data: AgentData,
+}
+
+impl AsAgent for CommandAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
     }
 
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn start(&mut self, app: &AppHandle) -> Result<()> {
+        start_agent(
+            app,
+            self.data.id.clone(),
+            &self.data.def_name,
+            self.data.config.clone(),
+        )?;
+        Ok(())
+    }
+
+    fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+        self.data.config = config.clone();
+        update_agent_config(app, &self.data.id)
+    }
+
+    fn stop(&mut self, app: &AppHandle) -> Result<()> {
+        stop_agent(app, &self.data.id)
+    }
+}
+
+impl CommandAgent {
+    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                id,
+                def_name,
+                config,
+            },
+        })
+    }
+}
+
+pub fn start_agent(
+    app: &AppHandle,
+    agent_id: String,
+    def_name: &str,
+    config: Option<AgentConfig>,
+) -> Result<CommandAgent> {
+    let agent = CommandAgent {
+        data: AgentData {
+            id: agent_id.clone(),
+            def_name: def_name.to_string(),
+            config,
+        },
+    };
+
     let env = app.state::<AgentEnv>();
+
     let agent_path;
     {
         let env_defs = env.defs.lock().unwrap();
-        if env_defs.contains_key(&agent_name) {
-            agent_path = env_defs.get(&agent_name).unwrap().path.clone();
+        if env_defs.contains_key(def_name) {
+            let def = env_defs.get(def_name).unwrap();
+            agent_path = def.path.clone();
         } else {
-            log::error!("Agent {} not found", agent_name);
+            log::error!("Agent {} not found", def_name);
             return Err(anyhow::anyhow!("Agent not found"));
         }
     }
-    let agent_path = agent_path.unwrap_or(agent_name.clone());
+    if agent_path.is_none() {
+        log::error!("Agent path not found: {}", def_name);
+        return Err(anyhow::anyhow!("Agent path not found"));
+    }
+    let path = agent_path.unwrap();
 
     let dir = agents_dir(app);
     if dir.is_none() {
         return Err(anyhow::anyhow!("Agents directory not found"));
     }
-    let agent_dir = dir.unwrap().join(&agent_name);
-
-    let mut path = PathBuf::from(&agent_path);
-    if path.is_absolute() {
-        log::error!("Absolute path of agent is not allowed. {}", agent_path);
-        return Err(anyhow::anyhow!("Absolute agent path"));
-    } else {
-        path = agent_dir
-            .join(path)
-            .with_extension(env::consts::EXE_EXTENSION);
-        if !path.exists() {
-            log::error!("Agent path not found: {} -> {}", agent_path, path.display());
-            return Err(anyhow::anyhow!("Agent path not found"));
-        }
-    }
+    let agent_dir = dir.unwrap().join(&def_name);
 
     let main_tx = env.tx.clone();
 
-    log::info!("Starting agent: {} {}", agent_name, agent_id);
+    log::info!("Starting agent: {} {}", def_name, agent_id);
 
-    let sidecar_command = if config.is_none() {
+    let sidecar_command = if agent.config().is_none() {
         app.shell().command(path).current_dir(agent_dir)
     } else {
         app.shell()
             .command(path)
-            .args(vec!["-c", serde_json::to_string(&config).unwrap().as_str()])
+            .args(vec![
+                "-c",
+                serde_json::to_string(&agent.config()).unwrap().as_str(),
+            ])
             .current_dir(agent_dir)
     };
 
@@ -85,6 +124,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
     let app_handle = app.clone();
     let agent_id = agent_id.to_string();
+    let def_name = def_name.to_string();
     tauri::async_runtime::spawn(async move {
         // read events such as stdout
         while let Some(event) = rx.recv().await {
@@ -93,7 +133,7 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
                     if line_bytes.is_empty() || line_bytes[0] != b'.' {
                         log::debug!(
                             "non-command stdout from {} {}: {:.200}",
-                            &agent_name,
+                            &def_name,
                             &agent_id,
                             String::from_utf8_lossy(&line_bytes)
                         );
@@ -134,13 +174,13 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
 
                 CommandEvent::Stderr(line_bytes) => {
                     let line = String::from_utf8_lossy(&line_bytes);
-                    log::debug!("stderr from {} {}: {:.200}", agent_name, agent_id, line);
+                    log::debug!("stderr from {} {}: {:.200}", def_name, agent_id, line);
                 }
 
                 CommandEvent::Terminated(status) => {
                     log::info!(
                         "Agent exited: {} {} with status: {:?}",
-                        agent_name,
+                        def_name,
                         agent_id,
                         status
                     );
@@ -157,13 +197,13 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
                 }
 
                 CommandEvent::Error(e) => {
-                    log::error!("CommandEvent Error {} {}: {}", agent_name, agent_id, e);
+                    log::error!("CommandEvent Error {} {}: {}", def_name, agent_id, e);
                 }
 
                 _ => {
                     log::error!(
                         "Unknown CommandEvent: {} {} {:?}",
-                        agent_name,
+                        def_name,
                         agent_id,
                         event
                     );
@@ -171,7 +211,8 @@ pub fn start_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
             }
         }
     });
-    Ok(())
+
+    Ok(agent)
 }
 
 pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {

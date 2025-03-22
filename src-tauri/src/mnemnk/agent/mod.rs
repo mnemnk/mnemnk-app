@@ -3,12 +3,14 @@ use serde_json::Value;
 use tauri::AppHandle;
 use tokio::sync::mpsc;
 
-pub mod board;
-pub mod bultin;
-pub mod command;
-pub mod definition;
 pub mod env;
 pub mod flow;
+
+mod agent;
+mod board;
+mod builtin;
+mod command;
+mod definition;
 
 use env::AgentEnv;
 

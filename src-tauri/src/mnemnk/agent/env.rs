@@ -6,20 +6,14 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::CommandChild;
 use tokio::sync::mpsc;
 
-use super::definition::{init_agent_defs, AgentDefinitions};
+use super::agent::AsyncAgent;
+use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
 use super::AgentMessage;
-
-// pub trait Agent {
-//     fn id(&self) -> &str;
-//     fn name(&self) -> &str;
-//     fn enabled(&self) -> bool;
-//     fn config(&self) -> Option<HashMap<String, Value>>;
-// }
 
 pub struct AgentEnv {
     pub defs: Mutex<AgentDefinitions>,
 
-    // pub nodes: Mutex<HashMap<String, Box<dyn Agent + Send>>>,
+    pub nodes: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
 
     // enabled node ids
     pub enabled_nodes: Mutex<HashSet<String>>,
@@ -41,10 +35,10 @@ pub struct AgentEnv {
 }
 
 impl AgentEnv {
-    pub fn new(tx: mpsc::Sender<AgentMessage>) -> Self {
+    fn new(tx: mpsc::Sender<AgentMessage>) -> Self {
         Self {
             defs: Default::default(),
-            // nodes: Default::default(),
+            nodes: Default::default(),
             enabled_nodes: Default::default(),
             edges: Default::default(),
             commands: Default::default(),
@@ -70,11 +64,11 @@ impl AgentEnv {
 
 #[tauri::command]
 pub fn get_agent_defs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
-    let defs;
+    let defs: HashMap<String, AgentDefinition>;
     {
         let env_defs = env.defs.lock().unwrap();
         defs = env_defs.clone();
     }
-    let value = serde_json::to_value(&defs).map_err(|e| e.to_string())?;
+    let value = serde_json::to_value(defs).map_err(|e| e.to_string())?;
     Ok(value)
 }
