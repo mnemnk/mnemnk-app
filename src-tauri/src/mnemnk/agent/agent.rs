@@ -10,10 +10,10 @@ use super::env::AgentEnv;
 #[derive(Debug, Error)]
 pub enum AgentError {
     #[error("Unknown agent def name: {0}")]
-    UnknwnDefName(String),
+    UnknownDefName(String),
 
     #[error("Unknown agent def kind: {0}")]
-    UnknwnDefKind(String),
+    UnknownDefKind(String),
 }
 
 pub trait Agent {
@@ -97,7 +97,7 @@ pub fn new_agent(
         let env_defs = env.defs.lock().unwrap();
         def = env_defs
             .get(def_name)
-            .ok_or_else(|| AgentError::UnknwnDefName(def_name.to_string()))?
+            .ok_or_else(|| AgentError::UnknownDefName(def_name.to_string()))?
             .clone();
     }
 
@@ -115,6 +115,6 @@ pub fn new_agent(
             let agent = super::builtin::DatabaseAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
-        _ => return Err(AgentError::UnknwnDefKind(def.kind.to_string()).into()),
+        _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
 }
