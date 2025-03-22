@@ -17,14 +17,14 @@ pub struct AgentEnv {
     // node id -> agent
     pub agents: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
 
-    // node id -> node ids / subscriber handle / target handle
+    // node id -> [node ids / subscriber handle / target handle]
     pub edges: Mutex<HashMap<String, Vec<(String, String, String)>>>,
 
     // node id -> child process
     pub commands: Mutex<HashMap<String, CommandChild>>,
 
-    // node id -> board name
-    pub board_names: Mutex<HashMap<String, String>>,
+    // board name -> [node id]
+    pub board_nodes: Mutex<HashMap<String, Vec<String>>>,
 
     // board name -> value
     pub board_values: Mutex<HashMap<String, Value>>,
@@ -40,7 +40,7 @@ impl AgentEnv {
             agents: Default::default(),
             edges: Default::default(),
             commands: Default::default(),
-            board_names: Default::default(),
+            board_nodes: Default::default(),
             board_values: Default::default(),
             tx,
         }

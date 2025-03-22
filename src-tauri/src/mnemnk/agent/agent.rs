@@ -19,6 +19,7 @@ pub enum AgentError {
 pub trait Agent {
     fn id(&self) -> &str;
 
+    #[allow(unused)]
     fn def_name(&self) -> &str;
 
     fn config(&self) -> Option<&AgentConfig>;
@@ -28,6 +29,8 @@ pub trait Agent {
     fn stop(&mut self, app: &AppHandle) -> Result<()>;
 
     fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()>;
+
+    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()>;
 }
 
 pub struct AgentData {
@@ -55,6 +58,8 @@ pub trait AsAgent {
         self.mut_data().config = config;
         Ok(())
     }
+
+    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()>;
 }
 
 impl<T: AsAgent> Agent for T {
@@ -80,6 +85,10 @@ impl<T: AsAgent> Agent for T {
 
     fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
         self.update(app, config)
+    }
+
+    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+        self.input(app, source, kind, value)
     }
 }
 
@@ -108,7 +117,7 @@ pub fn new_agent(
             return Ok(Box::new(agent));
         }
         "board" => {
-            let agent = super::builtin::BoardAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent = super::board::BoardAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "database" => {
