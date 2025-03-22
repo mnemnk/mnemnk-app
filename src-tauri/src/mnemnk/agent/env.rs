@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use super::agent::AsyncAgent;
 use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
-use super::AgentMessage;
+use super::message::AgentMessage;
 
 pub struct AgentEnv {
     // agent def name -> agent definition

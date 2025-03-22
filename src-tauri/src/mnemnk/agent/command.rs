@@ -8,12 +8,11 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-use crate::mnemnk::agent::definition::agents_dir;
-use crate::mnemnk::agent::env::AgentEnv;
-use crate::mnemnk::agent::AgentMessage;
-
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
+use super::definition::agents_dir;
+use super::env::AgentEnv;
 use super::flow::{find_agent_node, AgentFlows};
+use super::message::AgentMessage;
 
 pub struct CommandAgent {
     data: AgentData,
@@ -174,7 +173,7 @@ pub fn start_agent(
                                 continue;
                             }
                             main_tx
-                                .send(AgentMessage::Output {
+                                .send(AgentMessage::AgentOut {
                                     agent: agent_id.clone(),
                                     kind: kind.to_string(),
                                     value: value.unwrap(),
