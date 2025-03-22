@@ -189,10 +189,6 @@ pub fn start_agent(
                         let mut commands = env.commands.lock().unwrap();
                         commands.remove(&agent_id);
                     }
-                    {
-                        let mut enabled_nodes = env.enabled_nodes.lock().unwrap();
-                        enabled_nodes.remove(&agent_id);
-                    }
                     break;
                 }
 
@@ -217,10 +213,6 @@ pub fn start_agent(
 
 pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
     let env = app.state::<AgentEnv>();
-    {
-        let mut enable_nodes = env.enabled_nodes.lock().unwrap();
-        enable_nodes.remove(agent_id);
-    }
     {
         let mut commands = env.commands.lock().unwrap();
         if let Some(child) = commands.get_mut(agent_id) {

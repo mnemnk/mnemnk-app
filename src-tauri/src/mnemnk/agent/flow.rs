@@ -104,16 +104,13 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
         agent_flows = state.lock().unwrap().clone();
     }
 
-    let mut enabled_nodes = HashSet::new();
     let mut board_names = HashMap::<String, String>::new();
-    let mut new_agents = HashSet::new();
     let mut node_map: HashMap<String, &AgentFlowNode> = HashMap::new();
     for agent_flow in &agent_flows {
         for node in &agent_flow.nodes {
             if !node.enabled {
                 continue;
             }
-            enabled_nodes.insert(node.id.clone());
             node_map.insert(node.id.clone(), &node);
 
             if node.name.starts_with("$") {
@@ -128,8 +125,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
                         }
                     }
                 }
-            } else {
-                new_agents.insert(node.id.clone());
             }
         }
     }
@@ -137,7 +132,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     let mut edges = HashMap::<String, Vec<(String, String, String)>>::new();
     for agent_flow in &agent_flows {
         for edge in &agent_flow.edges {
-            if !enabled_nodes.contains(&edge.source) || !enabled_nodes.contains(&edge.target) {
+            if !node_map.contains_key(&edge.source) || !node_map.contains_key(&edge.target) {
                 continue;
             }
 
@@ -157,24 +152,21 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     let env = app.state::<AgentEnv>();
 
     // sync agents
+    // TODO: move into AgentEnv
 
     let new_nodes: HashSet<_> = node_map.keys().cloned().collect();
     let old_nodes: HashSet<_>;
     {
-        let env_nodes = env.nodes.lock().unwrap();
+        let env_nodes = env.agents.lock().unwrap();
         old_nodes = env_nodes.keys().cloned().collect();
     }
 
     // check if any agents need to be stopped
     for agent_id in old_nodes.difference(&new_nodes) {
-        let mut agent;
-        {
-            let mut env_nodes = env.nodes.lock().unwrap();
-            let Some(a) = env_nodes.remove(agent_id) else {
-                // maybe already stopped
-                continue;
-            };
-            agent = a;
+        let mut env_nodes = env.agents.lock().unwrap();
+        let Some(agent) = env_nodes.get_mut(agent_id) else {
+            // maybe already stopped
+            continue;
         };
         log::info!("Stopping agent: {}", agent_id);
         agent.stop(app).unwrap_or_else(|e| {
@@ -186,7 +178,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     for agent_id in new_nodes.intersection(&old_nodes) {
         let node = node_map[agent_id];
 
-        let mut env_nodes = env.nodes.lock().unwrap();
+        let mut env_nodes = env.agents.lock().unwrap();
         let Some(agent) = env_nodes.get_mut(agent_id) else {
             // maybe already stopped
             continue;
@@ -202,7 +194,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
 
         match agent::new_agent(&env, agent_id.to_string(), &node.name, node.config.clone()) {
             Ok(agent) => {
-                let mut env_nodes = env.nodes.lock().unwrap();
+                let mut env_nodes = env.agents.lock().unwrap();
                 log::info!("New agent: {}", agent.id());
                 env_nodes.insert(agent.id().to_string(), agent);
             }
@@ -214,7 +206,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     }
     // start new agents
     for agent_id in new_nodes.difference(&old_nodes) {
-        let mut env_nodes = env.nodes.lock().unwrap();
+        let mut env_nodes = env.agents.lock().unwrap();
         let Some(agent) = env_nodes.get_mut(agent_id) else {
             continue;
         };
@@ -226,10 +218,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
         }
     }
 
-    {
-        let mut env_enabled_nodes = env.enabled_nodes.lock().unwrap();
-        *env_enabled_nodes = enabled_nodes;
-    }
     {
         let mut env_edges = env.edges.lock().unwrap();
         *env_edges = edges;
