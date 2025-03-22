@@ -1,36 +1,12 @@
 use anyhow::Result;
 use std::collections::HashMap;
+use tauri::AppHandle;
 
 use serde_json::Value;
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
-
-pub struct BoardAgent {
-    data: AgentData,
-}
-
-impl AsAgent for BoardAgent {
-    fn data(&self) -> &AgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AgentData {
-        &mut self.data
-    }
-}
-
-impl BoardAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
-        Ok(Self {
-            data: AgentData {
-                id,
-                def_name,
-                config,
-            },
-        })
-    }
-}
+use crate::mnemnk::store;
 
 pub struct DatabaseAgent {
     data: AgentData,
@@ -43,6 +19,16 @@ impl AsAgent for DatabaseAgent {
 
     fn mut_data(&mut self) -> &mut AgentData {
         &mut self.data
+    }
+
+    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            if let Err(e) = store::store(&app, source, kind, value).await {
+                log::error!("Failed to store: {}", e);
+            }
+        });
+        Ok(())
     }
 }
 

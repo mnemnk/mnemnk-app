@@ -46,6 +46,21 @@ impl AsAgent for CommandAgent {
     fn stop(&mut self, app: &AppHandle) -> Result<()> {
         stop_agent(app, &self.data.id)
     }
+
+    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+        let env = app.state::<AgentEnv>();
+        let mut env_commands = env.commands.lock().unwrap();
+        if let Some(command) = env_commands.get_mut(&self.data.id) {
+            command
+                .write(format!(".IN {} {} {}\n", source, kind, value.to_string()).as_bytes())
+                .unwrap_or_else(|e| {
+                    log::error!("Failed to write to {}: {}", &self.data.id, e);
+                });
+        } else {
+            log::error!("command for agent not found: {}", &self.data.id);
+        }
+        Ok(())
+    }
 }
 
 impl CommandAgent {

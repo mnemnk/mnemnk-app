@@ -104,7 +104,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
         agent_flows = state.lock().unwrap().clone();
     }
 
-    let mut board_names = HashMap::<String, String>::new();
     let mut node_map: HashMap<String, &AgentFlowNode> = HashMap::new();
     for agent_flow in &agent_flows {
         for node in &agent_flow.nodes {
@@ -112,20 +111,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
                 continue;
             }
             node_map.insert(node.id.clone(), &node);
-
-            if node.name.starts_with("$") {
-                if node.name == "$board" {
-                    if let Some(board_name) = node
-                        .config
-                        .as_ref()
-                        .and_then(|x| x.get("board_name").cloned())
-                    {
-                        if let Some(board_name_str) = board_name.as_str() {
-                            board_names.insert(node.id.clone(), board_name_str.to_string());
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -204,6 +189,13 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
             }
         }
     }
+
+    // update edges
+    {
+        let mut env_edges = env.edges.lock().unwrap();
+        *env_edges = edges;
+    }
+
     // start new agents
     for agent_id in new_nodes.difference(&old_nodes) {
         let mut env_nodes = env.agents.lock().unwrap();
@@ -216,15 +208,6 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
             // remove agent from env
             env_nodes.remove(agent_id);
         }
-    }
-
-    {
-        let mut env_edges = env.edges.lock().unwrap();
-        *env_edges = edges;
-    }
-    {
-        let mut env_board_names = env.board_names.lock().unwrap();
-        *env_board_names = board_names;
     }
 }
 
