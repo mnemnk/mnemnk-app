@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::CommandChild;
@@ -11,12 +11,11 @@ use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
 use super::AgentMessage;
 
 pub struct AgentEnv {
+    // agent def name -> agent definition
     pub defs: Mutex<AgentDefinitions>,
 
-    pub nodes: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
-
-    // enabled node ids
-    pub enabled_nodes: Mutex<HashSet<String>>,
+    // node id -> agent
+    pub agents: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
 
     // node id -> node ids / subscriber handle / target handle
     pub edges: Mutex<HashMap<String, Vec<(String, String, String)>>>,
@@ -38,8 +37,7 @@ impl AgentEnv {
     fn new(tx: mpsc::Sender<AgentMessage>) -> Self {
         Self {
             defs: Default::default(),
-            nodes: Default::default(),
-            enabled_nodes: Default::default(),
+            agents: Default::default(),
             edges: Default::default(),
             commands: Default::default(),
             board_names: Default::default(),

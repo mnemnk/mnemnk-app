@@ -15,16 +15,14 @@ pub async fn board_message(app: &AppHandle, source_agent: String, kind: String, 
         let env_edges = env.edges.lock().unwrap();
         subscribers = env_edges.get(&kind).cloned();
     }
-    let enabled_nodes;
-    {
-        let env_enabled_nodes = env.enabled_nodes.lock().unwrap();
-        enabled_nodes = env_enabled_nodes.clone();
-    }
     if let Some(subscribers) = subscribers {
         for subscriber in subscribers {
             let (sub_node, _src_handle, sub_handle) = subscriber;
-            if !enabled_nodes.contains(&sub_node) {
-                continue;
+            {
+                let env_nodes = env.agents.lock().unwrap();
+                if !env_nodes.contains_key(&sub_node) {
+                    continue;
+                }
             }
 
             let target_kind = if sub_handle == "*" {
@@ -60,12 +58,6 @@ pub async fn write_message(app: &AppHandle, source_agent: String, kind: String, 
         targets = env_edges.get(&source_agent).cloned();
     }
 
-    let enabled_nodes;
-    {
-        let env_enabled_nodes = env.enabled_nodes.lock().unwrap();
-        enabled_nodes = env_enabled_nodes.clone();
-    }
-
     if targets.is_none() {
         return;
     }
@@ -75,8 +67,11 @@ pub async fn write_message(app: &AppHandle, source_agent: String, kind: String, 
         // so unwrap should not fail.
 
         let (target_node, source_handle, target_handle) = target;
-        if !enabled_nodes.contains(&target_node) {
-            continue;
+        {
+            let env_nodes = env.agents.lock().unwrap();
+            if !env_nodes.contains_key(&target_node) {
+                continue;
+            }
         }
 
         if source_handle != kind && source_handle != "*" {
