@@ -1,8 +1,62 @@
+use anyhow::Result;
 use std::collections::HashMap;
 
 use serde_json::Value;
 
+use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
+
+pub struct BoardAgent {
+    data: AgentData,
+}
+
+impl AsAgent for BoardAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+}
+
+impl BoardAgent {
+    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                id,
+                def_name,
+                config,
+            },
+        })
+    }
+}
+
+pub struct DatabaseAgent {
+    data: AgentData,
+}
+
+impl AsAgent for DatabaseAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+}
+
+impl DatabaseAgent {
+    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                id,
+                def_name,
+                config,
+            },
+        })
+    }
+}
 
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
@@ -10,10 +64,10 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
     defs.insert(
         "$board".to_string(),
         AgentDefinition {
+            kind: "board".to_string(),
             name: "$board".to_string(),
             title: Some("Board".to_string()),
             description: None,
-            path: None,
             inputs: Some(vec!["*".to_string()]),
             outputs: Some(vec!["*".to_string()]),
             default_config: Some(HashMap::from([(
@@ -26,19 +80,21 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
                     scope: None,
                 },
             )])),
+            path: None,
         },
     );
 
     defs.insert(
         "$database".to_string(),
         AgentDefinition {
+            kind: "database".to_string(),
             name: "$database".to_string(),
             title: Some("Database".to_string()),
             description: None,
-            path: None,
             inputs: Some(vec!["*".to_string()]),
             outputs: None,
             default_config: None,
+            path: None,
         },
     );
 

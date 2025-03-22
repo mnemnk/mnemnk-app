@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
-use super::command::{start_agent, stop_agent, update_agent_config};
+use super::agent;
 use super::env::AgentEnv;
 use crate::mnemnk::settings;
 
@@ -107,12 +107,15 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     let mut enabled_nodes = HashSet::new();
     let mut board_names = HashMap::<String, String>::new();
     let mut new_agents = HashSet::new();
+    let mut node_map: HashMap<String, &AgentFlowNode> = HashMap::new();
     for agent_flow in &agent_flows {
         for node in &agent_flow.nodes {
             if !node.enabled {
                 continue;
             }
             enabled_nodes.insert(node.id.clone());
+            node_map.insert(node.id.clone(), &node);
+
             if node.name.starts_with("$") {
                 if node.name == "$board" {
                     if let Some(board_name) = node
@@ -154,27 +157,72 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     let env = app.state::<AgentEnv>();
 
     // sync agents
-    let old_agents: HashSet<String>;
+
+    let new_nodes: HashSet<_> = node_map.keys().cloned().collect();
+    let old_nodes: HashSet<_>;
     {
-        let agent_commands = env.commands.lock().unwrap();
-        old_agents = agent_commands.keys().cloned().collect();
+        let env_nodes = env.nodes.lock().unwrap();
+        old_nodes = env_nodes.keys().cloned().collect();
     }
+
     // check if any agents need to be stopped
-    for agent in old_agents.difference(&new_agents) {
-        if let Err(e) = stop_agent(app, agent) {
+    for agent_id in old_nodes.difference(&new_nodes) {
+        let mut agent;
+        {
+            let mut env_nodes = env.nodes.lock().unwrap();
+            let Some(a) = env_nodes.remove(agent_id) else {
+                // maybe already stopped
+                continue;
+            };
+            agent = a;
+        };
+        log::info!("Stopping agent: {}", agent_id);
+        agent.stop(app).unwrap_or_else(|e| {
             log::error!("Failed to stop agent: {}", e);
-        }
+        });
     }
+
     // update config for running agents
-    for agent in new_agents.intersection(&old_agents) {
-        if let Err(e) = update_agent_config(app, agent) {
+    for agent_id in new_nodes.intersection(&old_nodes) {
+        let node = node_map[agent_id];
+
+        let mut env_nodes = env.nodes.lock().unwrap();
+        let Some(agent) = env_nodes.get_mut(agent_id) else {
+            // maybe already stopped
+            continue;
+        };
+        if let Err(e) = agent.update(app, node.config.clone()) {
             log::error!("Failed to sync agent: {}", e);
         }
     }
+
+    // initialize new agents
+    for agent_id in new_nodes.difference(&old_nodes) {
+        let node = node_map[agent_id];
+
+        match agent::new_agent(&env, agent_id.to_string(), &node.name, node.config.clone()) {
+            Ok(agent) => {
+                let mut env_nodes = env.nodes.lock().unwrap();
+                log::info!("New agent: {}", agent.id());
+                env_nodes.insert(agent.id().to_string(), agent);
+            }
+            Err(e) => {
+                log::error!("Failed to create agent: {}", e);
+                continue;
+            }
+        }
+    }
     // start new agents
-    for agent in new_agents.difference(&old_agents) {
-        if let Err(e) = start_agent(app, agent) {
+    for agent_id in new_nodes.difference(&old_nodes) {
+        let mut env_nodes = env.nodes.lock().unwrap();
+        let Some(agent) = env_nodes.get_mut(agent_id) else {
+            continue;
+        };
+        log::info!("Starting agent: {}", agent_id);
+        if let Err(e) = agent.start(app) {
             log::error!("Failed to start agent: {}", e);
+            // remove agent from env
+            env_nodes.remove(agent_id);
         }
     }
 
