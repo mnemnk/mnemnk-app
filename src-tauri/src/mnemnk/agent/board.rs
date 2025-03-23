@@ -93,23 +93,28 @@ impl AsAgent for BoardAgent {
         let env = app.state::<AgentEnv>();
         send_board(&env, source.clone(), kind.clone(), value.clone());
 
-        // remove image from the value. it's too big to send to frontend
-        let mut value = value;
-        if value.get("image").is_some() {
-            value.as_object_mut().unwrap().remove("image");
-        }
+        emit_publish(source, value, kind, app);
 
-        // emit the message to frontend
-        let message = WriteBoardMessage {
-            agent: source,
-            kind,
-            value,
-        };
-        app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
-            log::error!("Failed to emit message: {}", e);
-        });
         Ok(())
     }
+}
+
+fn emit_publish(source: String, value: Value, kind: String, app: AppHandle) {
+    // remove image from the value. it's too big to send to frontend
+    let mut value = value;
+    if value.get("image").is_some() {
+        value.as_object_mut().unwrap().remove("image");
+    }
+
+    // emit the message to frontend
+    let message = WriteBoardMessage {
+        agent: source,
+        kind,
+        value,
+    };
+    app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
+        log::error!("Failed to emit message: {}", e);
+    });
 }
 
 impl BoardAgent {
