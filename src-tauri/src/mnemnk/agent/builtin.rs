@@ -20,7 +20,7 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
         message::send_store(app, source, kind, value)
     }
 }
