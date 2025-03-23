@@ -183,6 +183,7 @@ fn post_process_agent_def(
         return None;
     }
 
+    // TODO: move into CommandAgent
     if def.kind == "Command" {
         // set path
         let mut agent_path = def.path.clone().unwrap_or_default();

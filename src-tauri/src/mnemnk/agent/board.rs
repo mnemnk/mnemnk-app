@@ -75,6 +75,7 @@ impl AsAgent for BoardAgent {
             }
             self.board_name = board_name;
         }
+        self.data.config = config;
         Ok(())
     }
 
