@@ -46,7 +46,7 @@ impl AsAgent for CommandAgent {
         stop_agent(app, &self.data.id)
     }
 
-    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
         let env = app.state::<AgentEnv>();
         let mut env_commands = env.commands.lock().unwrap();
 
