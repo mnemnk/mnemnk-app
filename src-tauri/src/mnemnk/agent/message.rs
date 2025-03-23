@@ -1,18 +1,26 @@
+use anyhow::{Context as _, Result};
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
+
+use crate::mnemnk::store;
 
 use super::env::AgentEnv;
 
 #[derive(Clone, Debug)]
 pub enum AgentMessage {
+    AgentOut {
+        agent: String,
+        kind: String,
+        value: Value,
+    },
     BoardOut {
         // original agent id
         agent: String,
         kind: String,
         value: Value,
     },
-    AgentOut {
+    Store {
         agent: String,
         kind: String,
         value: Value,
@@ -28,57 +36,38 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
             use AgentMessage::*;
 
             match message {
+                AgentOut { agent, kind, value } => {
+                    agent_out(&app_handle, agent, kind, value).await;
+                }
                 BoardOut { agent, kind, value } => {
                     board_out(&app_handle, agent, kind, value).await;
                 }
-                AgentOut { agent, kind, value } => {
-                    agent_out(&app_handle, agent, kind, value).await;
+                Store { agent, kind, value } => {
+                    store(&app_handle, agent, kind, value).await;
                 }
             }
         }
     });
 }
 
-async fn board_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
+pub fn send_board(env: &AgentEnv, agent: String, kind: String, value: Value) {
+    let main_tx = env.tx.clone();
+    main_tx
+        .try_send(AgentMessage::BoardOut { agent, kind, value })
+        .unwrap_or_else(|e| {
+            log::error!("Failed to send message: {}", e);
+        });
+}
+
+pub fn send_store(app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
     let env = app.state::<AgentEnv>();
-
-    let board_nodes;
-    {
-        let env_board_nodes = env.board_nodes.lock().unwrap();
-        board_nodes = env_board_nodes.get(&kind).cloned();
-    }
-    let Some(board_nodes) = board_nodes else {
-        // board not found
-        return;
-    };
-
-    for node in board_nodes {
-        let edges;
-        {
-            let env_edges = env.edges.lock().unwrap();
-            edges = env_edges.get(&node).cloned();
-        }
-        let Some(edges) = edges else {
-            // edges not found
-            continue;
-        };
-        for edge in edges {
-            let (sub_node, _src_handle, sub_handle) = edge;
-            let target_kind = if sub_handle == "*" {
-                kind.clone()
-            } else {
-                sub_handle
-            };
-            send_message_to(
-                app,
-                &env,
-                source_agent.clone(),
-                &sub_node,
-                target_kind,
-                value.clone(),
-            )
-        }
-    }
+    env.tx
+        .try_send(AgentMessage::Store {
+            agent: source,
+            kind,
+            value,
+        })
+        .context("Failed to send store message")
 }
 
 // Processing .OUT $agent_id $kind $value
@@ -133,6 +122,48 @@ async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: V
     }
 }
 
+async fn board_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
+    let env = app.state::<AgentEnv>();
+
+    let board_nodes;
+    {
+        let env_board_nodes = env.board_nodes.lock().unwrap();
+        board_nodes = env_board_nodes.get(&kind).cloned();
+    }
+    let Some(board_nodes) = board_nodes else {
+        // board not found
+        return;
+    };
+
+    for node in board_nodes {
+        let edges;
+        {
+            let env_edges = env.edges.lock().unwrap();
+            edges = env_edges.get(&node).cloned();
+        }
+        let Some(edges) = edges else {
+            // edges not found
+            continue;
+        };
+        for edge in edges {
+            let (sub_node, _src_handle, sub_handle) = edge;
+            let target_kind = if sub_handle == "*" {
+                kind.clone()
+            } else {
+                sub_handle
+            };
+            send_message_to(
+                app,
+                &env,
+                source_agent.clone(),
+                &sub_node,
+                target_kind,
+                value.clone(),
+            )
+        }
+    }
+}
+
 fn send_message_to(
     app: &AppHandle,
     env: &AgentEnv,
@@ -150,11 +181,10 @@ fn send_message_to(
     }
 }
 
-pub(super) fn send_board(env: &AgentEnv, agent: String, kind: String, value: Value) {
-    let main_tx = env.tx.clone();
-    main_tx
-        .try_send(AgentMessage::BoardOut { agent, kind, value })
+async fn store(app_handle: &AppHandle, agent: String, kind: String, value: Value) {
+    store::store(app_handle, agent, kind, value)
+        .await
         .unwrap_or_else(|e| {
-            log::error!("Failed to send message: {}", e);
+            log::error!("Failed to store: {}", e);
         });
 }

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
-use crate::mnemnk::store;
+use super::message;
 
 pub struct DatabaseAgent {
     data: AgentData,
@@ -22,13 +22,7 @@ impl AsAgent for DatabaseAgent {
     }
 
     fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
-        let app = app.clone();
-        tauri::async_runtime::spawn(async move {
-            if let Err(e) = store::store(&app, source, kind, value).await {
-                log::error!("Failed to store: {}", e);
-            }
-        });
-        Ok(())
+        message::send_store(app, source, kind, value)
     }
 }
 
