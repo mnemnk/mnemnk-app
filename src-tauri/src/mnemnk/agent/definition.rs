@@ -40,6 +40,66 @@ pub struct AgentDefaultConfigEntry {
     pub scope: Option<String>,
 }
 
+impl AgentDefinition {
+    pub fn new(kind: &str, name: &str) -> Self {
+        Self {
+            kind: kind.into(),
+            name: name.into(),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_title(mut self, title: &str) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_inputs(mut self, inputs: Vec<&str>) -> Self {
+        self.inputs = Some(inputs.into_iter().map(|x| x.into()).collect());
+        self
+    }
+
+    pub fn with_outputs(mut self, outputs: Vec<&str>) -> Self {
+        self.outputs = Some(outputs.into_iter().map(|x| x.into()).collect());
+        self
+    }
+
+    pub fn with_default_config(mut self, config: HashMap<String, AgentDefaultConfigEntry>) -> Self {
+        self.default_config = Some(config);
+        self
+    }
+}
+
+impl AgentDefaultConfigEntry {
+    pub fn new(value: Value, type_: &str) -> Self {
+        Self {
+            value,
+            type_: Some(type_.into()),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_title(mut self, title: &str) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    // pub fn with_description(mut self, description: &str) -> Self {
+    //     self.description = Some(description.into());
+    //     self
+    // }
+
+    // pub fn with_scope(mut self, scope: &str) -> Self {
+    //     self.scope = Some(scope.into());
+    //     self
+    // }
+}
+
 pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
     let mnemnk_dir = settings::mnemnk_dir(app);
     if mnemnk_dir.is_none() {
@@ -123,7 +183,7 @@ fn post_process_agent_def(
         return None;
     }
 
-    if def.kind == "command" {
+    if def.kind == "Command" {
         // set path
         let mut agent_path = def.path.clone().unwrap_or_default();
         if agent_path.is_empty() {

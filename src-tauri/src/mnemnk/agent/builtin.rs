@@ -1,8 +1,7 @@
 use anyhow::Result;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use tauri::AppHandle;
-
-use serde_json::Value;
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
@@ -41,41 +40,25 @@ impl DatabaseAgent {
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
 
+    // BoardAgent
     defs.insert(
-        "$board".to_string(),
-        AgentDefinition {
-            kind: "board".to_string(),
-            name: "$board".to_string(),
-            title: Some("Board".to_string()),
-            description: None,
-            inputs: Some(vec!["*".to_string()]),
-            outputs: Some(vec!["*".to_string()]),
-            default_config: Some(HashMap::from([(
-                "board_name".to_string(),
-                AgentDefaultConfigEntry {
-                    value: Value::String("".to_string()),
-                    type_: Some("string?".to_string()),
-                    title: Some("Board Name".to_string()),
-                    description: None,
-                    scope: None,
-                },
+        "$board".into(),
+        AgentDefinition::new("Board", "$board")
+            .with_title("Board")
+            .with_inputs(vec!["*"])
+            .with_outputs(vec!["*"])
+            .with_default_config(HashMap::from([(
+                "board_name".into(),
+                AgentDefaultConfigEntry::new(json!(""), "string?").with_title("Board Name"),
             )])),
-            path: None,
-        },
     );
 
+    // DatabaseAgent
     defs.insert(
-        "$database".to_string(),
-        AgentDefinition {
-            kind: "database".to_string(),
-            name: "$database".to_string(),
-            title: Some("Database".to_string()),
-            description: None,
-            inputs: Some(vec!["*".to_string()]),
-            outputs: None,
-            default_config: None,
-            path: None,
-        },
+        "$database".into(),
+        AgentDefinition::new("Database", "$database")
+            .with_title("Database")
+            .with_inputs(vec!["*"]),
     );
 
     defs
