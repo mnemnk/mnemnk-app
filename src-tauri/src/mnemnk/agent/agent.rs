@@ -112,15 +112,15 @@ pub fn new_agent(
 
     // TODO: Prepare a mapping from kind to the corresponding new function and use it to create the Agent
     match def.kind.as_str() {
-        "command" => {
+        "Command" => {
             let agent = super::command::CommandAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
-        "board" => {
+        "Board" => {
             let agent = super::board::BoardAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
-        "database" => {
+        "Database" => {
             let agent = super::builtin::DatabaseAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
