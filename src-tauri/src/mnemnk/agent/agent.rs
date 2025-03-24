@@ -116,12 +116,12 @@ pub fn new_agent(
             let agent = super::command::CommandAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
-        "InBoard" => {
-            let agent = super::board::InBoardAgent::new(agent_id, def_name.to_string(), config)?;
+        "BoardIn" => {
+            let agent = super::board::BoardInAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
-        "OutBoard" => {
-            let agent = super::board::OutBoardAgent::new(agent_id, def_name.to_string(), config)?;
+        "BoardOut" => {
+            let agent = super::board::BoardOutAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "Database" => {

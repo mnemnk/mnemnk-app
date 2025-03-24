@@ -15,12 +15,12 @@ struct WriteBoardMessage {
     value: Value,
 }
 
-pub struct InBoardAgent {
+pub struct BoardInAgent {
     data: AgentData,
     board_name: Option<String>,
 }
 
-impl InBoardAgent {
+impl BoardInAgent {
     pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
         let board_name = normalize_board_name(&config);
         Ok(Self {
@@ -34,7 +34,7 @@ impl InBoardAgent {
     }
 }
 
-impl AsAgent for InBoardAgent {
+impl AsAgent for BoardInAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -50,32 +50,39 @@ impl AsAgent for InBoardAgent {
     }
 
     fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
-        let kind = self.board_name.clone().unwrap_or(kind.to_string());
-        if kind.is_empty() {
+        let mut board_name = self.board_name.clone().unwrap_or_default();
+        if board_name.is_empty() {
+            // if board_name is not set, stop processing
             return Ok(());
         }
-
+        if board_name == "*" {
+            if kind.is_empty() {
+                // kind should not be empty, but just in case
+                return Ok(());
+            }
+            board_name = kind;
+        }
         {
             let env = app.state::<AgentEnv>();
             let mut board_values = env.board_values.lock().unwrap();
-            board_values.insert(kind.clone(), value.clone());
+            board_values.insert(board_name.clone(), value.clone());
         }
         let app = app.clone();
         let env = app.state::<AgentEnv>();
-        try_send_board(&env, kind.clone(), value.clone());
+        try_send_board(&env, board_name.clone(), value.clone());
 
-        emit_publish(&app, kind, value);
+        emit_publish(&app, board_name, value);
 
         Ok(())
     }
 }
 
-pub struct OutBoardAgent {
+pub struct BoardOutAgent {
     data: AgentData,
     board_name: Option<String>,
 }
 
-impl OutBoardAgent {
+impl BoardOutAgent {
     pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
         let board_name = normalize_board_name(&config);
         Ok(Self {
@@ -89,7 +96,7 @@ impl OutBoardAgent {
     }
 }
 
-impl AsAgent for OutBoardAgent {
+impl AsAgent for BoardOutAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }

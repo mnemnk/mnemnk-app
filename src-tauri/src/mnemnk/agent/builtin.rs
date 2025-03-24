@@ -88,25 +88,25 @@ impl JsonPathAgent {
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
 
-    // InBoardAgent
+    // BoardInAgent
     defs.insert(
-        "$in_board".into(),
-        AgentDefinition::new("InBoard", "$in_board")
-            .with_title("->Board")
+        "$board_in".into(),
+        AgentDefinition::new("BoardIn", "$board_in")
+            .with_title("Board In")
             .with_inputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "board_name".into(),
-                AgentDefaultConfigEntry::new(json!(""), "string?")
+                AgentDefaultConfigEntry::new(json!(""), "string")
                     .with_title("Board Name")
-                    .with_description("If empty, the source kind will be used"),
+                    .with_description("* = source kind"),
             )])),
     );
 
-    // OutBoardAgent
+    // BoardOutAgent
     defs.insert(
-        "$out_board".into(),
-        AgentDefinition::new("OutBoard", "$out_board")
-            .with_title("Board->")
+        "$board_out".into(),
+        AgentDefinition::new("BoardOut", "$board_out")
+            .with_title("Board Out")
             .with_outputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "board_name".into(),
