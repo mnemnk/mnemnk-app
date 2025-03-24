@@ -124,6 +124,10 @@ pub fn new_agent(
             let agent = super::builtin::DatabaseAgent::new(agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
+        "JsonPath" => {
+            let agent = super::builtin::JsonPathAgent::new(agent_id, def_name.to_string(), config)?;
+            return Ok(Box::new(agent));
+        }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
 }

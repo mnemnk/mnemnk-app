@@ -47,20 +47,39 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
     });
 }
 
-pub fn send_board(env: &AgentEnv, kind: String, value: Value) {
+pub async fn send_agent_out(env: &AgentEnv, agent: String, kind: String, value: Value) {
+    let main_tx = env.tx.clone();
+    main_tx
+        .send(AgentMessage::AgentOut { agent, kind, value })
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("Failed to send AgentOut message: {}", e);
+        });
+}
+
+pub fn try_send_agent_out(env: &AgentEnv, agent: String, kind: String, value: Value) {
+    let main_tx = env.tx.clone();
+    main_tx
+        .try_send(AgentMessage::AgentOut { agent, kind, value })
+        .unwrap_or_else(|e| {
+            log::error!("Failed to try_send AgentOut message: {}", e);
+        });
+}
+
+pub fn try_send_board(env: &AgentEnv, kind: String, value: Value) {
     let main_tx = env.tx.clone();
     main_tx
         .try_send(AgentMessage::BoardOut { kind, value })
         .unwrap_or_else(|e| {
-            log::error!("Failed to send message: {}", e);
+            log::error!("Failed to try_send BoardOut message: {}", e);
         });
 }
 
-pub fn send_store(app: &AppHandle, kind: String, value: Value) -> Result<()> {
+pub fn try_send_store(app: &AppHandle, kind: String, value: Value) -> Result<()> {
     let env = app.state::<AgentEnv>();
     env.tx
         .try_send(AgentMessage::Store { kind, value })
-        .context("Failed to send store message")
+        .context("Failed to send Store message")
 }
 
 // Processing .OUT $agent_id $kind $value

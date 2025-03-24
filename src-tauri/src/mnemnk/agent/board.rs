@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::env::AgentEnv;
-use super::message::send_board;
+use super::message::try_send_board;
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
@@ -91,7 +91,7 @@ impl AsAgent for BoardAgent {
         }
         let app = app.clone();
         let env = app.state::<AgentEnv>();
-        send_board(&env, kind.clone(), value.clone());
+        try_send_board(&env, kind.clone(), value.clone());
 
         emit_publish(&app, kind, value);
 
