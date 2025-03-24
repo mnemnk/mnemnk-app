@@ -187,14 +187,14 @@ fn read_mnemnk_json(agent_dir: &PathBuf) -> Option<MnemnkJson> {
                 return None;
             }
         };
-        let def: MnemnkJson = match serde_json::from_str(&content) {
-            Ok(def) => def,
+        let mnemnk_json: MnemnkJson = match serde_json::from_str(&content) {
+            Ok(json) => json,
             Err(e) => {
                 log::error!("Invalid JSON {}: {}", mnemnk_local_json_file.display(), e);
                 return None;
             }
         };
-        return Some(def);
+        return Some(mnemnk_json);
     }
 
     let mnemnk_json_file = agent_dir.join(MNEMNK_JSON);
