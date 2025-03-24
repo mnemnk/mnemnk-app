@@ -98,7 +98,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
                 "board_name".into(),
                 AgentDefaultConfigEntry::new(json!(""), "string?")
                     .with_title("Board Name")
-                    .with_description("If empty, the source kind wll be used"),
+                    .with_description("If empty, the source kind will be used"),
             )])),
     );
 
