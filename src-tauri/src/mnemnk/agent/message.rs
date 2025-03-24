@@ -82,7 +82,7 @@ pub fn try_send_store(app: &AppHandle, kind: String, value: Value) -> Result<()>
         .context("Failed to send Store message")
 }
 
-// Processing .OUT $agent_id $kind $value
+// Processing AgentOut message
 async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
     // Retrieve targets and enabled_nodes from agent_commands
     // Nodes that are not enabled should have been removed from targets in sync_agent_flow,
@@ -112,11 +112,11 @@ async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: V
             }
         }
 
-        if source_handle != kind && source_handle != "*" {
+        if source_handle != kind && (!source_handle.is_empty() && source_handle != "*") {
             // Skip if source_handle does not match with kind
             continue;
         }
-        let kind = if target_handle == "*" {
+        let kind = if target_handle.is_empty() || target_handle == "*" {
             kind.clone()
         } else {
             // Use target_handle as kind if it is specified
