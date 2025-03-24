@@ -15,12 +15,81 @@ struct WriteBoardMessage {
     value: Value,
 }
 
-pub struct BoardAgent {
+pub struct InBoardAgent {
     data: AgentData,
     board_name: Option<String>,
 }
 
-impl AsAgent for BoardAgent {
+impl InBoardAgent {
+    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+        let board_name = normalize_board_name(&config);
+        Ok(Self {
+            data: AgentData {
+                id,
+                def_name,
+                config,
+            },
+            board_name,
+        })
+    }
+}
+
+impl AsAgent for InBoardAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn update(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+        self.board_name = normalize_board_name(&config);
+        self.data.config = config;
+        Ok(())
+    }
+
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
+        let kind = self.board_name.clone().unwrap_or(kind.to_string());
+        if kind.is_empty() {
+            return Ok(());
+        }
+
+        {
+            let env = app.state::<AgentEnv>();
+            let mut board_values = env.board_values.lock().unwrap();
+            board_values.insert(kind.clone(), value.clone());
+        }
+        let app = app.clone();
+        let env = app.state::<AgentEnv>();
+        try_send_board(&env, kind.clone(), value.clone());
+
+        emit_publish(&app, kind, value);
+
+        Ok(())
+    }
+}
+
+pub struct OutBoardAgent {
+    data: AgentData,
+    board_name: Option<String>,
+}
+
+impl OutBoardAgent {
+    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+        let board_name = normalize_board_name(&config);
+        Ok(Self {
+            data: AgentData {
+                id,
+                def_name,
+                config,
+            },
+            board_name,
+        })
+    }
+}
+
+impl AsAgent for OutBoardAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -78,52 +147,8 @@ impl AsAgent for BoardAgent {
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
-        let kind = self.board_name.clone().unwrap_or(kind.to_string());
-        if kind.is_empty() {
-            return Ok(());
-        }
-
-        {
-            let env = app.state::<AgentEnv>();
-            let mut board_values = env.board_values.lock().unwrap();
-            board_values.insert(kind.clone(), value.clone());
-        }
-        let app = app.clone();
-        let env = app.state::<AgentEnv>();
-        try_send_board(&env, kind.clone(), value.clone());
-
-        emit_publish(&app, kind, value);
-
+    fn input(&mut self, _app: &AppHandle, _kind: String, _value: Value) -> Result<()> {
         Ok(())
-    }
-}
-
-fn emit_publish(app: &AppHandle, kind: String, value: Value) {
-    // remove image from the value. it's too big to send to frontend
-    let mut value = value;
-    if value.get("image").is_some() {
-        value.as_object_mut().unwrap().remove("image");
-    }
-
-    // emit the message to frontend
-    let message = WriteBoardMessage { kind, value };
-    app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
-        log::error!("Failed to emit message: {}", e);
-    });
-}
-
-impl BoardAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
-        let board_name = normalize_board_name(&config);
-        Ok(Self {
-            data: AgentData {
-                id,
-                def_name,
-                config,
-            },
-            board_name,
-        })
     }
 }
 
@@ -142,4 +167,18 @@ fn normalize_board_name(config: &Option<AgentConfig>) -> Option<String> {
         return None;
     }
     return Some(board_name.to_string());
+}
+
+fn emit_publish(app: &AppHandle, kind: String, value: Value) {
+    // remove image from the value. it's too big to send to frontend
+    let mut value = value;
+    if value.get("image").is_some() {
+        value.as_object_mut().unwrap().remove("image");
+    }
+
+    // emit the message to frontend
+    let message = WriteBoardMessage { kind, value };
+    app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
+        log::error!("Failed to emit message: {}", e);
+    });
 }
