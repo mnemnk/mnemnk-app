@@ -134,7 +134,7 @@ pub fn start_agent(
 
     let agent_cmd;
     let agent_args;
-    let agent_path;
+    let agent_dir;
     {
         let env_defs = env.defs.lock().unwrap();
         if env_defs.contains_key(def_name) {
@@ -145,7 +145,7 @@ pub fn start_agent(
                 .ok_or_else(|| anyhow::anyhow!("Agent has no command"))?;
             agent_cmd = def_command.cmd.clone();
             agent_args = def_command.args.clone();
-            agent_path = def_command
+            agent_dir = def_command
                 .dir
                 .clone()
                 .context(format!("Agent path not found: {}", def_name))?;
@@ -155,8 +155,8 @@ pub fn start_agent(
         }
     }
     if agent_cmd.is_empty() {
-        log::error!("Agent path not found: {}", def_name);
-        return Err(anyhow::anyhow!("Agent path not found"));
+        log::error!("Agent command.cmd not found: {}", def_name);
+        return Err(anyhow::anyhow!("Agent command.cmd not found"));
     }
 
     let main_tx = env.tx.clone();
@@ -173,12 +173,12 @@ pub fn start_agent(
         args.push(serde_json::to_string(&agent.config()).unwrap());
     }
     let sidecar_command = if args.is_empty() {
-        app.shell().command(agent_cmd).current_dir(agent_path)
+        app.shell().command(agent_cmd).current_dir(agent_dir)
     } else {
         app.shell()
             .command(agent_cmd)
             .args(args)
-            .current_dir(agent_path)
+            .current_dir(agent_dir)
     };
 
     let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;
