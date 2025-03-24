@@ -1,15 +1,16 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::vec;
+use std::{env, vec};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
-use super::definition::agents_dir;
+use super::definition::{AgentDefinition, AgentDefinitionError};
 use super::env::AgentEnv;
 use super::flow::{find_agent_node, AgentFlows};
 use super::message::AgentMessage;
@@ -46,7 +47,7 @@ impl AsAgent for CommandAgent {
         stop_agent(app, &self.data.id)
     }
 
-    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
         let env = app.state::<AgentEnv>();
         let mut env_commands = env.commands.lock().unwrap();
 
@@ -75,6 +76,44 @@ impl CommandAgent {
             },
         })
     }
+
+    pub fn read_def(
+        def: &mut AgentDefinition,
+        agent_dir: &PathBuf,
+    ) -> Result<(), AgentDefinitionError> {
+        let command = def.command.as_mut().ok_or_else(|| {
+            AgentDefinitionError::MissingEntry(def.name.clone(), "command".into())
+        })?;
+
+        // set agent dir
+        command.dir = agent_dir.to_string_lossy().to_string().into();
+
+        if command.cmd.is_empty() {
+            return Err(AgentDefinitionError::MissingEntry(
+                def.name.clone(),
+                "command.cmd".into(),
+            ));
+        }
+        if command.cmd.starts_with("./") || command.cmd.starts_with(".\\") {
+            // relative path
+            let command_path = agent_dir
+                .join(&command.cmd[2..])
+                .with_extension(env::consts::EXE_EXTENSION);
+            if !command_path.exists() {
+                log::error!(
+                    "Command not found: {} for {}",
+                    command_path.display(),
+                    def.name
+                );
+                return Err(AgentDefinitionError::InvalidEntry(
+                    def.name.clone(),
+                    "command.cmd".into(),
+                ));
+            }
+            command.cmd = command_path.to_string_lossy().to_string();
+        }
+        Ok(())
+    }
 }
 
 pub fn start_agent(
@@ -93,43 +132,53 @@ pub fn start_agent(
 
     let env = app.state::<AgentEnv>();
 
+    let agent_cmd;
+    let agent_args;
     let agent_path;
     {
         let env_defs = env.defs.lock().unwrap();
         if env_defs.contains_key(def_name) {
             let def = env_defs.get(def_name).unwrap();
-            agent_path = def.path.clone();
+            let def_command = def
+                .command
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Agent has no command"))?;
+            agent_cmd = def_command.cmd.clone();
+            agent_args = def_command.args.clone();
+            agent_path = def_command
+                .dir
+                .clone()
+                .context(format!("Agent path not found: {}", def_name))?;
         } else {
             log::error!("Agent {} not found", def_name);
             return Err(anyhow::anyhow!("Agent not found"));
         }
     }
-    if agent_path.is_none() {
+    if agent_cmd.is_empty() {
         log::error!("Agent path not found: {}", def_name);
         return Err(anyhow::anyhow!("Agent path not found"));
     }
-    let path = agent_path.unwrap();
-
-    let dir = agents_dir(app);
-    if dir.is_none() {
-        return Err(anyhow::anyhow!("Agents directory not found"));
-    }
-    let agent_dir = dir.unwrap().join(&def_name);
 
     let main_tx = env.tx.clone();
 
     log::info!("Starting agent: {} {}", def_name, agent_id);
 
-    let sidecar_command = if agent.config().is_none() {
-        app.shell().command(path).current_dir(agent_dir)
+    let mut args = if agent_args.is_none() {
+        vec![]
+    } else {
+        agent_args.unwrap().clone().into_iter().collect()
+    };
+    if agent.config().is_some() {
+        args.push("-c".to_string());
+        args.push(serde_json::to_string(&agent.config()).unwrap());
+    }
+    let sidecar_command = if args.is_empty() {
+        app.shell().command(agent_cmd).current_dir(agent_path)
     } else {
         app.shell()
-            .command(path)
-            .args(vec![
-                "-c",
-                serde_json::to_string(&agent.config()).unwrap().as_str(),
-            ])
-            .current_dir(agent_dir)
+            .command(agent_cmd)
+            .args(args)
+            .current_dir(agent_path)
     };
 
     let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;

@@ -79,7 +79,7 @@ impl AsAgent for BoardAgent {
         Ok(())
     }
 
-    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
         let kind = self.board_name.clone().unwrap_or(kind.to_string());
         if kind.is_empty() {
             return Ok(());

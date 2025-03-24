@@ -20,7 +20,7 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
         message::send_store(app, source, kind, value)
     }
 }
@@ -49,7 +49,9 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_outputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "board_name".into(),
-                AgentDefaultConfigEntry::new(json!(""), "string?").with_title("Board Name"),
+                AgentDefaultConfigEntry::new(json!(""), "string?")
+                    .with_title("Board Name")
+                    .with_description("If empty, the source label wll be used"),
             )])),
     );
 
@@ -58,6 +60,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         "$database".into(),
         AgentDefinition::new("Database", "$database")
             .with_title("Database")
+            .with_description("Store data in a database")
             .with_inputs(vec!["*"]),
     );
 
