@@ -25,6 +25,11 @@ pub enum AgentDefinitionError {
 
 pub type AgentDefinitions = HashMap<String, AgentDefinition>;
 
+#[derive(Deserialize)]
+pub struct MnemnkJson {
+    pub agents: Option<Vec<AgentDefinition>>,
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentDefinition {
     pub kind: String,
@@ -139,11 +144,11 @@ pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
 
 pub(super) fn init_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
     let mut defs = builtin_agent_defs();
-    defs.extend(read_agent_defs(app)?);
+    defs.extend(read_mnemnk_jsons(app)?);
     Ok(defs)
 }
 
-fn read_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
+fn read_mnemnk_jsons(app: &AppHandle) -> Result<AgentDefinitions> {
     let mut defs: AgentDefinitions = Default::default();
 
     // read agent definitions from agents directory
@@ -158,57 +163,59 @@ fn read_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
             continue;
         }
         // read mnemnk.json, and post process it
-        let Some(def) = read_agent_def(&agent_dir) else {
+        let Some(mnemnk_json) = read_mnemnk_json(&agent_dir) else {
             continue;
         };
-        let mut def = def;
-        post_process_agent_def(&mut def, &agent_dir)?;
-        defs.insert(def.name.clone(), def);
+        for def in mnemnk_json.agents.unwrap_or_default() {
+            let mut def = def;
+            post_process_agent_def(&mut def, &agent_dir)?;
+            defs.insert(def.name.clone(), def);
+        }
     }
 
     Ok(defs)
 }
 
-fn read_agent_def(agent_dir: &PathBuf) -> Option<AgentDefinition> {
+fn read_mnemnk_json(agent_dir: &PathBuf) -> Option<MnemnkJson> {
     // If mnemnk.local.json exists, prioritize reading it
-    let mnemnk_local_json = agent_dir.join(MNEMNK_LOCAL_JSON);
-    if mnemnk_local_json.exists() {
-        let content = match std::fs::read_to_string(&mnemnk_local_json) {
+    let mnemnk_local_json_file = agent_dir.join(MNEMNK_LOCAL_JSON);
+    if mnemnk_local_json_file.exists() {
+        let content = match std::fs::read_to_string(&mnemnk_local_json_file) {
             Ok(ret) => ret,
             Err(e) => {
-                log::error!("I/O Error {}: {}", mnemnk_local_json.display(), e);
+                log::error!("I/O Error {}: {}", mnemnk_local_json_file.display(), e);
                 return None;
             }
         };
-        let def: AgentDefinition = match serde_json::from_str(&content) {
+        let def: MnemnkJson = match serde_json::from_str(&content) {
             Ok(def) => def,
             Err(e) => {
-                log::error!("Invalid JSON {}: {}", mnemnk_local_json.display(), e);
+                log::error!("Invalid JSON {}: {}", mnemnk_local_json_file.display(), e);
                 return None;
             }
         };
         return Some(def);
     }
 
-    let mnemnk_json = agent_dir.join(MNEMNK_JSON);
-    if !mnemnk_json.exists() {
+    let mnemnk_json_file = agent_dir.join(MNEMNK_JSON);
+    if !mnemnk_json_file.exists() {
         return None;
     }
-    let content = match std::fs::read_to_string(&mnemnk_json) {
+    let content = match std::fs::read_to_string(&mnemnk_json_file) {
         Ok(ret) => ret,
         Err(e) => {
             log::warn!("Failed to read agent definition file: {}", e);
             return None;
         }
     };
-    let def: AgentDefinition = match serde_json::from_str(&content) {
-        Ok(def) => def,
+    let mnemnk_json: MnemnkJson = match serde_json::from_str(&content) {
+        Ok(json) => json,
         Err(e) => {
             log::warn!("Failed to parse agent definition file: {}", e);
             return None;
         }
     };
-    Some(def)
+    Some(mnemnk_json)
 }
 
 fn post_process_agent_def(def: &mut AgentDefinition, agent_dir: &PathBuf) -> Result<()> {
