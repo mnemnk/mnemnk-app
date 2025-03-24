@@ -109,13 +109,11 @@ export type Settings = {
 // emit
 
 export type WriteBoardEmit = {
-  agent: string;
   kind: string;
   value: any;
 };
 
 export type BoardMessage = {
-  agent: string;
   kind: string;
   value: any;
   time: number;

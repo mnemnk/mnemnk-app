@@ -30,7 +30,7 @@ pub trait Agent {
 
     fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()>;
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()>;
 }
 
 pub struct AgentData {
@@ -59,7 +59,7 @@ pub trait AsAgent {
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()>;
 }
 
 impl<T: AsAgent> Agent for T {
@@ -87,8 +87,8 @@ impl<T: AsAgent> Agent for T {
         self.update(app, config)
     }
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
-        self.input(app, source, kind, value)
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
+        self.input(app, kind, value)
     }
 }
 

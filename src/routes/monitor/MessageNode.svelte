@@ -8,7 +8,6 @@
   // extends Props from NodeProps
   type Props = NodeProps & {
     data: {
-      agent: string;
       value: Record<string, any>;
       time: number;
     };
