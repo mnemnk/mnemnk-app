@@ -9,11 +9,12 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
+use crate::mnemnk::agent::message::send_agent_out;
+
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefinition, AgentDefinitionError};
 use super::env::AgentEnv;
 use super::flow::{find_agent_node, AgentFlows};
-use super::message::AgentMessage;
 
 pub struct CommandAgent {
     data: AgentData,
@@ -159,8 +160,6 @@ pub fn start_agent(
         return Err(anyhow::anyhow!("Agent command.cmd not found"));
     }
 
-    let main_tx = env.tx.clone();
-
     log::info!("Starting agent: {} {}", def_name, agent_id);
 
     let mut args = if agent_args.is_none() {
@@ -221,16 +220,14 @@ pub fn start_agent(
                                 log::error!("Failed to parse value: {:.40}", &line);
                                 continue;
                             }
-                            main_tx
-                                .send(AgentMessage::AgentOut {
-                                    agent: agent_id.clone(),
-                                    kind: kind.to_string(),
-                                    value: value.unwrap(),
-                                })
-                                .await
-                                .unwrap_or_else(|e| {
-                                    log::error!("Failed to send message: {}", e);
-                                });
+                            let env = app_handle.state::<AgentEnv>();
+                            send_agent_out(
+                                &env,
+                                agent_id.clone(),
+                                kind.to_string(),
+                                value.unwrap(),
+                            )
+                            .await;
                         }
                         _ => {
                             log::error!("Unknown command: {} {}", agent_id, cmd);
