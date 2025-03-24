@@ -1,16 +1,27 @@
 use std::collections::HashMap;
-use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::AppHandle;
+use thiserror::Error;
 
-use super::builtin::builtin_agent_defs;
+use super::{builtin::builtin_agent_defs, command::CommandAgent};
 use crate::mnemnk::settings;
 
 static AGENTS_DIR: &str = "agents";
+static MNEMNK_JSON: &str = "mnemnk.json";
+static MNEMNK_LOCAL_JSON: &str = "mnemnk.local.json";
+
+#[derive(Debug, Error)]
+pub enum AgentDefinitionError {
+    #[error("{0}: Agent definition \"{1}\" is missing")]
+    MissingEntry(String, String),
+
+    #[error("{0}: Agent definition \"{1}\" is invalid")]
+    InvalidEntry(String, String),
+}
 
 pub type AgentDefinitions = HashMap<String, AgentDefinition>;
 
@@ -25,7 +36,7 @@ pub struct AgentDefinition {
     pub default_config: Option<AgentDefaultConfig>,
 
     // CommandAgent
-    pub path: Option<String>,
+    pub command: Option<CommandConfig>,
 }
 
 pub type AgentDefaultConfig = HashMap<String, AgentDefaultConfigEntry>;
@@ -37,7 +48,18 @@ pub struct AgentDefaultConfigEntry {
     pub type_: Option<String>,
     pub title: Option<String>,
     pub description: Option<String>,
-    pub scope: Option<String>,
+    // pub scope: Option<String>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct CommandConfig {
+    pub cmd: String,
+    pub args: Option<Vec<String>>,
+    // pub env: Option<HashMap<String, String>>,
+    // pub shell: Option<bool>,
+
+    // set in read_def
+    pub dir: Option<String>,
 }
 
 impl AgentDefinition {
@@ -89,10 +111,10 @@ impl AgentDefaultConfigEntry {
         self
     }
 
-    // pub fn with_description(mut self, description: &str) -> Self {
-    //     self.description = Some(description.into());
-    //     self
-    // }
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.description = Some(description.into());
+        self
+    }
 
     // pub fn with_scope(mut self, scope: &str) -> Self {
     //     self.scope = Some(scope.into());
@@ -107,7 +129,10 @@ pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
     }
     let agents_dir = PathBuf::from(mnemnk_dir.unwrap()).join(AGENTS_DIR);
     if !agents_dir.exists() {
-        std::fs::create_dir(&agents_dir).expect("Failed to create agents directory");
+        if let Err(e) = std::fs::create_dir(&agents_dir) {
+            log::error!("Failed to create agents directory: {}", e);
+            return None;
+        };
     }
     Some(agents_dir)
 }
@@ -133,19 +158,39 @@ fn read_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
             continue;
         }
         // read mnemnk.json, and post process it
-        let def =
-            read_agent_def(&agent_dir).and_then(|def| post_process_agent_def(def, &agent_dir));
-
-        if let Some(def) = def {
-            defs.insert(def.name.clone(), def);
-        }
+        let Some(def) = read_agent_def(&agent_dir) else {
+            continue;
+        };
+        let mut def = def;
+        post_process_agent_def(&mut def, &agent_dir)?;
+        defs.insert(def.name.clone(), def);
     }
 
     Ok(defs)
 }
 
 fn read_agent_def(agent_dir: &PathBuf) -> Option<AgentDefinition> {
-    let mnemnk_json = agent_dir.join("mnemnk.json");
+    // If mnemnk.local.json exists, prioritize reading it
+    let mnemnk_local_json = agent_dir.join(MNEMNK_LOCAL_JSON);
+    if mnemnk_local_json.exists() {
+        let content = match std::fs::read_to_string(&mnemnk_local_json) {
+            Ok(ret) => ret,
+            Err(e) => {
+                log::error!("I/O Error {}: {}", mnemnk_local_json.display(), e);
+                return None;
+            }
+        };
+        let def: AgentDefinition = match serde_json::from_str(&content) {
+            Ok(def) => def,
+            Err(e) => {
+                log::error!("Invalid JSON {}: {}", mnemnk_local_json.display(), e);
+                return None;
+            }
+        };
+        return Some(def);
+    }
+
+    let mnemnk_json = agent_dir.join(MNEMNK_JSON);
     if !mnemnk_json.exists() {
         return None;
     }
@@ -163,55 +208,13 @@ fn read_agent_def(agent_dir: &PathBuf) -> Option<AgentDefinition> {
             return None;
         }
     };
-
     Some(def)
 }
 
-fn post_process_agent_def(
-    mut def: AgentDefinition,
-    agent_dir: &PathBuf,
-) -> Option<AgentDefinition> {
-    let agent_dir_name = agent_dir.file_name().unwrap().to_string_lossy().to_string();
-
-    // check if name and def.name match
-    if def.name != agent_dir_name {
-        log::warn!(
-            "Agent name and definition name mismatch: {} != {}",
-            agent_dir_name,
-            def.name
-        );
-        return None;
+fn post_process_agent_def(def: &mut AgentDefinition, agent_dir: &PathBuf) -> Result<()> {
+    match def.kind.as_str() {
+        "Command" => CommandAgent::read_def(def, agent_dir)?,
+        _ => {}
     }
-
-    // TODO: move into CommandAgent
-    if def.kind == "Command" {
-        // set path
-        let mut agent_path = def.path.clone().unwrap_or_default();
-        if agent_path.is_empty() {
-            agent_path = def.name.clone();
-        }
-        let mut path = PathBuf::from(&agent_path);
-        if path.is_absolute() {
-            log::warn!(
-                "Absolute path is not allowed (agent: {}): {}",
-                def.name,
-                agent_path,
-            );
-            return None;
-        }
-        path = agent_dir
-            .join(path)
-            .with_extension(env::consts::EXE_EXTENSION);
-        if !path.exists() {
-            log::warn!(
-                "Agent path not found (agent: {}): {}",
-                def.name,
-                path.display()
-            );
-            return None;
-        }
-        def.path = Some(path.to_string_lossy().to_string());
-    }
-
-    Some(def)
+    Ok(())
 }
