@@ -14,7 +14,7 @@ export const edges = writable([]);
 
 export const MESSAGES_TIMEOUT = 10 * 60 * 1000;
 
-function addMessage(agent: string, kind: string, value: any, time: number) {
+function addMessage(kind: string, value: any, time: number) {
   if (!boards.has(kind)) {
     nodes.update((nodes) => {
       return [
@@ -33,7 +33,7 @@ function addMessage(agent: string, kind: string, value: any, time: number) {
   let messages = boards.get(kind) ?? [];
   const timeoutThreshold = Date.now() - MESSAGES_TIMEOUT;
   messages = messages.filter((m) => m.time > timeoutThreshold);
-  messages.push({ agent, kind, value, time });
+  messages.push({ kind, value, time });
   boards.set(kind, messages);
 
   nodes.update((nodes) => {
@@ -42,7 +42,7 @@ function addMessage(agent: string, kind: string, value: any, time: number) {
       {
         id: Math.random().toString(),
         type: "message",
-        data: { agent, value, time },
+        data: { value, time },
         position: { x: Math.random() * 1000, y: Math.random() * 1000 },
         parentId: kind,
         extent: "parent",
@@ -55,9 +55,9 @@ let unlisten: UnlistenFn | null = null;
 
 $effect.root(() => {
   listen<WriteBoardEmit>("mnemnk:write_board", (event) => {
-    const { agent, kind, value } = event.payload;
+    const { kind, value } = event.payload;
     let time = value.t ?? Date.now();
-    addMessage(agent, kind, value, time);
+    addMessage(kind, value, time);
   }).then((unlistenFn) => {
     unlisten = unlistenFn;
   });

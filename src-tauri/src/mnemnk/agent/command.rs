@@ -47,7 +47,7 @@ impl AsAgent for CommandAgent {
         stop_agent(app, &self.data.id)
     }
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
         let env = app.state::<AgentEnv>();
         let mut env_commands = env.commands.lock().unwrap();
 
@@ -57,7 +57,7 @@ impl AsAgent for CommandAgent {
         })?;
 
         command
-            .write(format!(".IN {} {} {}\n", source, kind, value.to_string()).as_bytes())
+            .write(format!(".IN {} {}\n", kind, value.to_string()).as_bytes())
             .map_err(|e| {
                 log::error!("Failed to write to {}: {}", &self.data.id, e);
                 anyhow::anyhow!("Failed to write to agent")

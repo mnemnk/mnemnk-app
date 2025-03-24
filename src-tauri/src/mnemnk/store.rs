@@ -85,12 +85,7 @@ pub fn quit(_app: &AppHandle) {
     // nothing
 }
 
-pub async fn store(
-    app: &AppHandle,
-    agent: String,
-    kind: String,
-    mut json_value: Value,
-) -> Result<()> {
+pub async fn store(app: &AppHandle, kind: String, mut json_value: Value) -> Result<()> {
     // extract timestamp from the value if it exists
     let timestamp = if let Some(t) = json_value.get("t").cloned() {
         // remove timestamp from the value
@@ -157,7 +152,7 @@ pub async fn store(
         .content(Event {
             kind,
             time: surrealdb::Datetime::from(utc_dt),
-            agent,
+            agent: "".to_string(),
             local_offset,
             local_y,
             local_ym,

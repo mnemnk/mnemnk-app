@@ -15,13 +15,10 @@ pub enum AgentMessage {
         value: Value,
     },
     BoardOut {
-        // original agent id
-        agent: String,
         kind: String,
         value: Value,
     },
     Store {
-        agent: String,
         kind: String,
         value: Value,
     },
@@ -39,34 +36,30 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
                 AgentOut { agent, kind, value } => {
                     agent_out(&app_handle, agent, kind, value).await;
                 }
-                BoardOut { agent, kind, value } => {
-                    board_out(&app_handle, agent, kind, value).await;
+                BoardOut { kind, value } => {
+                    board_out(&app_handle, kind, value).await;
                 }
-                Store { agent, kind, value } => {
-                    store(&app_handle, agent, kind, value).await;
+                Store { kind, value } => {
+                    store(&app_handle, kind, value).await;
                 }
             }
         }
     });
 }
 
-pub fn send_board(env: &AgentEnv, agent: String, kind: String, value: Value) {
+pub fn send_board(env: &AgentEnv, kind: String, value: Value) {
     let main_tx = env.tx.clone();
     main_tx
-        .try_send(AgentMessage::BoardOut { agent, kind, value })
+        .try_send(AgentMessage::BoardOut { kind, value })
         .unwrap_or_else(|e| {
             log::error!("Failed to send message: {}", e);
         });
 }
 
-pub fn send_store(app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+pub fn send_store(app: &AppHandle, kind: String, value: Value) -> Result<()> {
     let env = app.state::<AgentEnv>();
     env.tx
-        .try_send(AgentMessage::Store {
-            agent: source,
-            kind,
-            value,
-        })
+        .try_send(AgentMessage::Store { kind, value })
         .context("Failed to send store message")
 }
 
@@ -111,18 +104,11 @@ async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: V
             target_handle.clone()
         };
 
-        send_message_to(
-            app,
-            &env,
-            source_agent.clone(),
-            &target_node,
-            kind,
-            value.clone(),
-        )
+        send_message_to(app, &env, &target_node, kind, value.clone())
     }
 }
 
-async fn board_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
+async fn board_out(app: &AppHandle, kind: String, value: Value) {
     let env = app.state::<AgentEnv>();
 
     let board_nodes;
@@ -152,37 +138,21 @@ async fn board_out(app: &AppHandle, source_agent: String, kind: String, value: V
             } else {
                 sub_handle
             };
-            send_message_to(
-                app,
-                &env,
-                source_agent.clone(),
-                &sub_node,
-                target_kind,
-                value.clone(),
-            )
+            send_message_to(app, &env, &sub_node, target_kind, value.clone())
         }
     }
 }
 
-fn send_message_to(
-    app: &AppHandle,
-    env: &AgentEnv,
-    source_agent: String,
-    target_id: &str,
-    kind: String,
-    value: Value,
-) {
+fn send_message_to(app: &AppHandle, env: &AgentEnv, target_id: &str, kind: String, value: Value) {
     if let Some(target_node) = env.agents.lock().unwrap().get_mut(target_id) {
-        target_node
-            .input(app, source_agent, kind, value)
-            .unwrap_or_else(|e| {
-                log::error!("Failed to send message to {}: {}", target_id, e);
-            });
+        target_node.input(app, kind, value).unwrap_or_else(|e| {
+            log::error!("Failed to send message to {}: {}", target_id, e);
+        });
     }
 }
 
-async fn store(app_handle: &AppHandle, agent: String, kind: String, value: Value) {
-    store::store(app_handle, agent, kind, value)
+async fn store(app_handle: &AppHandle, kind: String, value: Value) {
+    store::store(app_handle, kind, value)
         .await
         .unwrap_or_else(|e| {
             log::error!("Failed to store: {}", e);

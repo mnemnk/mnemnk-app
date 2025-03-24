@@ -20,8 +20,8 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
-        message::send_store(app, source, kind, value)
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
+        message::send_store(app, kind, value)
     }
 }
 
@@ -60,7 +60,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         "$database".into(),
         AgentDefinition::new("Database", "$database")
             .with_title("Database")
-            .with_description("Store data in a database")
+            .with_description("Store data")
             .with_inputs(vec!["*"]),
     );
 

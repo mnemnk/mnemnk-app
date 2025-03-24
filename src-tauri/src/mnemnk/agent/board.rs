@@ -11,7 +11,6 @@ const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
 #[derive(Clone, Debug, Serialize)]
 struct WriteBoardMessage {
-    agent: String,
     kind: String,
     value: Value,
 }
@@ -79,7 +78,7 @@ impl AsAgent for BoardAgent {
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, source: String, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
         let kind = self.board_name.clone().unwrap_or(kind.to_string());
         if kind.is_empty() {
             return Ok(());
@@ -92,15 +91,15 @@ impl AsAgent for BoardAgent {
         }
         let app = app.clone();
         let env = app.state::<AgentEnv>();
-        send_board(&env, source.clone(), kind.clone(), value.clone());
+        send_board(&env, kind.clone(), value.clone());
 
-        emit_publish(source, value, kind, app);
+        emit_publish(&app, kind, value);
 
         Ok(())
     }
 }
 
-fn emit_publish(source: String, value: Value, kind: String, app: AppHandle) {
+fn emit_publish(app: &AppHandle, kind: String, value: Value) {
     // remove image from the value. it's too big to send to frontend
     let mut value = value;
     if value.get("image").is_some() {
@@ -108,11 +107,7 @@ fn emit_publish(source: String, value: Value, kind: String, app: AppHandle) {
     }
 
     // emit the message to frontend
-    let message = WriteBoardMessage {
-        agent: source,
-        kind,
-        value,
-    };
+    let message = WriteBoardMessage { kind, value };
     app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
         log::error!("Failed to emit message: {}", e);
     });
