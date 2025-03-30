@@ -8,7 +8,18 @@
   import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
-  import { GradientButton, Modal } from "flowbite-svelte";
+  import {
+    Accordion,
+    AccordionItem,
+    Dropdown,
+    DropdownItem,
+    GradientButton,
+    Modal,
+    Navbar,
+    NavLi,
+    NavUl,
+  } from "flowbite-svelte";
+  import { ChevronDownOutline } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
 
   import {
@@ -28,9 +39,9 @@
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
-  import AgentDrawer from "./AgentDrawer.svelte";
+  import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
-  import FlowDrawer from "./FlowDrawer.svelte";
+  import FlowList from "./FlowList.svelte";
 
   const { data } = $props();
 
@@ -45,7 +56,6 @@
 
   const agent_defs = data.agent_defs;
 
-  // const flows = data.agent_flows.map((flow) => deserializeAgentFlow(flow, data.agent_defs));
   let flows = $state(data.agent_flows.map((flow) => deserializeAgentFlow(flow, data.agent_defs)));
   let flowIndex = $state(Math.min(0, data.agent_flows.length - 1));
 
@@ -97,35 +107,59 @@
     };
   });
 
-  // AgentDrawer
+  // AgentList
 
-  let agent_drawer = $state(false);
+  let openAgent = $state(false);
 
-  const key_agent_drawer = "a";
+  const key_open_agent = "a";
 
   $effect(() => {
-    hotkeys(key_agent_drawer, () => {
-      agent_drawer = !agent_drawer;
+    hotkeys(key_open_agent, () => {
+      openAgent = !openAgent;
     });
 
     return () => {
-      hotkeys.unbind(key_agent_drawer);
+      hotkeys.unbind(key_open_agent);
     };
   });
 
-  // FlowDrawer
+  // FlowList
 
-  let flow_drawer = $state(false);
+  let openFlow = $state(false);
 
-  const key_flow_drawer = "f";
+  const key_open_flow = "f";
 
   $effect(() => {
-    hotkeys(key_flow_drawer, () => {
-      flow_drawer = !flow_drawer;
+    hotkeys(key_open_flow, () => {
+      openFlow = !openFlow;
     });
 
     return () => {
-      hotkeys.unbind(key_flow_drawer);
+      hotkeys.unbind(key_open_flow);
+    };
+  });
+
+  // shortcuts
+  $effect(() => {
+    hotkeys("ctrl+s", (event) => {
+      event.preventDefault();
+      onSaveFlow();
+    });
+
+    // hotkeys("ctrl+e", (event) => {
+    //   event.preventDefault();
+    //   onExportFlow();
+    // });
+
+    // hotkeys("ctrl+i", (event) => {
+    //   event.preventDefault();
+    //   onImportFlow();
+    // });
+
+    return () => {
+      hotkeys.unbind("ctrl+s");
+      // hotkeys.unbind("ctrl+e");
+      // hotkeys.unbind("ctrl+i");
     };
   });
 
@@ -134,7 +168,7 @@
   let new_flow_modal = $state(false);
   let new_flow_name = $state("");
 
-  async function handleNewFlow() {
+  async function onNewFlow() {
     new_flow_name = "";
     new_flow_modal = true;
   }
@@ -147,10 +181,6 @@
     flows.push(deserializeAgentFlow(flow, agent_defs));
     flowIndex = flows.length - 1;
   }
-
-  // async function updateFlow() {
-  //   await updateAgentFlow(nodes, edges, flow_index, agent_defs);
-  // }
 
   async function onSaveFlow() {
     if (flowIndex < 0) return;
@@ -214,70 +244,54 @@
     class="relative w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
   >
     <Controls />
-    <div class="fixed top-4 left-4 z-30 w-20">
-      <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={handleNewFlow}
-        >New Flow</GradientButton
-      >
-      <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={onSaveFlow}
-        >Save</GradientButton
-      >
-      <!-- <GradientButton color="pinkToOrange" class="w-full mb-4" onclick={updateFlow}
-        >Update</GradientButton
-      > -->
-      <GradientButton color="purpleToBlue" class="w-full mb-4" onclick={onExportFlow}
-        >Export</GradientButton
-      >
-      <GradientButton color="purpleToPink" class="w-full mb-4" onclick={onImportFlow}
-        >Import</GradientButton
-      >
-    </div>
-
-    {#if agent_drawer}
-      <AgentDrawer agent_defs={data.agent_defs} {onAddAgent} />
-    {:else}
-      <GradientButton
-        shadow
-        color="cyan"
-        class="fixed top-4 right-4 z-30"
-        onclick={() => (agent_drawer = true)}
-      >
-        Agents
-      </GradientButton>
-    {/if}
-
-    {#if flow_drawer}
-      <FlowDrawer {flows} bind:flowIndex />
-    {:else}
-      <GradientButton
-        shadow
-        color="cyan"
-        class="fixed top-24 right-4 z-30"
-        onclick={() => (flow_drawer = true)}
-      >
-        Flows
-      </GradientButton>
-    {/if}
-
-    {#if new_flow_modal}
-      <Modal title="New Flow" bind:open={new_flow_modal}>
-        <div class="flex flex-col">
-          <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-            >Flow Name</label
-          >
-          <input
-            type="text"
-            id="flow_name"
-            bind:value={new_flow_name}
-            class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="Flow Name"
-          />
-        </div>
-        <div class="flex justify-end mt-4">
-          <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
-        </div>
-      </Modal>
-    {/if}
   </SvelteFlow>
+
+  <Navbar class="fixed top-4 left-0 z-10 !bg-transparent">
+    <NavUl>
+      <NavLi class="cursor-pointer w-40"
+        >File<ChevronDownOutline class="w-6 h-6 ms-2 inline" /></NavLi
+      >
+      <Dropdown class="w-40 z-20">
+        <DropdownItem onclick={onNewFlow}>New</DropdownItem>
+        <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
+        <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
+        <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
+      </Dropdown>
+    </NavUl>
+  </Navbar>
+
+  <div class="fixed top-4 right-4 z-30">
+    <Accordion class="w-40 bg-white dark:bg-black" classActive="bg-white dark:bg-black">
+      <AccordionItem open={openAgent}>
+        <div slot="header">Agents</div>
+        <AgentList agent_defs={data.agent_defs} {onAddAgent} />
+      </AccordionItem>
+      <AccordionItem open={openFlow}>
+        <span slot="header">Flows</span>
+        <FlowList {flows} bind:flowIndex />
+      </AccordionItem>
+    </Accordion>
+  </div>
+
+  {#if new_flow_modal}
+    <Modal title="New Flow" bind:open={new_flow_modal}>
+      <div class="flex flex-col">
+        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >Flow Name</label
+        >
+        <input
+          type="text"
+          id="flow_name"
+          bind:value={new_flow_name}
+          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Flow Name"
+        />
+      </div>
+      <div class="flex justify-end mt-4">
+        <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
+      </div>
+    </Modal>
+  {/if}
 </main>
 
 <style>
