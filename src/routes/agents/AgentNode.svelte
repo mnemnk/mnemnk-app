@@ -52,6 +52,8 @@
           <Input type="text" bind:value={() => get(config), (v) => config.set(v)} />
         {:else if default_config?.type === "string[]"}
           <Textarea bind:value={() => get(config), (v) => config.set(v)} rows={4} />
+        {:else if default_config?.type === "object"}
+          <Textarea bind:value={() => get(config), (v) => config.set(v)} rows={4} />
         {:else}
           <Input type="text" value={JSON.stringify(get(config))} disabled />
         {/if}
