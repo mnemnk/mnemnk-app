@@ -28,42 +28,40 @@
   }
 </script>
 
-<div class="relative">
-  {#each inputs as input, idx}
-    <Handle
-      id={input}
-      type="target"
-      position={Position.Left}
-      style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
-    />
-    <div
-      class="absolute text-white opacity-20 hover:opacity-100"
-      style={`top: ${idx * 30 + 30}px; left: -20px;`}
-    >
-      {input}
-    </div>
-  {/each}
+{#each inputs as input, idx}
+  <Handle
+    id={input}
+    type="target"
+    position={Position.Left}
+    style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
+  />
   <div
-    class="relative p-0 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
+    class="absolute text-white opacity-20 hover:opacity-100"
+    style={`top: ${idx * 30 + 30}px; left: -20px;`}
   >
-    <div class="flex justify-between items-center pl-4 pr-0 mb-2">
-      {@render title()}
-      <Button onclick={deleteNode}><CloseOutline /></Button>
-    </div>
-    {@render contents()}
+    {input}
   </div>
-  {#each outputs as output, idx}
-    <div
-      class="absolute text-white opacity-20 hover:opacity-100"
-      style={`top: ${idx * 30 + 30}px; left: 105%;`}
-    >
-      {output}
-    </div>
-    <Handle
-      id={output}
-      type="source"
-      position={Position.Right}
-      style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
-    />
-  {/each}
+{/each}
+<div
+  class="p-0 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
+>
+  <div class="flex justify-between items-center pl-4 pr-0 mb-2">
+    {@render title()}
+    <Button onclick={deleteNode}><CloseOutline /></Button>
+  </div>
+  {@render contents()}
 </div>
+{#each outputs as output, idx}
+  <div
+    class="absolute text-white opacity-20 hover:opacity-100"
+    style={`top: ${idx * 30 + 30}px; left: 105%;`}
+  >
+    {output}
+  </div>
+  <Handle
+    id={output}
+    type="source"
+    position={Position.Right}
+    style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
+  />
+{/each}
