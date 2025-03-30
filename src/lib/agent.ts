@@ -1,8 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { getContext, setContext } from "svelte";
-import { get, writable } from "svelte/store";
-import type { Writable } from "svelte/store";
 
 import { nanoid } from "nanoid";
 
@@ -113,7 +111,7 @@ export function deserializeAgentFlowNode(
       name: node.name,
       title: configs?.title ?? null,
       description: configs?.description ?? null,
-      enabled: writable(node.enabled),
+      enabled: node.enabled,
       inputs: configs?.inputs ?? [],
       outputs: configs?.outputs ?? [],
       config: deserializeAgentConfig(node.config, default_config),
@@ -145,23 +143,23 @@ function deserializeAgentConfig(
   for (const key of Object.keys(node_config)) {
     const t = default_config?.[key].type;
     if (t === null) {
-      agent_config[key] = writable(node_config[key]);
+      agent_config[key] = node_config[key];
     } else if (t === "boolean") {
-      agent_config[key] = writable(node_config[key] === true ? "true" : "false");
+      agent_config[key] = node_config[key] === true ? "true" : "false";
     } else if (t === "integer") {
-      agent_config[key] = writable(node_config[key].toString());
+      agent_config[key] = node_config[key].toString();
     } else if (t === "number") {
-      agent_config[key] = writable(node_config[key].toString());
+      agent_config[key] = node_config[key].toString();
     } else if (t === "string") {
-      agent_config[key] = writable(node_config[key]);
+      agent_config[key] = node_config[key];
     } else if (t === "string?") {
-      agent_config[key] = writable(node_config[key] ?? "");
+      agent_config[key] = node_config[key] ?? "";
     } else if (t === "string[]") {
-      agent_config[key] = writable(node_config[key].join("\n"));
+      agent_config[key] = node_config[key].join("\n");
     } else if (t === "object") {
-      agent_config[key] = writable(JSON.stringify(node_config[key], null, 2));
+      agent_config[key] = JSON.stringify(node_config[key], null, 2);
     } else {
-      agent_config[key] = writable(node_config[key]);
+      agent_config[key] = node_config[key];
     }
   }
   return agent_config;
@@ -203,7 +201,7 @@ export function serializeAgentFlowNode(
       node.data.config,
       agent_configs[node.data.name].default_config,
     ),
-    enabled: get(node.data.enabled),
+    enabled: node.data.enabled,
     x: node.position.x,
     y: node.position.y,
     width: node.width,
@@ -222,7 +220,7 @@ function serializeAgentFlowNodeConfig(
   if (default_config === null) {
     const config: Record<string, any> = {};
     for (const key of Object.keys(node_config)) {
-      config[key] = get(node_config[key]);
+      config[key] = node_config[key];
     }
     return config;
   }
@@ -230,7 +228,7 @@ function serializeAgentFlowNodeConfig(
   const config: Record<string, any> = {};
   for (const key of Object.keys(node_config)) {
     const t = default_config[key].type;
-    const value = get(node_config[key]);
+    const value = node_config[key];
     if (t === "boolean") {
       config[key] = value === "true";
     } else if (t === "integer") {
