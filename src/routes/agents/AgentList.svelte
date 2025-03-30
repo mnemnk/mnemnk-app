@@ -1,13 +1,11 @@
 <script lang="ts">
-  import type { Writable } from "svelte/store";
-
   import type { NodeProps } from "@xyflow/svelte";
   import { Button } from "flowbite-svelte";
 
   import type { SAgentDefinitions, AgentFlowNode } from "@/lib/types";
 
   type Props = NodeProps & {
-    nodes: Writable<AgentFlowNode[]>;
+    nodes: AgentFlowNode[];
     agent_defs: SAgentDefinitions;
     onAddAgent: (agent_name: string) => Promise<void>;
   };
