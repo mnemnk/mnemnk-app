@@ -1,10 +1,6 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
 
-  import { writable } from "svelte/store";
-  import type { Writable } from "svelte/store";
-  import { get } from "svelte/store";
-
   import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
@@ -45,17 +41,17 @@
 
   const { data } = $props();
 
-  const { screenToFlowPosition } = useSvelteFlow();
+  const { screenToFlowPosition } = $derived(useSvelteFlow());
   setAgentDefinitionsContext(data.agent_defs);
 
-  const nodes: Writable<AgentFlowNode[]> = writable([]);
-  const edges: Writable<AgentFlowEdge[]> = writable([]);
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
   };
 
   const agent_defs = data.agent_defs;
 
+  let nodes = $state.raw<AgentFlowNode[]>([]);
+  let edges = $state.raw<AgentFlowEdge[]>([]);
   let flows = $state(data.agent_flows.map((flow) => deserializeAgentFlow(flow, data.agent_defs)));
   let flowIndex = $state(Math.min(0, data.agent_flows.length - 1));
 
@@ -63,8 +59,8 @@
     if (flowIndex < 0) {
       return;
     }
-    nodes.set(flows[flowIndex].nodes);
-    edges.set(flows[flowIndex].edges);
+    nodes = flows[flowIndex].nodes;
+    edges = flows[flowIndex].edges;
   });
 
   async function checkDeletedNodes(nodes: AgentFlowNode[]) {
@@ -95,16 +91,8 @@
   }
 
   $effect(() => {
-    const unsubscribeNodes = nodes.subscribe(async (nodes) => {
-      checkDeletedNodes(nodes);
-    });
-    const unsubscribeEdges = edges.subscribe(async (edges) => {
-      checkDeletedEdges(edges);
-    });
-    return () => {
-      unsubscribeNodes();
-      unsubscribeEdges();
-    };
+    checkDeletedNodes(nodes);
+    checkDeletedEdges(edges);
   });
 
   // AgentList
@@ -184,12 +172,12 @@
 
   async function onSaveFlow() {
     if (flowIndex < 0) return;
-    const flow = serializeAgentFlow(get(nodes), get(edges), flows[flowIndex].name, data.agent_defs);
+    const flow = serializeAgentFlow(nodes, edges, flows[flowIndex].name, data.agent_defs);
     await saveAgentFlow(flow);
   }
 
   function onExportFlow() {
-    const flow = serializeAgentFlow(get(nodes), get(edges), flows[flowIndex].name, agent_defs);
+    const flow = serializeAgentFlow(nodes, edges, flows[flowIndex].name, agent_defs);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -208,8 +196,8 @@
     const sflow = await importAgentFlow(file);
     if (!sflow.nodes || !sflow.edges) return;
     const flow = deserializeAgentFlow(sflow, agent_defs);
-    nodes.set(flow.nodes);
-    edges.set(flow.edges);
+    nodes = flow.nodes;
+    edges = flow.edges;
   }
 
   async function onAddAgent(agent_name: string) {
@@ -223,17 +211,15 @@
     await addAgentNode(flows[flowIndex].name, snode);
     const new_node = deserializeAgentFlowNode(snode, agent_defs);
     flows[flowIndex].nodes.push(new_node);
-    nodes.update((nodes) => {
-      return [...nodes, new_node];
-    });
+    nodes = [...nodes, new_node];
   }
 </script>
 
 <main class="container static min-w-[100vw]">
   <SvelteFlow
-    {nodes}
+    bind:nodes
+    bind:edges
     {nodeTypes}
-    {edges}
     deleteKey={["Delete", "Backspace"]}
     connectionRadius={38}
     colorMode="dark"
