@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::vec;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
@@ -12,12 +12,18 @@ use super::agent;
 use super::env::AgentEnv;
 use crate::mnemnk::settings;
 
-pub type AgentFlows = Vec<AgentFlow>;
+pub type AgentFlows = HashMap<String, AgentFlow>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlow {
     pub nodes: Vec<AgentFlowNode>,
     pub edges: Vec<AgentFlowEdge>,
+
+    pub name: Option<String>,
+
+    #[serde(skip)]
+    // Only set when reading/saving the file under the agent_flows_dir
+    path: Option<PathBuf>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -45,7 +51,16 @@ pub struct AgentFlowEdge {
 
 pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
     if let Some(dir) = agent_flows_dir(app) {
-        let agent_flows = read_agent_flows(&dir)?;
+        let mut agent_flows: AgentFlows = read_agent_flows(&dir)?;
+        if agent_flows.is_empty() {
+            agent_flows.insert(
+                "main".to_string(),
+                AgentFlow {
+                    name: Some("main".to_string()),
+                    ..Default::default()
+                },
+            );
+        }
         app.manage(Mutex::new(agent_flows));
     } else {
         return Err(anyhow::anyhow!("Agent flows directory not found"));
@@ -66,15 +81,27 @@ fn agent_flows_dir(app: &AppHandle) -> Option<PathBuf> {
 }
 
 fn read_agent_flows<P: AsRef<Path>>(dir: P) -> Result<AgentFlows> {
-    let mut flows = Vec::new();
+    let mut flows: AgentFlows = Default::default();
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
         if !path.is_file() || path.extension().unwrap_or_default() != "json" {
+            // TODO: subdirectories support
             continue;
         }
-        let flow = read_agent_flow(&path)?;
-        flows.push(flow);
+        let mut flow = read_agent_flow(&path)?;
+
+        flow.path = Some(path);
+
+        let name = flow
+            .path
+            .as_ref()
+            .unwrap()
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        flows.insert(name, flow);
     }
     Ok(flows)
 }
@@ -88,15 +115,6 @@ fn read_agent_flow(path: &PathBuf) -> Result<AgentFlow> {
     Ok(flow)
 }
 
-fn save_agent_flows(flows: &AgentFlows, dir: &PathBuf) -> Result<()> {
-    for (i, flow) in flows.iter().enumerate() {
-        let path = dir.join(format!("{}.json", i));
-        let content = serde_json::to_string_pretty(flow)?;
-        std::fs::write(&path, content)?;
-    }
-    Ok(())
-}
-
 pub(super) fn sync_agent_flows(app: &AppHandle) {
     let agent_flows;
     {
@@ -105,7 +123,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     }
 
     let mut node_map: HashMap<String, &AgentFlowNode> = HashMap::new();
-    for agent_flow in &agent_flows {
+    for (_name, agent_flow) in &agent_flows {
         for node in &agent_flow.nodes {
             if !node.enabled {
                 continue;
@@ -115,7 +133,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
     }
 
     let mut edges = HashMap::<String, Vec<(String, String, String)>>::new();
-    for agent_flow in &agent_flows {
+    for (_name, agent_flow) in &agent_flows {
         for edge in &agent_flow.edges {
             if !node_map.contains_key(&edge.source) || !node_map.contains_key(&edge.target) {
                 continue;
@@ -227,7 +245,7 @@ pub fn find_agent_node<'a>(
     agent_flows: &'a AgentFlows,
     agent_id: &str,
 ) -> Option<&'a AgentFlowNode> {
-    for agent_flow in agent_flows {
+    for (_name, agent_flow) in agent_flows {
         if let Some(agent_node) = agent_flow.nodes.iter().find(|x| x.id == agent_id) {
             return Some(agent_node);
         }
@@ -238,39 +256,151 @@ pub fn find_agent_node<'a>(
 #[tauri::command]
 pub fn get_agent_flows_cmd(agent_flows: State<Mutex<AgentFlows>>) -> Result<Value, String> {
     let agent_flows = agent_flows.lock().unwrap();
-    let agent_flows = agent_flows.clone();
+    let agent_flows = agent_flows.values().cloned().collect::<Vec<_>>();
     let value = serde_json::to_value(&agent_flows).map_err(|e| e.to_string())?;
     Ok(value)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command]
+pub fn new_agent_flow_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    name: String,
+) -> Result<AgentFlow, String> {
+    let flow = new_agent_flow(agent_flows, &name).map_err(|e| e.to_string())?;
+    Ok(flow)
+}
+
+fn new_agent_flow(agent_flows: State<Mutex<AgentFlows>>, name: &str) -> Result<AgentFlow> {
+    let mut flow = AgentFlow::default();
+    {
+        let mut agent_flows = agent_flows.lock().unwrap();
+        let name = unique_flow_name(&agent_flows, name);
+        flow.name = Some(name.clone());
+        agent_flows.insert(name.clone(), flow.clone());
+    }
+    Ok(flow)
+}
+
+#[tauri::command]
 pub fn save_agent_flow_cmd(
     app: AppHandle,
     agent_flows: State<Mutex<AgentFlows>>,
     agent_flow: AgentFlow,
-    idx: usize,
 ) -> Result<(), String> {
-    let flows;
+    save_agent_flow(&app, agent_flows, agent_flow).map_err(|e| e.to_string())
+}
+
+// Save the AgentFlow that matches the name in agent_flows.
+fn save_agent_flow(
+    app: &AppHandle,
+    agent_flows: State<Mutex<AgentFlows>>,
+    agent_flow: AgentFlow,
+) -> Result<()> {
+    let name = agent_flow
+        .name
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Agent flow name is required"))?
+        .clone();
+    let path;
     {
-        let mut agent_flows = agent_flows.lock().unwrap();
-        if idx < agent_flows.len() {
-            agent_flows[idx] = agent_flow;
+        let agent_flows = agent_flows.lock().unwrap();
+        let flow = agent_flows.get(&name).context("Agent flow not found")?;
+        if let Some(p) = &flow.path {
+            path = p.clone();
         } else {
-            agent_flows.push(agent_flow);
+            // If flow.path is None, this is the first time saving the AgentFlow, so set the path
+            let dir = agent_flows_dir(&app).context("Agent flows directory not found")?;
+            path = dir.join(name.clone()).with_extension("json");
         }
-        flows = agent_flows.clone();
     }
-    let dir = agent_flows_dir(&app);
-    if dir.is_none() {
-        return Err("Agent flows directory not found".to_string());
-    }
-    save_agent_flows(&flows, &dir.unwrap()).map_err(|e| e.to_string())?;
-    sync_agent_flows(&app);
+    let content = serde_json::to_string_pretty(&agent_flow)?;
+    std::fs::write(&path, content)?;
     Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn read_agent_flow_cmd(path: String) -> Result<AgentFlow, String> {
+pub fn import_agent_flow_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    path: String,
+) -> Result<AgentFlow, String> {
     let path = PathBuf::from(path);
-    read_agent_flow(&path).map_err(|e| e.to_string())
+    let mut flow = read_agent_flow(&path).map_err(|e| e.to_string())?;
+
+    let mut agent_flows = agent_flows.lock().unwrap();
+
+    let name = unique_flow_name(
+        &agent_flows,
+        &path.file_stem().unwrap().to_string_lossy().to_string(),
+    );
+    flow.name = Some(name.clone());
+
+    agent_flows.insert(name, flow.clone());
+
+    Ok(flow)
+}
+
+fn unique_flow_name(agent_flows: &AgentFlows, name: &str) -> String {
+    let mut new_name = name.to_string();
+    let mut i = 1;
+    while agent_flows.contains_key(&new_name) {
+        new_name = format!("{} ({})", name, i);
+        i += 1;
+    }
+    new_name
+}
+
+#[tauri::command]
+pub fn add_agent_node_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    flow_name: String,
+    node: AgentFlowNode,
+) -> Result<(), String> {
+    let mut agent_flows = agent_flows.lock().unwrap();
+    let flow = agent_flows
+        .get_mut(&flow_name)
+        .ok_or_else(|| "Agent flow not found".to_string())?;
+    flow.nodes.push(node);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_agent_node_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    flow_name: String,
+    node_id: String,
+) -> Result<(), String> {
+    let mut agent_flows = agent_flows.lock().unwrap();
+    let flow = agent_flows
+        .get_mut(&flow_name)
+        .ok_or_else(|| "Agent flow not found".to_string())?;
+    flow.nodes.retain(|node| node.id != node_id);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn add_agent_edge_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    flow_name: String,
+    edge: AgentFlowEdge,
+) -> Result<(), String> {
+    let mut agent_flows = agent_flows.lock().unwrap();
+    let flow = agent_flows
+        .get_mut(&flow_name)
+        .ok_or_else(|| "Agent flow not found".to_string())?;
+    flow.edges.push(edge);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_agent_edge_cmd(
+    agent_flows: State<Mutex<AgentFlows>>,
+    flow_name: String,
+    edge_id: String,
+) -> Result<(), String> {
+    let mut agent_flows = agent_flows.lock().unwrap();
+    let flow = agent_flows
+        .get_mut(&flow_name)
+        .ok_or_else(|| "Agent flow not found".to_string())?;
+    flow.edges.retain(|edge| edge.id != edge_id);
+    Ok(())
 }

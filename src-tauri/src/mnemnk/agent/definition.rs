@@ -44,6 +44,12 @@ pub struct AgentDefinition {
     pub command: Option<CommandConfig>,
 }
 
+// pub struct AgentInput {
+//     pub name: String,
+//     pub kind: String,
+//     pub default_value: Option<Value>,
+// }
+
 pub type AgentDefaultConfig = HashMap<String, AgentDefaultConfigEntry>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

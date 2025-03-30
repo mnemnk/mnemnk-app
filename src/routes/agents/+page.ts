@@ -5,10 +5,7 @@ import { getAgentFlows, getAgentDefs } from "@/lib/agent";
 export async function load() {
   const agent_defs: SAgentDefinitions = await getAgentDefs();
 
-  const agent_flows = await getAgentFlows();
-  if (agent_flows.length === 0) {
-    agent_flows.push({ nodes: [], edges: [] });
-  }
+  let agent_flows = await getAgentFlows();
 
   return {
     agent_defs,
