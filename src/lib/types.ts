@@ -1,5 +1,3 @@
-import type { Writable } from "svelte/store";
-
 import type { Edge, Node } from "@xyflow/svelte";
 
 export type SAgentDefinitions = Record<string, SAgentDefinition>;
@@ -61,11 +59,11 @@ export type AgentFlowNode = Node & {
 
 export type AgentFlowNodeData = {
   name: string;
-  enabled: Writable<boolean>;
+  enabled: boolean;
   config: AgentFlowNodeConfig | null;
 };
 
-export type AgentFlowNodeConfig = Record<string, Writable<any>>;
+export type AgentFlowNodeConfig = Record<string, any>;
 
 export type AgentFlowEdge = Edge;
 
