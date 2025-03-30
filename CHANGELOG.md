@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.12.0](https://github.com/mnemnk/mnemnk-app/compare/v0.11.3...v0.12.0) (2025-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 protocol change. remove source arg from agent input
+
+### Features
+
+* 🎸 empty board name is invalid on Board In Agent ([#139](https://github.com/mnemnk/mnemnk-app/issues/139)) ([c818b89](https://github.com/mnemnk/mnemnk-app/commit/c818b89854616052b36a4377ba4f606a1b1c018b))
+* 🎸 improve UI ([#142](https://github.com/mnemnk/mnemnk-app/issues/142)) ([083e90c](https://github.com/mnemnk/mnemnk-app/commit/083e90c2780fbcb6dc6d24b2e31b360b20e45afd))
+* 🎸 JSON Path Agent ([#135](https://github.com/mnemnk/mnemnk-app/issues/135)) ([0ed2f9d](https://github.com/mnemnk/mnemnk-app/commit/0ed2f9da8c0e971be5aad64b33a14e66fdc3a47f))
+* 🎸 mnemnk.json supports multiple agent definitions ([#136](https://github.com/mnemnk/mnemnk-app/issues/136)) ([a7f7896](https://github.com/mnemnk/mnemnk-app/commit/a7f78962d14d1010ed1c8b505c3748856623733c))
+* 🎸 new entry command.args for command agent definition ([#133](https://github.com/mnemnk/mnemnk-app/issues/133)) ([933147b](https://github.com/mnemnk/mnemnk-app/commit/933147b43e5ab5091805e5b2ff91ae697fc683d6))
+* 🎸 open and close agent drawer ([#140](https://github.com/mnemnk/mnemnk-app/issues/140)) ([c61dd26](https://github.com/mnemnk/mnemnk-app/commit/c61dd26f6ff90ae5409da4d7789fb4efc150d785))
+* 🎸 remove source arg from agent input ([#134](https://github.com/mnemnk/mnemnk-app/issues/134)) ([2e7b306](https://github.com/mnemnk/mnemnk-app/commit/2e7b306493700b470f3c806726b97d8a03fd05c5))
+* 🎸 separate board into in- and out- ([#138](https://github.com/mnemnk/mnemnk-app/issues/138)) ([5be505f](https://github.com/mnemnk/mnemnk-app/commit/5be505f89c3c8728eef217df618cf5fcb2f12cb7))
+* 🎸 support multiple flows ([#141](https://github.com/mnemnk/mnemnk-app/issues/141)) ([a03fc97](https://github.com/mnemnk/mnemnk-app/commit/a03fc97ca778a6c3a385f9bad0db604ed7679731))
+* 🎸 treat empty handle name as * ([#137](https://github.com/mnemnk/mnemnk-app/issues/137)) ([cc0430b](https://github.com/mnemnk/mnemnk-app/commit/cc0430bf1cc1e8e8c0acf7e576a799c7a68a22fa))
+
+
+### Bug Fixes
+
+* 🐛 change input(&self, into input(&mut self ([#132](https://github.com/mnemnk/mnemnk-app/issues/132)) ([7110d64](https://github.com/mnemnk/mnemnk-app/commit/7110d6439d2a4deaba0428f35712a770cf3f3ea6))
+* 🐛 update data.config ([64c968d](https://github.com/mnemnk/mnemnk-app/commit/64c968d72b5ea64014be5810e79dccb42bcd2ba1))
+
 ## [0.11.3](https://github.com/mnemnk/mnemnk-app/compare/v0.11.2...v0.11.3) (2025-03-20)
 
 
