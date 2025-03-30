@@ -27,6 +27,7 @@ export type SAgentDefaultConfigEntry = {
 export type SAgentFlow = {
   nodes: SAgentFlowNode[];
   edges: SAgentFlowEdge[];
+  name: string;
 };
 
 export type SAgentFlowNode = {
@@ -51,6 +52,7 @@ export type SAgentFlowEdge = {
 export type AgentFlow = {
   nodes: AgentFlowNode[];
   edges: AgentFlowEdge[];
+  name: string;
 };
 
 export type AgentFlowNode = Node & {

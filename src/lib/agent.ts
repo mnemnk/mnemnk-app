@@ -26,12 +26,16 @@ export async function getAgentFlows(): Promise<SAgentFlow[]> {
   return await invoke("get_agent_flows_cmd");
 }
 
-export async function readAgentFlow(path: string): Promise<SAgentFlow> {
-  return await invoke("read_agent_flow_cmd", { path });
+export async function importAgentFlow(path: string): Promise<SAgentFlow> {
+  return await invoke("import_agent_flow_cmd", { path });
 }
 
-export async function saveAgentFlow(agent_flow: SAgentFlow, idx: number): Promise<void> {
-  await invoke("save_agent_flow_cmd", { agent_flow, idx });
+export async function newAgentFlow(name: string): Promise<SAgentFlow> {
+  return await invoke("new_agent_flow_cmd", { name });
+}
+
+export async function saveAgentFlow(agentFlow: SAgentFlow): Promise<void> {
+  await invoke("save_agent_flow_cmd", { agentFlow });
 }
 
 const agentDefinitionsKey = Symbol("agentDefinitions");
@@ -44,28 +48,44 @@ export function getAgentDefinitionsContext(): SAgentDefinitions {
   return getContext(agentDefinitionsKey);
 }
 
+export async function addAgentNode(flowName: string, node: SAgentFlowNode): Promise<void> {
+  await invoke("add_agent_node_cmd", { flowName, node });
+}
+
+export async function deleteAgentNode(flowName: string, nodeId: string): Promise<void> {
+  await invoke("delete_agent_node_cmd", { flowName, nodeId });
+}
+
+export async function addAgentEdge(flowName: string, edge: SAgentFlowEdge): Promise<void> {
+  await invoke("add_agent_edge_cmd", { flowName, edge });
+}
+
+export async function deleteAgentEdge(flowName: string, edgeId: string): Promise<void> {
+  await invoke("delete_agent_edge_cmd", { flowName, edgeId });
+}
+
 // Agent Flow
 
-export function addAgentNode(
-  agent_name: string,
-  nodes: Writable<AgentFlowNode[]>,
-  settings: SAgentDefinitions,
-) {
-  const new_node = newAgentFlowNode(agent_name, settings);
-  nodes.update((nodes) => {
-    return [...nodes, new_node];
-  });
-}
+// export function addAgentNode(
+//   agent_name: string,
+//   nodes: Writable<AgentFlowNode[]>,
+//   settings: SAgentDefinitions,
+// ) {
+//   const new_node = newAgentFlowNode(agent_name, settings);
+//   nodes.update((nodes) => {
+//     return [...nodes, new_node];
+//   });
+// }
 
-export async function updateAgentFlow(
-  nodes: Writable<AgentFlowNode[]>,
-  edges: Writable<AgentFlowEdge[]>,
-  flow_index: number,
-  agent_configs: SAgentDefinitions,
-) {
-  const flow = serializeAgentFlow(get(nodes), get(edges), agent_configs);
-  await saveAgentFlow(flow, flow_index);
-}
+// export async function updateAgentFlow(
+//   nodes: Writable<AgentFlowNode[]>,
+//   edges: Writable<AgentFlowEdge[]>,
+//   flow_index: number,
+//   agent_configs: SAgentDefinitions,
+// ) {
+//   const flow = serializeAgentFlow(get(nodes), get(edges), agent_configs);
+//   await saveAgentFlow(flow, flow_index);
+// }
 
 // deserialize: SAgentFlow -> AgentFlow
 
@@ -76,6 +96,7 @@ export function deserializeAgentFlow(
   return {
     nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
     edges: flow.edges.map((edge) => deserializeAgentFlowEdge(edge)),
+    name: flow.name,
   };
 }
 
@@ -161,11 +182,13 @@ function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
 export function serializeAgentFlow(
   nodes: AgentFlowNode[],
   edges: AgentFlowEdge[],
+  name: string,
   agent_configs: SAgentDefinitions,
 ): SAgentFlow {
   return {
     nodes: nodes.map((node) => serializeAgentFlowNode(node, agent_configs)),
     edges: edges.map((edge) => serializeAgentFlowEdge(edge)),
+    name,
   };
 }
 
@@ -239,22 +262,22 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
   };
 }
 
-export function newAgentFlowNode(agent_name: string, settings: SAgentDefinitions): AgentFlowNode {
-  const id = newNodeId(agent_name);
-  const default_config = settings[agent_name].default_config ?? {};
+export function newAgentFlowNode(def_name: string, agent_defs: SAgentDefinitions): SAgentFlowNode {
+  const id = newNodeId(def_name);
+  const default_config = agent_defs[def_name].default_config ?? {};
   const config: Record<string, any> = {};
   for (const key of Object.keys(default_config)) {
     config[key] = default_config[key].value;
   }
   const node_data = {
     id,
-    name: agent_name,
-    enabled: true,
+    name: def_name,
+    enabled: false,
     config,
     x: 0,
     y: 0,
   };
-  return deserializeAgentFlowNode(node_data, settings);
+  return node_data;
 }
 
 function newNodeId(prefix: string) {

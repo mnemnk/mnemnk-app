@@ -4,21 +4,17 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Button, Drawer } from "flowbite-svelte";
 
-  import { addAgentNode } from "@/lib/agent";
-  import type { SAgentDefinitions, AgentFlowNode, AgentFlowEdge } from "@/lib/types";
+  import type { SAgentDefinitions, AgentFlowNode } from "@/lib/types";
 
   type Props = NodeProps & {
     nodes: Writable<AgentFlowNode[]>;
     agent_defs: SAgentDefinitions;
+    onAddAgent: (agent_name: string) => Promise<void>;
   };
 
-  const { nodes, agent_defs }: Props = $props();
+  const { agent_defs, onAddAgent }: Props = $props();
 
   const agent_names = Object.keys(agent_defs).sort();
-
-  function addAgent(agent_name: string) {
-    addAgentNode(agent_name, nodes, agent_defs);
-  }
 </script>
 
 <Drawer
@@ -34,7 +30,7 @@
         class="w-full"
         color={agent_name.startsWith("$") ? "blue" : "primary"}
         outline
-        onclick={() => addAgent(agent_name)}>{agent_defs[agent_name].title ?? agent_name}</Button
+        onclick={() => onAddAgent(agent_name)}>{agent_defs[agent_name].title ?? agent_name}</Button
       >
     </div>
   {/each}
