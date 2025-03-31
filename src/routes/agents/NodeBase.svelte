@@ -3,29 +3,22 @@
 
   import { Handle, Position, useSvelteFlow } from "@xyflow/svelte";
   import type { NodeProps } from "@xyflow/svelte";
-  import { Button } from "flowbite-svelte";
-  import { CloseOutline } from "flowbite-svelte-icons";
+  import { Toggle } from "flowbite-svelte";
 
   const DEFAULT_HANDLE_STYLE = "width: 10px; height: 10px;";
 
   type Props = NodeProps & {
+    enabled: boolean;
     inputs: string[];
     outputs: string[];
     title: Snippet;
     contents: Snippet;
   };
 
-  let { id, inputs, outputs, title, contents }: Props = $props();
+  const bgColors = ["bg-gray-200 dark:bg-gray-700", "bg-gray-100 dark:bg-gray-800"];
 
-  const { deleteElements, getNode } = useSvelteFlow();
-
-  async function deleteNode(event: MouseEvent) {
-    event.preventDefault();
-    const node = getNode(id);
-    if (node !== undefined) {
-      await deleteElements({ nodes: [node] });
-    }
-  }
+  let { id, enabled, inputs, outputs, title, contents }: Props = $props();
+  const { updateNodeData } = useSvelteFlow();
 </script>
 
 {#each inputs as input, idx}
@@ -43,10 +36,18 @@
   </div>
 {/each}
 <div
-  class="p-0 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
+  class={`${bgColors[enabled ? 1 : 0]} p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
 >
-  <div class="pl-4 pr-0 mb-2">
+  <div class="w-full flex justify-between pl-4 pr-0 mb-2">
     {@render title()}
+    <div class="flex-none w-8"></div>
+    <Toggle
+      checked={enabled}
+      onchange={() => updateNodeData(id, { enabled: !enabled })}
+      size="custom"
+      customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
+      class="col-span-6 pt-1"
+    ></Toggle>
   </div>
   {@render contents()}
 </div>

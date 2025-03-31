@@ -24,22 +24,10 @@
   const agent_default_config = getAgentDefinitionsContext()?.[data.name]?.default_config;
 
   const { updateNodeData } = useSvelteFlow();
-
-  $inspect(data);
 </script>
 
 {#snippet title()}
-  <div class="w-full flex justify-between mb-2">
-    <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
-    <div class="flex-none w-8"></div>
-    <Toggle
-      checked={data.enabled}
-      onchange={(evt) => updateNodeData(id, { enabled: evt.currentTarget.value })}
-      size="custom"
-      customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
-      class="col-span-6 pt-1"
-    ></Toggle>
-  </div>
+  <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
 {/snippet}
 
 {#snippet contents()}
@@ -56,8 +44,8 @@
         {#if default_config?.type === "boolean"}
           <Toggle
             checked={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={() =>
+              updateNodeData(id, { config: { ...data.config, [key]: !data.config[key] } })}
           />
         {:else if default_config?.type === "integer"}
           <NumberInput
@@ -101,4 +89,11 @@
   </form>
 {/snippet}
 
-<NodeBase {id} inputs={data.inputs} outputs={data.outputs} {title} {contents} />
+<NodeBase
+  {id}
+  enabled={data.enabled}
+  inputs={data.inputs}
+  outputs={data.outputs}
+  {title}
+  {contents}
+/>
