@@ -186,7 +186,7 @@ pub(super) fn sync_agent_flows(app: &AppHandle) {
             // maybe already stopped
             continue;
         };
-        if let Err(e) = agent.update(app, node.config.clone()) {
+        if let Err(e) = agent.set_config(app, node.config.clone()) {
             log::error!("Failed to sync agent: {}", e);
         }
     }

@@ -1,8 +1,10 @@
 import type { Edge, Node } from "@xyflow/svelte";
 
 export type SAgentDefinitions = Record<string, SAgentDefinition>;
+export type SAgentGlobalConfigs = Record<string, SAgentConfigs>;
 
 export type SAgentDefinition = {
+  kind: string;
   name: string;
   title: string | null;
   description: string | null;
@@ -10,16 +12,16 @@ export type SAgentDefinition = {
   inputs: string[] | null;
   outputs: string[] | null;
   default_config: SAgentDefaultConfig | null;
+  global_config: SAgentDefaultConfig | null;
 };
 
-export type SAgentDefaultConfig = Record<string, SAgentDefaultConfigEntry>;
+export type SAgentDefaultConfig = Record<string, SAgentConfigEntry>;
 
-export type SAgentDefaultConfigEntry = {
+export type SAgentConfigEntry = {
   value: any;
   type: string | null;
   title?: string | null;
   description?: string | null;
-  scope?: string | null;
 };
 
 export type SAgentFlow = {
@@ -28,10 +30,13 @@ export type SAgentFlow = {
   name: string;
 };
 
+export type SAgentConfigs = Record<string, SAgentConfig>;
+export type SAgentConfig = Record<string, any>;
+
 export type SAgentFlowNode = {
   id: string;
   name: string;
-  config: Record<string, any> | null;
+  config: SAgentConfig | null;
   enabled: boolean;
   x: number;
   y: number;

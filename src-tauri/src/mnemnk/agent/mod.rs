@@ -2,14 +2,14 @@ use anyhow::Result;
 use tauri::AppHandle;
 use tokio::sync::mpsc;
 
+pub mod agent;
+pub mod definition;
 pub mod env;
 pub mod flow;
 
-mod agent;
 mod board;
 mod builtin;
 mod command;
-mod definition;
 mod message;
 
 use env::AgentEnv;

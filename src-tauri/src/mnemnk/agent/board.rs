@@ -43,7 +43,7 @@ impl AsAgent for BoardInAgent {
         &mut self.data
     }
 
-    fn update(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
         self.board_name = normalize_board_name(&config);
         self.data.config = config;
         Ok(())
@@ -129,7 +129,7 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
             if let Some(board_name) = &self.board_name {

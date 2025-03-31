@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use tauri::{AppHandle, Manager};
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
-use super::definition::{AgentDefaultConfigEntry, AgentDefinition, AgentDefinitions};
+use super::definition::{AgentConfigEntry, AgentDefinition, AgentDefinitions};
 use super::env::AgentEnv;
 use super::message;
 
@@ -96,7 +96,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_inputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "board_name".into(),
-                AgentDefaultConfigEntry::new(json!(""), "string")
+                AgentConfigEntry::new(json!(""), "string")
                     .with_title("Board Name")
                     .with_description("* = source kind"),
             )])),
@@ -110,7 +110,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_outputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "board_name".into(),
-                AgentDefaultConfigEntry::new(json!(""), "string").with_title("Board Name"),
+                AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
             )])),
     );
 
@@ -132,7 +132,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_outputs(vec!["*"])
             .with_default_config(HashMap::from([(
                 "jsonpath".into(),
-                AgentDefaultConfigEntry::new(json!("$[*]"), "string")
+                AgentConfigEntry::new(json!("$[*]"), "string")
                     .with_title("JSON Path")
                     .with_description(r#"ex. $[?search(@.url, "https://github.com/.*")]"#),
             )])),

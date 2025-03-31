@@ -1,8 +1,6 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use std::time::Duration;
 use std::{env, vec};
 use tauri::{AppHandle, Manager};
@@ -14,7 +12,6 @@ use crate::mnemnk::agent::message::send_agent_out;
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefinition, AgentDefinitionError};
 use super::env::AgentEnv;
-use super::flow::{find_agent_node, AgentFlows};
 
 pub struct CommandAgent {
     data: AgentData,
@@ -30,22 +27,191 @@ impl AsAgent for CommandAgent {
     }
 
     fn start(&mut self, app: &AppHandle) -> Result<()> {
-        start_agent(
-            app,
-            self.data.id.clone(),
-            &self.data.def_name,
-            self.data.config.clone(),
-        )?;
+        let env = app.state::<AgentEnv>();
+
+        let agent_id = &self.data.id;
+        let def_name = &self.data.def_name;
+
+        // get agent command from agent env
+        let agent_cmd;
+        let agent_args;
+        let agent_dir;
+        {
+            let env_defs = env.defs.lock().unwrap();
+            if env_defs.contains_key(def_name) {
+                let def = env_defs.get(def_name).unwrap();
+                let def_command = def
+                    .command
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("Agent has no command"))?;
+                agent_cmd = def_command.cmd.clone();
+                agent_args = def_command.args.clone();
+                agent_dir = def_command
+                    .dir
+                    .clone()
+                    .context(format!("Agent path not found: {}", def_name))?;
+            } else {
+                log::error!("Agent {} not found", def_name);
+                return Err(anyhow::anyhow!("Agent not found"));
+            }
+        }
+        if agent_cmd.is_empty() {
+            log::error!("Agent command.cmd not found: {}", def_name);
+            return Err(anyhow::anyhow!("Agent command.cmd not found"));
+        }
+
+        log::info!("Starting agent: {} {}", def_name, agent_id);
+
+        // prepare args
+        let mut args = if agent_args.is_none() {
+            vec![]
+        } else {
+            agent_args.unwrap().clone().into_iter().collect()
+        };
+        let config = self.merged_config(app);
+        if let Some(config) = config {
+            args.push("-c".to_string());
+            args.push(serde_json::to_string(&config).unwrap());
+        }
+
+        // prepare sidecar command
+        let sidecar_command = if args.is_empty() {
+            app.shell().command(agent_cmd).current_dir(agent_dir)
+        } else {
+            app.shell()
+                .command(agent_cmd)
+                .args(args)
+                .current_dir(agent_dir)
+        };
+
+        // spawn the sidecar command
+        let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;
+
+        {
+            let mut agent_commands = env.commands.lock().unwrap();
+            agent_commands.insert(agent_id.to_string(), child);
+        }
+
+        let app_handle = app.clone();
+        let agent_id = agent_id.to_string();
+        let def_name = def_name.to_string();
+        tauri::async_runtime::spawn(async move {
+            // read events such as stdout
+            while let Some(event) = rx.recv().await {
+                match event {
+                    CommandEvent::Stdout(line_bytes) => {
+                        if line_bytes.is_empty() || line_bytes[0] != b'.' {
+                            log::debug!(
+                                "non-command stdout from {} {}: {:.200}",
+                                &def_name,
+                                &agent_id,
+                                String::from_utf8_lossy(&line_bytes)
+                            );
+                            continue;
+                        }
+
+                        let line = String::from_utf8_lossy(&line_bytes);
+                        let (cmd, args) = parse_stdout(&line);
+                        match cmd {
+                            ".OUT" => {
+                                let kind_value = args.split_once(" ");
+                                if kind_value.is_none() {
+                                    log::error!("Invalid OUT command: {:.40}", &line);
+                                    continue;
+                                }
+                                let (kind, value) = kind_value.unwrap();
+                                let value = serde_json::from_str::<Value>(value);
+                                if value.is_err() {
+                                    log::error!("Failed to parse value: {:.40}", &line);
+                                    continue;
+                                }
+                                let env = app_handle.state::<AgentEnv>();
+                                send_agent_out(
+                                    &env,
+                                    agent_id.clone(),
+                                    kind.to_string(),
+                                    value.unwrap(),
+                                )
+                                .await;
+                            }
+                            _ => {
+                                log::error!("Unknown command: {} {}", agent_id, cmd);
+                            }
+                        }
+                    }
+
+                    CommandEvent::Stderr(line_bytes) => {
+                        let line = String::from_utf8_lossy(&line_bytes);
+                        log::debug!("stderr from {} {}: {:.200}", def_name, agent_id, line);
+                    }
+
+                    CommandEvent::Terminated(status) => {
+                        log::info!(
+                            "Agent exited: {} {} with status: {:?}",
+                            def_name,
+                            agent_id,
+                            status
+                        );
+                        let env = app_handle.state::<AgentEnv>();
+                        {
+                            let mut commands = env.commands.lock().unwrap();
+                            commands.remove(&agent_id);
+                        }
+                        break;
+                    }
+
+                    CommandEvent::Error(e) => {
+                        log::error!("CommandEvent Error {} {}: {}", def_name, agent_id, e);
+                    }
+
+                    _ => {
+                        log::error!(
+                            "Unknown CommandEvent: {} {} {:?}",
+                            def_name,
+                            agent_id,
+                            event
+                        );
+                    }
+                }
+            }
+        });
         Ok(())
     }
 
-    fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
         self.data.config = config.clone();
-        update_agent_config(app, &self.data.id)
+        let merged_config = self.merged_config(app);
+        if merged_config.is_none() {
+            return Ok(());
+        }
+        let json_config =
+            serde_json::to_value(merged_config.unwrap()).context("Failed to serialize config")?;
+        let agent_id = &self.data.id;
+        let env = app.state::<AgentEnv>();
+        let mut agent_commands = env.commands.lock().unwrap();
+        if let Some(child) = agent_commands.get_mut(agent_id) {
+            // the agent is already running, so update the config
+            if let Err(e) = child.write(format!(".CONFIG {}\n", json_config.to_string()).as_bytes())
+            {
+                log::error!("Failed to set config to {}: {}", agent_id, e);
+                return Err(anyhow::anyhow!("Failed to set config to agent"));
+            }
+        }
+        Ok(())
     }
 
     fn stop(&mut self, app: &AppHandle) -> Result<()> {
-        stop_agent(app, &self.data.id)
+        let agent_id = &self.data.id;
+        let env = app.state::<AgentEnv>();
+        {
+            let mut commands = env.commands.lock().unwrap();
+            if let Some(child) = commands.get_mut(agent_id) {
+                child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
+                    log::error!("Failed to write to {}: {}", agent_id, e);
+                });
+            }
+        }
+        Ok(())
     }
 
     fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
@@ -115,206 +281,6 @@ impl CommandAgent {
         }
         Ok(())
     }
-}
-
-pub fn start_agent(
-    app: &AppHandle,
-    agent_id: String,
-    def_name: &str,
-    config: Option<AgentConfig>,
-) -> Result<CommandAgent> {
-    let agent = CommandAgent {
-        data: AgentData {
-            id: agent_id.clone(),
-            def_name: def_name.to_string(),
-            config,
-        },
-    };
-
-    let env = app.state::<AgentEnv>();
-
-    let agent_cmd;
-    let agent_args;
-    let agent_dir;
-    {
-        let env_defs = env.defs.lock().unwrap();
-        if env_defs.contains_key(def_name) {
-            let def = env_defs.get(def_name).unwrap();
-            let def_command = def
-                .command
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Agent has no command"))?;
-            agent_cmd = def_command.cmd.clone();
-            agent_args = def_command.args.clone();
-            agent_dir = def_command
-                .dir
-                .clone()
-                .context(format!("Agent path not found: {}", def_name))?;
-        } else {
-            log::error!("Agent {} not found", def_name);
-            return Err(anyhow::anyhow!("Agent not found"));
-        }
-    }
-    if agent_cmd.is_empty() {
-        log::error!("Agent command.cmd not found: {}", def_name);
-        return Err(anyhow::anyhow!("Agent command.cmd not found"));
-    }
-
-    log::info!("Starting agent: {} {}", def_name, agent_id);
-
-    let mut args = if agent_args.is_none() {
-        vec![]
-    } else {
-        agent_args.unwrap().clone().into_iter().collect()
-    };
-    if agent.config().is_some() {
-        args.push("-c".to_string());
-        args.push(serde_json::to_string(&agent.config()).unwrap());
-    }
-    let sidecar_command = if args.is_empty() {
-        app.shell().command(agent_cmd).current_dir(agent_dir)
-    } else {
-        app.shell()
-            .command(agent_cmd)
-            .args(args)
-            .current_dir(agent_dir)
-    };
-
-    let (mut rx, child) = sidecar_command.spawn().context("Failed to spawn sidecar")?;
-
-    {
-        let mut agent_commands = env.commands.lock().unwrap();
-        agent_commands.insert(agent_id.to_string(), child);
-    }
-
-    let app_handle = app.clone();
-    let agent_id = agent_id.to_string();
-    let def_name = def_name.to_string();
-    tauri::async_runtime::spawn(async move {
-        // read events such as stdout
-        while let Some(event) = rx.recv().await {
-            match event {
-                CommandEvent::Stdout(line_bytes) => {
-                    if line_bytes.is_empty() || line_bytes[0] != b'.' {
-                        log::debug!(
-                            "non-command stdout from {} {}: {:.200}",
-                            &def_name,
-                            &agent_id,
-                            String::from_utf8_lossy(&line_bytes)
-                        );
-                        continue;
-                    }
-
-                    let line = String::from_utf8_lossy(&line_bytes);
-                    let (cmd, args) = parse_stdout(&line);
-                    match cmd {
-                        ".OUT" => {
-                            let kind_value = args.split_once(" ");
-                            if kind_value.is_none() {
-                                log::error!("Invalid OUT command: {:.40}", &line);
-                                continue;
-                            }
-                            let (kind, value) = kind_value.unwrap();
-                            let value = serde_json::from_str::<Value>(value);
-                            if value.is_err() {
-                                log::error!("Failed to parse value: {:.40}", &line);
-                                continue;
-                            }
-                            let env = app_handle.state::<AgentEnv>();
-                            send_agent_out(
-                                &env,
-                                agent_id.clone(),
-                                kind.to_string(),
-                                value.unwrap(),
-                            )
-                            .await;
-                        }
-                        _ => {
-                            log::error!("Unknown command: {} {}", agent_id, cmd);
-                        }
-                    }
-                }
-
-                CommandEvent::Stderr(line_bytes) => {
-                    let line = String::from_utf8_lossy(&line_bytes);
-                    log::debug!("stderr from {} {}: {:.200}", def_name, agent_id, line);
-                }
-
-                CommandEvent::Terminated(status) => {
-                    log::info!(
-                        "Agent exited: {} {} with status: {:?}",
-                        def_name,
-                        agent_id,
-                        status
-                    );
-                    let env = app_handle.state::<AgentEnv>();
-                    {
-                        let mut commands = env.commands.lock().unwrap();
-                        commands.remove(&agent_id);
-                    }
-                    break;
-                }
-
-                CommandEvent::Error(e) => {
-                    log::error!("CommandEvent Error {} {}: {}", def_name, agent_id, e);
-                }
-
-                _ => {
-                    log::error!(
-                        "Unknown CommandEvent: {} {} {:?}",
-                        def_name,
-                        agent_id,
-                        event
-                    );
-                }
-            }
-        }
-    });
-
-    Ok(agent)
-}
-
-pub fn stop_agent(app: &AppHandle, agent_id: &str) -> Result<()> {
-    let env = app.state::<AgentEnv>();
-    {
-        let mut commands = env.commands.lock().unwrap();
-        if let Some(child) = commands.get_mut(agent_id) {
-            child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
-                log::error!("Failed to write to {}: {}", agent_id, e);
-            });
-        }
-    }
-    Ok(())
-}
-
-pub fn update_agent_config(app: &AppHandle, agent_id: &str) -> Result<()> {
-    let config;
-    let flows = app.state::<Mutex<AgentFlows>>();
-    {
-        let flows = flows.lock().unwrap();
-        if let Some(agent_node) = find_agent_node(&flows, agent_id) {
-            config = agent_node.config.clone().unwrap_or(HashMap::new());
-        } else {
-            log::error!("Agent setting for {} not found", agent_id);
-            return Err(anyhow::anyhow!("Agent setting not found"));
-        }
-    }
-    let json_config = serde_json::to_value(config).context("Failed to serialize config")?;
-
-    let env = app.state::<AgentEnv>();
-    {
-        let mut agent_commands = env.commands.lock().unwrap();
-        if let Some(child) = agent_commands.get_mut(agent_id) {
-            // the agent is already running, so update the config
-            if let Err(e) = child.write(format!(".CONFIG {}\n", json_config.to_string()).as_bytes())
-            {
-                log::error!("Failed to set config to {}: {}", agent_id, e);
-                return Err(anyhow::anyhow!("Failed to set config to agent"));
-            }
-        }
-    }
-
-    Ok(())
 }
 
 pub fn quit(app: &AppHandle) {

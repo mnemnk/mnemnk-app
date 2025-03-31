@@ -71,6 +71,8 @@ pub fn run() {
             mnemnk::agent::flow::save_agent_flow_cmd,
             mnemnk::settings::get_core_settings_cmd,
             mnemnk::settings::set_core_settings_cmd,
+            mnemnk::settings::get_agent_configs_cmd,
+            mnemnk::settings::set_agent_config_cmd,
             mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
             mnemnk::store::reindex_ymd_cmd,
