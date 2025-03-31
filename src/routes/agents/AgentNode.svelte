@@ -11,6 +11,8 @@
     data: {
       name: string;
       enabled: boolean;
+      title?: string | null;
+      description?: string | null;
       inputs: string[];
       outputs: string[];
       config: AgentFlowNodeConfig;
@@ -22,10 +24,22 @@
   const agent_default_config = getAgentDefinitionsContext()?.[data.name]?.default_config;
 
   const { updateNodeData } = useSvelteFlow();
+
+  $inspect(data);
 </script>
 
 {#snippet title()}
-  <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
+  <div class="w-full flex justify-between mb-2">
+    <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
+    <div class="flex-none w-8"></div>
+    <Toggle
+      checked={data.enabled}
+      onchange={(evt) => updateNodeData(id, { enabled: evt.currentTarget.value })}
+      size="custom"
+      customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
+      class="col-span-6 pt-1"
+    ></Toggle>
+  </div>
 {/snippet}
 
 {#snippet contents()}
@@ -33,11 +47,6 @@
     <h4 class="text-sm pl-4 pb-4">{data.description}</h4>
   {/if}
   <form class="grid grid-cols-6 gap-4 p-4">
-    <Toggle
-      checked={data.enabled}
-      onchange={(evt) => updateNodeData(id, { enabled: evt.currentTarget.value })}
-      class="col-span-6"
-    ></Toggle>
     {#each Object.keys(data.config) as key}
       {@const default_config = agent_default_config?.[key]}
       {@const config = data.config[key]}

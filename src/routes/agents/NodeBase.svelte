@@ -45,9 +45,8 @@
 <div
   class="p-0 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
 >
-  <div class="flex justify-between items-center pl-4 pr-0 mb-2">
+  <div class="pl-4 pr-0 mb-2">
     {@render title()}
-    <Button onclick={deleteNode}><CloseOutline /></Button>
   </div>
   {@render contents()}
 </div>
