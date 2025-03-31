@@ -39,8 +39,8 @@
       class="col-span-6"
     ></Toggle>
     {#each Object.keys(data.config) as key}
-      {@const config = data.config[key]}
       {@const default_config = agent_default_config?.[key]}
+      {@const config = data.config[key]}
       <Label class="col-span-6 space-y-2">
         <h3>{default_config?.title || key}</h3>
         <p class="text-xs text-gray-500">{default_config?.description}</p>

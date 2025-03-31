@@ -39,37 +39,32 @@ pub struct AgentDefinition {
     pub inputs: Option<Vec<String>>,
     pub outputs: Option<Vec<String>>,
     pub default_config: Option<AgentDefaultConfig>,
+    pub global_config: Option<AgentGlobalConfig>,
 
     // CommandAgent
     pub command: Option<CommandConfig>,
 }
 
-// pub struct AgentInput {
-//     pub name: String,
-//     pub kind: String,
-//     pub default_value: Option<Value>,
-// }
-
-pub type AgentDefaultConfig = HashMap<String, AgentDefaultConfigEntry>;
+pub type AgentDefaultConfig = HashMap<String, AgentConfigEntry>;
+pub type AgentGlobalConfig = HashMap<String, AgentConfigEntry>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AgentDefaultConfigEntry {
+pub struct AgentConfigEntry {
     pub value: Value,
+
     #[serde(rename = "type")]
     pub type_: Option<String>,
+
     pub title: Option<String>,
+
     pub description: Option<String>,
-    // pub scope: Option<String>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct CommandConfig {
     pub cmd: String,
     pub args: Option<Vec<String>>,
-    // pub env: Option<HashMap<String, String>>,
-    // pub shell: Option<bool>,
 
-    // set in read_def
     pub dir: Option<String>,
 }
 
@@ -102,13 +97,13 @@ impl AgentDefinition {
         self
     }
 
-    pub fn with_default_config(mut self, config: HashMap<String, AgentDefaultConfigEntry>) -> Self {
+    pub fn with_default_config(mut self, config: HashMap<String, AgentConfigEntry>) -> Self {
         self.default_config = Some(config);
         self
     }
 }
 
-impl AgentDefaultConfigEntry {
+impl AgentConfigEntry {
     pub fn new(value: Value, type_: &str) -> Self {
         Self {
             value,
@@ -126,11 +121,6 @@ impl AgentDefaultConfigEntry {
         self.description = Some(description.into());
         self
     }
-
-    // pub fn with_scope(mut self, scope: &str) -> Self {
-    //     self.scope = Some(scope.into());
-    //     self
-    // }
 }
 
 pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {

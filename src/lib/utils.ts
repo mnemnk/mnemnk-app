@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { CoreSettings, DailyStats, MnemnkEvent } from "./types";
+import type { CoreSettings, DailyStats, MnemnkEvent, SAgentConfig, SAgentConfigs } from "./types";
 
 const isEdge = typeof navigator !== "undefined" && navigator.userAgent?.includes("Edg");
 
@@ -61,4 +61,12 @@ export async function get_core_settings(): Promise<CoreSettings> {
 
 export async function set_core_settings(new_settings: CoreSettings): Promise<void> {
   await invoke("set_core_settings_cmd", { new_settings });
+}
+
+export async function getAgentConfigs(): Promise<SAgentConfigs> {
+  return await invoke("get_agent_configs_cmd");
+}
+
+export async function setAgentConfig(agentName: string, agentConfig: SAgentConfig): Promise<void> {
+  await invoke("set_agent_config_cmd", { agentName, agentConfig });
 }

@@ -6,7 +6,7 @@
   interface Props {
     title: string;
     tooltip?: string;
-    subtitle?: string;
+    subtitle?: string | null;
     class?: string;
     children: Snippet;
   }

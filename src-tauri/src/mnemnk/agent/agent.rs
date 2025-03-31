@@ -5,6 +5,8 @@ use serde_json::Value;
 use tauri::AppHandle;
 use thiserror::Error;
 
+use crate::mnemnk::settings;
+
 use super::env::AgentEnv;
 
 #[derive(Debug, Error)]
@@ -22,13 +24,28 @@ pub trait Agent {
     #[allow(unused)]
     fn def_name(&self) -> &str;
 
-    fn config(&self) -> Option<&AgentConfig>;
+    fn config(&self, app: &AppHandle) -> Option<&AgentConfig>;
+
+    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()>;
+
+    fn global_config(&self, app: &AppHandle) -> Option<AgentConfig> {
+        settings::get_agent_config(app, self.def_name())
+    }
+
+    fn merged_config(&self, app: &AppHandle) -> Option<AgentConfig> {
+        let mut merged_config = self.global_config(app).unwrap_or_default();
+        let config = self.config(app);
+        if let Some(config) = config {
+            for (key, value) in config.iter() {
+                merged_config.insert(key.clone(), value.clone());
+            }
+        }
+        Some(merged_config)
+    }
 
     fn start(&mut self, app: &AppHandle) -> Result<()>;
 
     fn stop(&mut self, app: &AppHandle) -> Result<()>;
-
-    fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()>;
 
     fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()>;
 }
@@ -39,6 +56,7 @@ pub struct AgentData {
     pub config: Option<AgentConfig>,
 }
 
+pub type AgentConfigs = HashMap<String, AgentConfig>;
 pub type AgentConfig = HashMap<String, Value>;
 
 pub trait AsAgent {
@@ -46,16 +64,20 @@ pub trait AsAgent {
 
     fn mut_data(&mut self) -> &mut AgentData;
 
+    fn config(&self, _app: &AppHandle) -> Option<&AgentConfig> {
+        self.data().config.as_ref()
+    }
+
+    fn set_config(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+        self.mut_data().config = config;
+        Ok(())
+    }
+
     fn start(&mut self, _app: &AppHandle) -> Result<()> {
         Ok(())
     }
 
     fn stop(&mut self, _app: &AppHandle) -> Result<()> {
-        Ok(())
-    }
-
-    fn update(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
-        self.mut_data().config = config;
         Ok(())
     }
 
@@ -71,8 +93,12 @@ impl<T: AsAgent> Agent for T {
         self.data().def_name.as_str()
     }
 
-    fn config(&self) -> Option<&AgentConfig> {
-        self.data().config.as_ref()
+    fn config(&self, app: &AppHandle) -> Option<&AgentConfig> {
+        self.config(app)
+    }
+
+    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+        self.set_config(app, config)
     }
 
     fn start(&mut self, app: &AppHandle) -> Result<()> {
@@ -81,10 +107,6 @@ impl<T: AsAgent> Agent for T {
 
     fn stop(&mut self, app: &AppHandle) -> Result<()> {
         self.stop(app)
-    }
-
-    fn update(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
-        self.update(app, config)
     }
 
     fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {

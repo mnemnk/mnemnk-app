@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 
 import type {
   AgentFlowNodeConfig,
+  SAgentConfig,
   SAgentFlow,
   SAgentFlowEdge,
   SAgentFlowNode,
@@ -125,8 +126,8 @@ export function deserializeAgentFlowNode(
   };
 }
 
-function deserializeAgentConfig(
-  node_config: Record<string, any> | null,
+export function deserializeAgentConfig(
+  node_config: SAgentConfig | null,
   default_config: SAgentDefaultConfig | null,
 ): AgentFlowNodeConfig {
   if (!node_config) {
@@ -209,7 +210,7 @@ export function serializeAgentFlowNode(
   };
 }
 
-function serializeAgentFlowNodeConfig(
+export function serializeAgentFlowNodeConfig(
   node_config: AgentFlowNodeConfig | null,
   default_config: SAgentDefaultConfig | null,
 ): Record<string, any> | null {

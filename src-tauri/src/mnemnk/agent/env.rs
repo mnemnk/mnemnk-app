@@ -6,6 +6,8 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::CommandChild;
 use tokio::sync::mpsc;
 
+use crate::mnemnk::settings;
+
 use super::agent::AsyncAgent;
 use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
 use super::message::AgentMessage;
@@ -50,6 +52,7 @@ impl AgentEnv {
         let env = Self::new(tx);
 
         let agent_defs = init_agent_defs(app)?;
+        settings::init_agent_configs(app, &agent_defs)?;
         {
             let mut defs = env.defs.lock().unwrap();
             *defs = agent_defs;
