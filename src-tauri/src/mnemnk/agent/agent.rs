@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
@@ -28,6 +28,7 @@ pub enum AgentStatus {
 }
 
 pub trait Agent {
+    #[allow(unused)]
     fn id(&self) -> &str;
 
     fn status(&self) -> &AgentStatus;
@@ -37,10 +38,10 @@ pub trait Agent {
 
     fn config(&self, app: &AppHandle) -> Option<&AgentConfig>;
 
-    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()>;
+    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()>;
 
     fn global_config(&self, app: &AppHandle) -> Option<AgentConfig> {
-        settings::get_agent_config(app, self.def_name())
+        settings::get_agent_global_config(app, self.def_name())
     }
 
     fn merged_config(&self, app: &AppHandle) -> Option<AgentConfig> {
@@ -80,8 +81,8 @@ pub trait AsAgent {
         self.data().config.as_ref()
     }
 
-    fn set_config(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
-        self.mut_data().config = config;
+    fn set_config(&mut self, _app: &AppHandle, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
         Ok(())
     }
 
@@ -113,7 +114,7 @@ impl<T: AsAgent> Agent for T {
         self.config(app)
     }
 
-    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()> {
         self.set_config(app, config)
     }
 
@@ -178,4 +179,33 @@ pub fn new_agent(
         }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
+}
+
+#[tauri::command]
+pub fn start_agent_cmd(
+    env: State<AgentEnv>,
+    app: AppHandle,
+    agent_id: String,
+) -> Result<(), String> {
+    env.start_agent(&app, &agent_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_agent_cmd(
+    env: State<AgentEnv>,
+    app: AppHandle,
+    agent_id: String,
+) -> Result<(), String> {
+    env.stop_agent(&app, &agent_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_agent_config_cmd(
+    env: State<AgentEnv>,
+    app: AppHandle,
+    agent_id: String,
+    config: AgentConfig,
+) -> Result<(), String> {
+    env.set_agent_config(&app, &agent_id, config)
+        .map_err(|e| e.to_string())
 }

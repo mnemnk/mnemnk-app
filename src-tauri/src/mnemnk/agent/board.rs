@@ -22,7 +22,7 @@ pub struct BoardInAgent {
 
 impl BoardInAgent {
     pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
-        let board_name = normalize_board_name(&config);
+        let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
             data: AgentData {
                 id,
@@ -44,9 +44,9 @@ impl AsAgent for BoardInAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, _app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, _app: &AppHandle, config: AgentConfig) -> Result<()> {
         self.board_name = normalize_board_name(&config);
-        self.data.config = config;
+        self.data.config = Some(config);
         Ok(())
     }
 
@@ -85,7 +85,7 @@ pub struct BoardOutAgent {
 
 impl BoardOutAgent {
     pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
-        let board_name = normalize_board_name(&config);
+        let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
             data: AgentData {
                 id,
@@ -131,7 +131,7 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
+    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
             if let Some(board_name) = &self.board_name {
@@ -152,7 +152,7 @@ impl AsAgent for BoardOutAgent {
             }
             self.board_name = board_name;
         }
-        self.data.config = config;
+        self.data.config = Some(config);
         Ok(())
     }
 
@@ -161,11 +161,7 @@ impl AsAgent for BoardOutAgent {
     }
 }
 
-fn normalize_board_name(config: &Option<AgentConfig>) -> Option<String> {
-    let Some(config) = config else {
-        // config is not set
-        return None;
-    };
+fn normalize_board_name(config: &AgentConfig) -> Option<String> {
     let Some(board_name) = config.get("board_name") else {
         // board_name is not set
         return None;

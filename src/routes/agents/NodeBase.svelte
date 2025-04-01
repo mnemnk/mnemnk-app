@@ -5,6 +5,8 @@
   import type { NodeProps } from "@xyflow/svelte";
   import { Toggle } from "flowbite-svelte";
 
+  import { startAgent, stopAgent } from "@/lib/agent";
+
   const DEFAULT_HANDLE_STYLE = "width: 10px; height: 10px;";
 
   type Props = NodeProps & {
@@ -15,10 +17,20 @@
     contents: Snippet;
   };
 
+  let { id, enabled, inputs, outputs, title, contents }: Props = $props();
+
   const bgColors = ["bg-gray-200 dark:bg-gray-700", "bg-gray-100 dark:bg-gray-800"];
 
-  let { id, enabled, inputs, outputs, title, contents }: Props = $props();
   const { updateNodeData } = useSvelteFlow();
+
+  async function updateEnabled(value: boolean) {
+    updateNodeData(id, { enabled: value });
+    if (value) {
+      await startAgent(id);
+    } else {
+      await stopAgent(id);
+    }
+  }
 </script>
 
 {#each inputs as input, idx}
@@ -43,7 +55,7 @@
     <div class="flex-none w-8"></div>
     <Toggle
       checked={enabled}
-      onchange={() => updateNodeData(id, { enabled: !enabled })}
+      onchange={() => updateEnabled(!enabled)}
       size="custom"
       customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
       class="col-span-6 pt-1"
