@@ -10,6 +10,7 @@
     Dropdown,
     DropdownItem,
     GradientButton,
+    MegaMenu,
     Modal,
     Navbar,
     NavLi,
@@ -37,7 +38,6 @@
 
   import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
-  import FlowList from "./FlowList.svelte";
 
   const { data } = $props();
 
@@ -52,47 +52,57 @@
 
   let nodes = $state.raw<AgentFlowNode[]>([]);
   let edges = $state.raw<AgentFlowEdge[]>([]);
-  let flows = $state(data.agent_flows.map((flow) => deserializeAgentFlow(flow, data.agent_defs)));
-  let flowIndex = $state(Math.min(0, data.agent_flows.length - 1));
+  let flows = $state(
+    Object.fromEntries(
+      Object.entries(data.agent_flows).map(([key, flow]) => [
+        key,
+        deserializeAgentFlow(flow, data.agent_defs),
+      ]),
+    ),
+  );
+  let flowName = $state("main" in flows ? "main" : Object.keys(flows)[0] || "");
+  let flowMenuItems = $derived(
+    Object.keys(flows).map((key) => {
+      return { name: key };
+    }),
+  );
 
   $effect(() => {
-    if (flowIndex < 0) {
-      return;
+    if (flowName in flows) {
+      nodes = flows[flowName].nodes;
+      edges = flows[flowName].edges;
     }
-    nodes = flows[flowIndex].nodes;
-    edges = flows[flowIndex].edges;
   });
 
-  async function checkDeletedNodes(nodes: AgentFlowNode[]) {
+  async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
-    const deletedNodes = flows[flowIndex].nodes.filter((node) => !nodeIds.has(node.id));
+
+    const deletedNodes = flows[flowName].nodes.filter((node) => !nodeIds.has(node.id));
     for (const node of deletedNodes) {
-      await removeAgentFlowNode(flows[flowIndex].name, node.id);
-      flows[flowIndex].nodes = flows[flowIndex].nodes.filter((n) => n.id !== node.id);
+      await removeAgentFlowNode(flowName, node.id);
+      flows[flowName].nodes = flows[flowName].nodes.filter((n) => n.id !== node.id);
     }
   }
 
-  async function checkDeletedEdges(edges: AgentFlowEdge[]) {
+  async function checkEdgeChange(edges: AgentFlowEdge[]) {
     const edgeIds = new Set(edges.map((edge) => edge.id));
 
-    const deletedEdges = flows[flowIndex].edges.filter((edge) => !edgeIds.has(edge.id));
+    const deletedEdges = flows[flowName].edges.filter((edge) => !edgeIds.has(edge.id));
     for (const edge of deletedEdges) {
-      await removeAgentFlowEdge(flows[flowIndex].name, edge.id);
-      flows[flowIndex].edges = flows[flowIndex].edges.filter((e) => e.id !== edge.id);
+      await removeAgentFlowEdge(flowName, edge.id);
+      flows[flowName].edges = flows[flowName].edges.filter((e) => e.id !== edge.id);
     }
 
-    const addedEdges = edges.filter(
-      (edge) => !flows[flowIndex].edges.some((e) => e.id === edge.id),
-    );
+    const addedEdges = edges.filter((edge) => !flows[flowName].edges.some((e) => e.id === edge.id));
     for (const edge of addedEdges) {
-      await addAgentFlowEdge(flows[flowIndex].name, serializeAgentFlowEdge(edge));
-      flows[flowIndex].edges.push(edge);
+      await addAgentFlowEdge(flowName, serializeAgentFlowEdge(edge));
+      flows[flowName].edges.push(edge);
     }
   }
 
   $effect(() => {
-    checkDeletedNodes(nodes);
-    checkDeletedEdges(edges);
+    checkNodeChange(nodes);
+    checkEdgeChange(edges);
   });
 
   // AgentList
@@ -111,22 +121,6 @@
     };
   });
 
-  // FlowList
-
-  let openFlow = $state(false);
-
-  const key_open_flow = "f";
-
-  $effect(() => {
-    hotkeys(key_open_flow, () => {
-      openFlow = !openFlow;
-    });
-
-    return () => {
-      hotkeys.unbind(key_open_flow);
-    };
-  });
-
   // shortcuts
 
   $effect(() => {
@@ -142,31 +136,32 @@
 
   // New Flow
 
-  let new_flow_modal = $state(false);
-  let new_flow_name = $state("");
+  let newFlowModal = $state(false);
+  let newFlowName = $state("");
 
   async function onNewFlow() {
-    new_flow_name = "";
-    new_flow_modal = true;
+    newFlowName = "";
+    newFlowModal = true;
   }
 
   async function createNewFlow() {
-    new_flow_modal = false;
-    if (!new_flow_name) return;
-    const flow = await newAgentFlow(new_flow_name);
+    newFlowModal = false;
+    if (!newFlowName) return;
+    const flow = await newAgentFlow(newFlowName);
     if (!flow) return;
-    flows.push(deserializeAgentFlow(flow, agent_defs));
-    flowIndex = flows.length - 1;
+    flows[newFlowName] = deserializeAgentFlow(flow, agent_defs);
+    flowName = newFlowName;
   }
 
   async function onSaveFlow() {
-    if (flowIndex < 0) return;
-    const flow = serializeAgentFlow(nodes, edges, flows[flowIndex].name, data.agent_defs);
-    await saveAgentFlow(flow);
+    if (flowName in flows) {
+      const flow = serializeAgentFlow(nodes, edges, flowName, data.agent_defs);
+      await saveAgentFlow(flow);
+    }
   }
 
   function onExportFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flows[flowIndex].name, agent_defs);
+    const flow = serializeAgentFlow(nodes, edges, flowName, agent_defs);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -197,9 +192,9 @@
     });
     snode.x = xy.x;
     snode.y = xy.y;
-    await addAgentFlowNode(flows[flowIndex].name, snode);
+    await addAgentFlowNode(flowName, snode);
     const new_node = deserializeAgentFlowNode(snode, agent_defs);
-    flows[flowIndex].nodes.push(new_node);
+    flows[flowName].nodes.push(new_node);
     nodes = [...nodes, new_node];
   }
 </script>
@@ -223,15 +218,23 @@
 
   <Navbar class="fixed top-4 left-0 z-10 !bg-transparent">
     <NavUl>
-      <NavLi class="cursor-pointer w-40"
-        >File<ChevronDownOutline class="w-6 h-6 ms-2 inline" /></NavLi
-      >
-      <Dropdown class="w-40 z-20">
+      <NavLi>
+        File<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
+      </NavLi>
+      <Dropdown class="!bg-gray-100 dark:!bg-gray-900">
         <DropdownItem onclick={onNewFlow}>New</DropdownItem>
         <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
         <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
         <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
       </Dropdown>
+      <NavLi>
+        {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
+      </NavLi>
+      <MegaMenu items={flowMenuItems} let:item class="!bg-gray-100 dark:!bg-gray-900 border-none">
+        <button type="button" onclick={() => (flowName = item.name)}>
+          {item.name}
+        </button>
+      </MegaMenu>
     </NavUl>
   </Navbar>
 
@@ -241,15 +244,11 @@
         <div slot="header">Agents</div>
         <AgentList agent_defs={data.agent_defs} {onAddAgent} />
       </AccordionItem>
-      <AccordionItem open={openFlow}>
-        <span slot="header">Flows</span>
-        <FlowList {flows} bind:flowIndex />
-      </AccordionItem>
     </Accordion>
   </div>
 
-  {#if new_flow_modal}
-    <Modal title="New Flow" bind:open={new_flow_modal}>
+  {#if newFlowModal}
+    <Modal title="New Flow" bind:open={newFlowModal}>
       <div class="flex flex-col">
         <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
           >Flow Name</label
@@ -257,7 +256,7 @@
         <input
           type="text"
           id="flow_name"
-          bind:value={new_flow_name}
+          bind:value={newFlowName}
           class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           placeholder="Flow Name"
         />
