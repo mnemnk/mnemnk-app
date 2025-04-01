@@ -160,7 +160,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "flow.json";
+    a.download = flowName + ".json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -175,6 +175,7 @@
     const flow = deserializeAgentFlow(sflow, agent_defs);
     nodes = flow.nodes;
     edges = flow.edges;
+    flowName = flow.name;
   }
 
   async function onAddAgent(agent_name: string) {
