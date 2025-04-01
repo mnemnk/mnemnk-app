@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context as _, Result};
+use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
@@ -167,20 +168,32 @@ fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow)
     Ok(())
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command]
 pub fn import_agent_flow_cmd(env: State<AgentEnv>, path: String) -> Result<AgentFlow, String> {
+    import_agent_flow(&env, path).map_err(|e| e.to_string())
+}
+
+fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
-    let mut flow = read_agent_flow(&path).map_err(|e| e.to_string())?;
+    let mut flow = read_agent_flow(&path)?;
 
+    // refresh the node and edge ids
+    let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
+    flow.nodes = nodes;
+    flow.edges = edges;
+
+    // disable all nodes
+    for node in &mut flow.nodes {
+        node.enabled = false;
+    }
+
+    // Unique name for the flow
     let mut agent_flows = env.flows.lock().unwrap();
-
     let name = unique_flow_name(
         &agent_flows,
         &path.file_stem().unwrap().to_string_lossy().to_string(),
     );
     flow.name = Some(name.clone());
-
-    // TODO: rename id to unique id
 
     agent_flows.insert(name, flow.clone());
 
@@ -195,6 +208,47 @@ fn unique_flow_name(agent_flows: &AgentFlows, name: &str) -> String {
         i += 1;
     }
     new_name
+}
+
+fn copy_sub_flow(
+    nodes: Vec<&AgentFlowNode>,
+    edges: Vec<&AgentFlowEdge>,
+) -> (Vec<AgentFlowNode>, Vec<AgentFlowEdge>) {
+    let mut new_nodes = Vec::new();
+    let mut node_id_map = HashMap::new();
+    for node in nodes {
+        let new_id = new_node_id(node.name.as_str());
+        node_id_map.insert(node.id.clone(), new_id.clone());
+        let mut new_node = node.clone();
+        new_node.id = new_id;
+        new_nodes.push(new_node);
+    }
+
+    let mut new_edges = Vec::new();
+    for edge in edges {
+        let Some(source) = node_id_map.get(&edge.source) else {
+            continue;
+        };
+        let Some(target) = node_id_map.get(&edge.target) else {
+            continue;
+        };
+        let mut new_edge = edge.clone();
+        new_edge.id = new_edge_id(source, target);
+        new_edge.source = source.clone();
+        new_edge.target = target.clone();
+        new_edges.push(new_edge);
+    }
+
+    (new_nodes, new_edges)
+}
+
+fn new_node_id(def_name: &str) -> String {
+    format!("{}_{}", def_name, nanoid!())
+}
+
+fn new_edge_id(source: &str, target: &str) -> String {
+    // not sure if we need to align the prefix
+    format!("xy-edge__{}-{}", source, target)
 }
 
 #[tauri::command]
