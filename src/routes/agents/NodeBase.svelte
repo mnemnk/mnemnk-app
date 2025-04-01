@@ -19,7 +19,7 @@
 
   let { id, enabled, inputs, outputs, title, contents }: Props = $props();
 
-  const bgColors = ["bg-gray-200 dark:bg-gray-700", "bg-gray-100 dark:bg-gray-800"];
+  const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
 
   const { updateNodeData } = useSvelteFlow();
 

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
 
-  import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow } from "@xyflow/svelte";
+  import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow, MiniMap } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
   import {
+    Button,
+    ButtonGroup,
     Dropdown,
     DropdownItem,
     GradientButton,
@@ -13,7 +15,7 @@
     NavLi,
     NavUl,
   } from "flowbite-svelte";
-  import { ChevronDownOutline } from "flowbite-svelte-icons";
+  import { ChevronDownOutline, PauseOutline, PlayOutline } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
 
   import {
@@ -30,6 +32,8 @@
     serializeAgentFlow,
     serializeAgentFlowEdge,
     setAgentDefinitionsContext,
+    startAgent,
+    stopAgent,
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
@@ -39,7 +43,7 @@
 
   let { data } = $props();
 
-  const { screenToFlowPosition } = $derived(useSvelteFlow());
+  const { screenToFlowPosition, updateNodeData } = $derived(useSvelteFlow());
   setAgentDefinitionsContext(data.agent_defs);
 
   const nodeTypes: NodeTypes = {
@@ -192,6 +196,24 @@
     flows[flowName].nodes.push(new_node);
     nodes = [...nodes, new_node];
   }
+
+  async function onPlay() {
+    for (const node of nodes) {
+      if (!node.data.enabled) {
+        updateNodeData(node.id, { enabled: true });
+        await startAgent(node.id);
+      }
+    }
+  }
+
+  async function onPause() {
+    for (const node of nodes) {
+      if (node.data.enabled) {
+        updateNodeData(node.id, { enabled: false });
+        await stopAgent(node.id);
+      }
+    }
+  }
 </script>
 
 <main class="container static min-w-[100vw]">
@@ -209,6 +231,19 @@
     class="relative w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
   >
     <Controls />
+    <MiniMap />
+    <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
+      <Button onclick={onPause} pill class="!bg-gray-800">
+        <PauseOutline
+          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+        />
+      </Button>
+      <Button onclick={onPlay} pill class="!bg-gray-800">
+        <PlayOutline
+          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+        />
+      </Button>
+    </ButtonGroup>
   </SvelteFlow>
 
   <Navbar class="fixed top-4 left-0 z-10 !bg-transparent">
