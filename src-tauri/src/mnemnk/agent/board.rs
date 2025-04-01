@@ -26,6 +26,7 @@ impl BoardInAgent {
         Ok(Self {
             data: AgentData {
                 id,
+                status: Default::default(),
                 def_name,
                 config,
             },
@@ -88,6 +89,7 @@ impl BoardOutAgent {
         Ok(Self {
             data: AgentData {
                 id,
+                status: Default::default(),
                 def_name,
                 config,
             },
