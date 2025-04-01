@@ -3522,6 +3522,7 @@ dependencies = [
  "image",
  "jsonpath-rust",
  "log",
+ "nanoid",
  "regex",
  "serde",
  "serde_json",
