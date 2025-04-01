@@ -24,6 +24,8 @@ export type SAgentConfigEntry = {
   description?: string | null;
 };
 
+export type SAgentFlows = Record<string, SAgentFlow>;
+
 export type SAgentFlow = {
   nodes: SAgentFlowNode[];
   edges: SAgentFlowEdge[];

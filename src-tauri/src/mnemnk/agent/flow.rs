@@ -121,10 +121,10 @@ fn read_agent_flow(path: &PathBuf) -> Result<AgentFlow> {
 
 #[tauri::command]
 pub fn get_agent_flows_cmd(env: State<AgentEnv>) -> Result<Value, String> {
-    let agent_flows: Vec<AgentFlow>;
+    let agent_flows;
     {
         let flows = env.flows.lock().unwrap();
-        agent_flows = flows.values().cloned().collect::<Vec<_>>();
+        agent_flows = flows.clone();
     }
     let value = serde_json::to_value(&agent_flows).map_err(|e| e.to_string())?;
     Ok(value)

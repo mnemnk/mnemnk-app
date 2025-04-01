@@ -5,23 +5,24 @@ import { getContext, setContext } from "svelte";
 import { nanoid } from "nanoid";
 
 import type {
+  AgentFlow,
+  AgentFlowEdge,
+  AgentFlowNode,
   AgentFlowNodeConfig,
   SAgentConfig,
   SAgentFlow,
   SAgentFlowEdge,
+  SAgentFlows,
   SAgentFlowNode,
-  SAgentDefinitions,
   SAgentDefaultConfig,
-  AgentFlow,
-  AgentFlowEdge,
-  AgentFlowNode,
+  SAgentDefinitions,
 } from "./types";
 
 export async function getAgentDefs(): Promise<SAgentDefinitions> {
   return await invoke("get_agent_defs_cmd");
 }
 
-export async function getAgentFlows(): Promise<SAgentFlow[]> {
+export async function getAgentFlows(): Promise<SAgentFlows> {
   return await invoke("get_agent_flows_cmd");
 }
 
