@@ -47,20 +47,20 @@ export function getAgentDefinitionsContext(): SAgentDefinitions {
   return getContext(agentDefinitionsKey);
 }
 
-export async function addAgentNode(flowName: string, node: SAgentFlowNode): Promise<void> {
-  await invoke("add_agent_node_cmd", { flowName, node });
+export async function addAgentFlowNode(flowName: string, node: SAgentFlowNode): Promise<void> {
+  await invoke("add_agent_flow_node_cmd", { flowName, node });
 }
 
-export async function deleteAgentNode(flowName: string, nodeId: string): Promise<void> {
-  await invoke("delete_agent_node_cmd", { flowName, nodeId });
+export async function removeAgentFlowNode(flowName: string, nodeId: string): Promise<void> {
+  await invoke("remove_agent_flow_node_cmd", { flowName, nodeId });
 }
 
-export async function addAgentEdge(flowName: string, edge: SAgentFlowEdge): Promise<void> {
+export async function addAgentFlowEdge(flowName: string, edge: SAgentFlowEdge): Promise<void> {
   await invoke("add_agent_edge_cmd", { flowName, edge });
 }
 
-export async function deleteAgentEdge(flowName: string, edgeId: string): Promise<void> {
-  await invoke("delete_agent_edge_cmd", { flowName, edgeId });
+export async function removeAgentFlowEdge(flowName: string, edgeId: string): Promise<void> {
+  await invoke("remove_agent_flow_edge_cmd", { flowName, edgeId });
 }
 
 // Agent Flow

@@ -32,6 +32,7 @@ impl DatabaseAgent {
         Ok(Self {
             data: AgentData {
                 id,
+                status: Default::default(),
                 def_name,
                 config,
             },
@@ -78,6 +79,7 @@ impl JsonPathAgent {
         Ok(Self {
             data: AgentData {
                 id,
+                status: Default::default(),
                 def_name,
                 config,
             },

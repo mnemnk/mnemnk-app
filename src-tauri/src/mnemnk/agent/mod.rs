@@ -19,7 +19,6 @@ pub async fn init(app: &AppHandle) -> Result<()> {
     AgentEnv::init(app, tx.clone())?;
 
     flow::init_agent_flows(app)?;
-    flow::sync_agent_flows(app);
 
     message::spawn_main_loop(app, rx);
 

@@ -19,10 +19,10 @@
   import hotkeys from "hotkeys-js";
 
   import {
-    addAgentEdge,
-    addAgentNode,
-    deleteAgentEdge,
-    deleteAgentNode,
+    addAgentFlowEdge,
+    addAgentFlowNode,
+    removeAgentFlowEdge,
+    removeAgentFlowNode,
     deserializeAgentFlow,
     deserializeAgentFlowNode,
     importAgentFlow,
@@ -67,7 +67,7 @@
     const nodeIds = new Set(nodes.map((node) => node.id));
     const deletedNodes = flows[flowIndex].nodes.filter((node) => !nodeIds.has(node.id));
     for (const node of deletedNodes) {
-      await deleteAgentNode(flows[flowIndex].name, node.id);
+      await removeAgentFlowNode(flows[flowIndex].name, node.id);
       flows[flowIndex].nodes = flows[flowIndex].nodes.filter((n) => n.id !== node.id);
     }
   }
@@ -77,7 +77,7 @@
 
     const deletedEdges = flows[flowIndex].edges.filter((edge) => !edgeIds.has(edge.id));
     for (const edge of deletedEdges) {
-      await deleteAgentEdge(flows[flowIndex].name, edge.id);
+      await removeAgentFlowEdge(flows[flowIndex].name, edge.id);
       flows[flowIndex].edges = flows[flowIndex].edges.filter((e) => e.id !== edge.id);
     }
 
@@ -85,7 +85,7 @@
       (edge) => !flows[flowIndex].edges.some((e) => e.id === edge.id),
     );
     for (const edge of addedEdges) {
-      await addAgentEdge(flows[flowIndex].name, serializeAgentFlowEdge(edge));
+      await addAgentFlowEdge(flows[flowIndex].name, serializeAgentFlowEdge(edge));
       flows[flowIndex].edges.push(edge);
     }
   }
@@ -128,26 +128,15 @@
   });
 
   // shortcuts
+
   $effect(() => {
     hotkeys("ctrl+s", (event) => {
       event.preventDefault();
       onSaveFlow();
     });
 
-    // hotkeys("ctrl+e", (event) => {
-    //   event.preventDefault();
-    //   onExportFlow();
-    // });
-
-    // hotkeys("ctrl+i", (event) => {
-    //   event.preventDefault();
-    //   onImportFlow();
-    // });
-
     return () => {
       hotkeys.unbind("ctrl+s");
-      // hotkeys.unbind("ctrl+e");
-      // hotkeys.unbind("ctrl+i");
     };
   });
 
@@ -208,7 +197,7 @@
     });
     snode.x = xy.x;
     snode.y = xy.y;
-    await addAgentNode(flows[flowIndex].name, snode);
+    await addAgentFlowNode(flows[flowIndex].name, snode);
     const new_node = deserializeAgentFlowNode(snode, agent_defs);
     flows[flowIndex].nodes.push(new_node);
     nodes = [...nodes, new_node];

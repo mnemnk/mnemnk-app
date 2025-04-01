@@ -18,8 +18,19 @@ pub enum AgentError {
     UnknownDefKind(String),
 }
 
+#[derive(Debug, Default, Clone, PartialEq)]
+pub enum AgentStatus {
+    #[default]
+    Init,
+    Starting,
+    Run,
+    Stopping,
+}
+
 pub trait Agent {
     fn id(&self) -> &str;
+
+    fn status(&self) -> &AgentStatus;
 
     #[allow(unused)]
     fn def_name(&self) -> &str;
@@ -52,6 +63,7 @@ pub trait Agent {
 
 pub struct AgentData {
     pub id: String,
+    pub status: AgentStatus,
     pub def_name: String,
     pub config: Option<AgentConfig>,
 }
@@ -89,6 +101,10 @@ impl<T: AsAgent> Agent for T {
         self.data().id.as_str()
     }
 
+    fn status(&self) -> &AgentStatus {
+        &self.data().status
+    }
+
     fn def_name(&self) -> &str {
         self.data().def_name.as_str()
     }
@@ -102,11 +118,17 @@ impl<T: AsAgent> Agent for T {
     }
 
     fn start(&mut self, app: &AppHandle) -> Result<()> {
-        self.start(app)
+        self.mut_data().status = AgentStatus::Starting;
+        self.start(app)?;
+        self.mut_data().status = AgentStatus::Run;
+        Ok(())
     }
 
     fn stop(&mut self, app: &AppHandle) -> Result<()> {
-        self.stop(app)
+        self.mut_data().status = AgentStatus::Stopping;
+        self.stop(app)?;
+        self.mut_data().status = AgentStatus::Init;
+        Ok(())
     }
 
     fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
