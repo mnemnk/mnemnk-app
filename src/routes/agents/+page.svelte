@@ -5,12 +5,9 @@
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
   import {
-    Accordion,
-    AccordionItem,
     Dropdown,
     DropdownItem,
     GradientButton,
-    MegaMenu,
     Modal,
     Navbar,
     NavLi,
@@ -36,10 +33,11 @@
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
-  import AgentList from "./AgentList.svelte";
+  import AgentMegaMenu from "./AgentMegaMenu.svelte";
   import AgentNode from "./AgentNode.svelte";
+  import FlowMegaMenu from "./FlowMegaMenu.svelte";
 
-  const { data } = $props();
+  let { data } = $props();
 
   const { screenToFlowPosition } = $derived(useSvelteFlow());
   setAgentDefinitionsContext(data.agent_defs);
@@ -61,11 +59,6 @@
     ),
   );
   let flowName = $state("main" in flows ? "main" : Object.keys(flows)[0] || "");
-  let flowMenuItems = $derived(
-    Object.keys(flows).map((key) => {
-      return { name: key };
-    }),
-  );
 
   $effect(() => {
     if (flowName in flows) {
@@ -105,23 +98,13 @@
     checkEdgeChange(edges);
   });
 
-  // AgentList
+  // shortcuts
 
   let openAgent = $state(false);
-
   const key_open_agent = "a";
 
-  $effect(() => {
-    hotkeys(key_open_agent, () => {
-      openAgent = !openAgent;
-    });
-
-    return () => {
-      hotkeys.unbind(key_open_agent);
-    };
-  });
-
-  // shortcuts
+  let openFlow = $state(false);
+  const key_open_flow = "f";
 
   $effect(() => {
     hotkeys("ctrl+s", (event) => {
@@ -129,8 +112,18 @@
       onSaveFlow();
     });
 
+    hotkeys(key_open_agent, () => {
+      openAgent = !openAgent;
+    });
+
+    hotkeys(key_open_flow, () => {
+      openFlow = !openFlow;
+    });
+
     return () => {
       hotkeys.unbind("ctrl+s");
+      hotkeys.unbind(key_open_agent);
+      hotkeys.unbind(key_open_flow);
     };
   });
 
@@ -230,22 +223,13 @@
       <NavLi>
         {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
-      <MegaMenu items={flowMenuItems} let:item class="!bg-gray-100 dark:!bg-gray-900 border-none">
-        <button type="button" onclick={() => (flowName = item.name)}>
-          {item.name}
-        </button>
-      </MegaMenu>
+      <FlowMegaMenu {flows} bind:flowName bind:open={openFlow} />
+      <NavLi>
+        Agents<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
+      </NavLi>
+      <AgentMegaMenu agentDefs={data.agent_defs} {onAddAgent} bind:open={openAgent} />
     </NavUl>
   </Navbar>
-
-  <div class="fixed top-4 right-4 z-30">
-    <Accordion class="w-40 bg-white dark:bg-black" classActive="bg-white dark:bg-black">
-      <AccordionItem open={openAgent}>
-        <div slot="header">Agents</div>
-        <AgentList agent_defs={data.agent_defs} {onAddAgent} />
-      </AccordionItem>
-    </Accordion>
-  </div>
 
   {#if newFlowModal}
     <Modal title="New Flow" bind:open={newFlowModal}>
