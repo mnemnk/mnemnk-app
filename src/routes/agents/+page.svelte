@@ -150,6 +150,7 @@
     if (flowName in flows) {
       const flow = serializeAgentFlow(nodes, edges, flowName, data.agent_defs);
       await saveAgentFlow(flow);
+      flows[flowName] = deserializeAgentFlow(flow, data.agent_defs);
     }
   }
 

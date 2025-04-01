@@ -57,7 +57,7 @@ export async function removeAgentFlowNode(flowName: string, nodeId: string): Pro
 }
 
 export async function addAgentFlowEdge(flowName: string, edge: SAgentFlowEdge): Promise<void> {
-  await invoke("add_agent_edge_cmd", { flowName, edge });
+  await invoke("add_agent_flow_edge_cmd", { flowName, edge });
 }
 
 export async function removeAgentFlowEdge(flowName: string, edgeId: string): Promise<void> {
