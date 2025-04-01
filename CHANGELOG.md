@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.12.1](https://github.com/mnemnk/mnemnk-app/compare/v0.12.0...v0.12.1) (2025-04-01)
+
+
+### Features
+
+* 🎸 add support default_config.type object ([#144](https://github.com/mnemnk/mnemnk-app/issues/144)) ([6326fae](https://github.com/mnemnk/mnemnk-app/commit/6326fae585653c4157c7ba60f4f0d8112b3015b2))
+* 🎸 AgentMegaMenu ([#153](https://github.com/mnemnk/mnemnk-app/issues/153)) ([68ca2dd](https://github.com/mnemnk/mnemnk-app/commit/68ca2dd7a046b6ce91d3bf1b2d43c3d07620eae9))
+* 🎸 global config ([#147](https://github.com/mnemnk/mnemnk-app/issues/147)) ([7645cb4](https://github.com/mnemnk/mnemnk-app/commit/7645cb4ecd253bca9ceda1a69e29e0dde483e8da))
+* 🎸 migrate SvelteFlow to v1 ([#143](https://github.com/mnemnk/mnemnk-app/issues/143)) ([f41e3ed](https://github.com/mnemnk/mnemnk-app/commit/f41e3ed29fc44f61aafe6d96afad8eb3d0e37f7d))
+* 🎸 new ids on importing ([#158](https://github.com/mnemnk/mnemnk-app/issues/158)) ([fc659ee](https://github.com/mnemnk/mnemnk-app/commit/fc659ee6aaeb1a12b5eb0eb9ddf187a328e26686)), closes [#148](https://github.com/mnemnk/mnemnk-app/issues/148)
+* 🎸 play and pause buttons ([#159](https://github.com/mnemnk/mnemnk-app/issues/159)) ([96da69f](https://github.com/mnemnk/mnemnk-app/commit/96da69fb912d050aac91502034a19732be8a10cb))
+* 🎸 realtime changes to config and enabled on frontend ([#157](https://github.com/mnemnk/mnemnk-app/issues/157)) ([fb0a2f5](https://github.com/mnemnk/mnemnk-app/commit/fb0a2f59462b3a7223cadbb7404d58536f1ccde5))
+
+
+### Bug Fixes
+
+* 🐛 boolean config and enabled ([#150](https://github.com/mnemnk/mnemnk-app/issues/150)) ([2b01110](https://github.com/mnemnk/mnemnk-app/commit/2b0111011380f6253699036f03e15afe4d97e6f5))
+* 🐛 migrate SvelteFlow v1 ([#146](https://github.com/mnemnk/mnemnk-app/issues/146)) ([f4cca22](https://github.com/mnemnk/mnemnk-app/commit/f4cca22572f3f2d24ed1e53291d920e1d399b9b6))
+* 🐛 update frontend flow after saving ([#156](https://github.com/mnemnk/mnemnk-app/issues/156)) ([632908c](https://github.com/mnemnk/mnemnk-app/commit/632908c940521eedaa637639e6349e2bb3b53f40))
+* 🐛 use flow name on exporting and importing flow ([#155](https://github.com/mnemnk/mnemnk-app/issues/155)) ([4d3c8d2](https://github.com/mnemnk/mnemnk-app/commit/4d3c8d236c495bf53b89c6fe3dc25f920abe6d95))
+* 🐛 use renamed name on duplicated flow name ([#154](https://github.com/mnemnk/mnemnk-app/issues/154)) ([e5632df](https://github.com/mnemnk/mnemnk-app/commit/e5632df6a92433fe0ee212c7a286ec7d35d3d8b4))
+
 ## [0.12.0](https://github.com/mnemnk/mnemnk-app/compare/v0.11.3...v0.12.0) (2025-03-30)
 
 
