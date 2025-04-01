@@ -142,8 +142,8 @@
     if (!newFlowName) return;
     const flow = await newAgentFlow(newFlowName);
     if (!flow) return;
-    flows[newFlowName] = deserializeAgentFlow(flow, agent_defs);
-    flowName = newFlowName;
+    flows[flow.name] = deserializeAgentFlow(flow, agent_defs);
+    flowName = flow.name;
   }
 
   async function onSaveFlow() {
