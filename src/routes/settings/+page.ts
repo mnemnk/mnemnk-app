@@ -1,10 +1,10 @@
 import { getAgentDefs } from "@/lib/agent";
-import { get_core_settings, getAgentConfigs } from "@/lib/utils";
+import { getCoreSettings, getAgentGlobalConfigs } from "@/lib/utils";
 
 export async function load() {
-  const settings = await get_core_settings();
+  const settings = await getCoreSettings();
   const agentDefs = await getAgentDefs();
-  const agentConfigs = await getAgentConfigs();
+  const agentConfigs = await getAgentGlobalConfigs();
 
   return {
     settings,

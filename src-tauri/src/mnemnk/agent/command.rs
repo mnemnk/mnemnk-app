@@ -178,8 +178,8 @@ impl AsAgent for CommandAgent {
         Ok(())
     }
 
-    fn set_config(&mut self, app: &AppHandle, config: Option<AgentConfig>) -> Result<()> {
-        self.data.config = config.clone();
+    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()> {
+        self.data.config = Some(config);
         let merged_config = self.merged_config(app);
         if merged_config.is_none() {
             return Ok(());

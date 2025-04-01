@@ -18,6 +18,18 @@ import type {
   SAgentDefinitions,
 } from "./types";
 
+export async function startAgent(agentId: string): Promise<void> {
+  await invoke("start_agent_cmd", { agentId });
+}
+
+export async function stopAgent(agentId: string): Promise<void> {
+  await invoke("stop_agent_cmd", { agentId });
+}
+
+export async function setAgentConfig(agentId: string, config: SAgentConfig): Promise<void> {
+  await invoke("set_agent_config_cmd", { agentId, config });
+}
+
 export async function getAgentDefs(): Promise<SAgentDefinitions> {
   return await invoke("get_agent_defs_cmd");
 }

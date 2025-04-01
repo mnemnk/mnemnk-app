@@ -2,7 +2,11 @@
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
   import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
-  import { getAgentDefinitionsContext } from "@/lib/agent";
+  import {
+    getAgentDefinitionsContext,
+    serializeAgentFlowNodeConfig,
+    setAgentConfig,
+  } from "@/lib/agent";
   import type { AgentFlowNodeConfig } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
@@ -21,10 +25,18 @@
 
   let { id, data }: Props = $props();
 
-  const agent_default_config = getAgentDefinitionsContext()?.[data.name]?.default_config;
+  const agentDefaultConfig = getAgentDefinitionsContext()?.[data.name]?.default_config;
 
-  // https://next.svelteflow.dev/learn/troubleshooting/migrate-to-v1#usesvelteflow
-  const { updateNodeData } = $derived(useSvelteFlow());
+  const { updateNodeData } = useSvelteFlow();
+
+  async function updateConfig(key: string, value: any) {
+    const newConfig = { ...data.config, [key]: value };
+    updateNodeData(id, { config: newConfig });
+    const sConfig = serializeAgentFlowNodeConfig(newConfig, agentDefaultConfig);
+    if (sConfig) {
+      await setAgentConfig(id, sConfig);
+    }
+  }
 </script>
 
 {#snippet title()}
@@ -37,49 +49,40 @@
   {/if}
   <form class="grid grid-cols-6 gap-4 p-4">
     {#each Object.keys(data.config) as key}
-      {@const default_config = agent_default_config?.[key]}
+      {@const default_config = agentDefaultConfig?.[key]}
       {@const config = data.config[key]}
       <Label class="col-span-6 space-y-2">
         <h3>{default_config?.title || key}</h3>
         <p class="text-xs text-gray-500">{default_config?.description}</p>
         {#if default_config?.type === "boolean"}
-          <Toggle
-            checked={config}
-            onchange={() =>
-              updateNodeData(id, { config: { ...data.config, [key]: !data.config[key] } })}
-          />
+          <Toggle checked={config} onchange={() => updateConfig(key, !data.config[key])} />
         {:else if default_config?.type === "integer"}
           <NumberInput
             value={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
           />
         {:else if default_config?.type === "number"}
           <Input
             type="text"
             value={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
           />
         {:else if default_config?.type === "string" || default_config?.type === "string?"}
           <Input
             type="text"
             value={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
           />
         {:else if default_config?.type === "string[]"}
           <Textarea
             value={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
             rows={4}
           />
         {:else if default_config?.type === "object"}
           <Textarea
             value={config}
-            onchange={(evt) =>
-              updateNodeData(id, { config: { ...data.config, [key]: evt.currentTarget.value } })}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
             rows={4}
           />
         {:else}

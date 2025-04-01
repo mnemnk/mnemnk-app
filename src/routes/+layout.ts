@@ -1,5 +1,5 @@
 import { daily_stats } from "@/lib/utils";
-import { get_core_settings } from "@/lib/utils";
+import { getCoreSettings } from "@/lib/utils";
 
 // Tauri doesn't have a Node.js server to do proper SSR
 // so we will use adapter-static to prerender the app (SSG)
@@ -9,7 +9,7 @@ export const ssr = false;
 
 export async function load() {
   const stats = await daily_stats();
-  const settings = await get_core_settings();
+  const settings = await getCoreSettings();
   return {
     daily_stats: stats,
     settings,

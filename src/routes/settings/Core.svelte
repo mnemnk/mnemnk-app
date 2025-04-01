@@ -5,7 +5,7 @@
   import { Button, ButtonGroup, Input, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
-  import { exitApp, set_core_settings } from "@/lib/utils";
+  import { exitApp, setCoreSettings } from "@/lib/utils";
 
   interface Props {
     settings: Record<string, any>;
@@ -32,7 +32,7 @@
   }
 
   async function saveSettings() {
-    await set_core_settings({
+    await setCoreSettings({
       autostart,
       mnemnk_dir,
       shortcut_keys,

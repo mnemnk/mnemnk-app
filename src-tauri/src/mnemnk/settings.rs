@@ -157,7 +157,7 @@ pub fn get_core_settings_cmd(settings: State<Mutex<CoreSettings>>) -> Result<Val
     Ok(json)
 }
 
-#[tauri::command(rename_all = "snake_case")]
+#[tauri::command]
 pub fn set_core_settings_cmd(
     app: AppHandle,
     settings: State<Mutex<CoreSettings>>,
@@ -173,21 +173,21 @@ pub fn set_core_settings_cmd(
     Ok(())
 }
 
-pub fn init_agent_configs(app: &AppHandle, agent_defs: &AgentDefinitions) -> Result<()> {
+pub fn init_agent_global_configs(app: &AppHandle, agent_defs: &AgentDefinitions) -> Result<()> {
     let store = app.store(SETTINGS_JSON)?;
 
-    let mut agents_settings = AgentConfigs::default();
+    let mut agent_global_configs = AgentConfigs::default();
     if let Some(value) = store.get("agents") {
-        agents_settings = serde_json::from_value(value).unwrap_or_else(|e| {
+        agent_global_configs = serde_json::from_value(value).unwrap_or_else(|e| {
             log::error!("Failed to load agent settings: {}", e);
             Default::default()
         });
     }
 
-    // merge with global config
+    // update the stored agent_setting by merging with global config
     for (agent_name, agent_def) in agent_defs.iter() {
         if let Some(global_config) = agent_def.global_config.as_ref() {
-            if let Some(existing_config) = agents_settings.get_mut(agent_name) {
+            if let Some(existing_config) = agent_global_configs.get_mut(agent_name) {
                 for (key, config_entry) in global_config.iter() {
                     if !existing_config.contains_key(key) {
                         existing_config.insert(key.clone(), config_entry.value.clone());
@@ -198,31 +198,33 @@ pub fn init_agent_configs(app: &AppHandle, agent_defs: &AgentDefinitions) -> Res
                 for (key, config_entry) in global_config.iter() {
                     new_config.insert(key.clone(), config_entry.value.clone());
                 }
-                agents_settings.insert(agent_name.clone(), new_config);
+                agent_global_configs.insert(agent_name.clone(), new_config);
             }
         }
     }
 
-    app.manage(Mutex::new(agents_settings));
+    app.manage(Mutex::new(agent_global_configs));
 
     Ok(())
 }
 
-pub fn get_agent_config(app: &AppHandle, agent_name: &str) -> Option<AgentConfig> {
+pub fn get_agent_global_config(app: &AppHandle, agent_name: &str) -> Option<AgentConfig> {
     let agent_configs = app.state::<Mutex<AgentConfigs>>();
     let configs = agent_configs.lock().unwrap();
     configs.get(agent_name).cloned()
 }
 
 #[tauri::command]
-pub fn get_agent_configs_cmd(agent_configs: State<Mutex<AgentConfigs>>) -> Result<Value, String> {
+pub fn get_agent_global_configs_cmd(
+    agent_configs: State<Mutex<AgentConfigs>>,
+) -> Result<Value, String> {
     let configs = agent_configs.lock().unwrap();
     let json = serde_json::to_value(&*configs).map_err(|e| e.to_string())?;
     Ok(json)
 }
 
 #[tauri::command]
-pub fn set_agent_config_cmd(
+pub fn set_agent_global_config_cmd(
     app: AppHandle,
     agent_configs: State<Mutex<AgentConfigs>>,
     agent_name: String,

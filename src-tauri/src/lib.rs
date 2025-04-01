@@ -60,6 +60,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             exit_app_cmd,
+            mnemnk::agent::agent::start_agent_cmd,
+            mnemnk::agent::agent::stop_agent_cmd,
+            mnemnk::agent::agent::set_agent_config_cmd,
             mnemnk::agent::env::get_agent_defs_cmd,
             mnemnk::agent::flow::get_agent_flows_cmd,
             mnemnk::agent::flow::new_agent_flow_cmd,
@@ -71,8 +74,8 @@ pub fn run() {
             mnemnk::agent::flow::save_agent_flow_cmd,
             mnemnk::settings::get_core_settings_cmd,
             mnemnk::settings::set_core_settings_cmd,
-            mnemnk::settings::get_agent_configs_cmd,
-            mnemnk::settings::set_agent_config_cmd,
+            mnemnk::settings::get_agent_global_configs_cmd,
+            mnemnk::settings::set_agent_global_config_cmd,
             mnemnk::store::daily_stats_cmd,
             mnemnk::store::find_events_by_ymd_cmd,
             mnemnk::store::reindex_ymd_cmd,

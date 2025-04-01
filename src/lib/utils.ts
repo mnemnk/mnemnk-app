@@ -55,18 +55,21 @@ export async function search_events(query: string): Promise<MnemnkEvent[]> {
 
 // settings
 
-export async function get_core_settings(): Promise<CoreSettings> {
+export async function getCoreSettings(): Promise<CoreSettings> {
   return await invoke("get_core_settings_cmd");
 }
 
-export async function set_core_settings(new_settings: CoreSettings): Promise<void> {
-  await invoke("set_core_settings_cmd", { new_settings });
+export async function setCoreSettings(newSettings: CoreSettings): Promise<void> {
+  await invoke("set_core_settings_cmd", { newSettings });
 }
 
-export async function getAgentConfigs(): Promise<SAgentConfigs> {
-  return await invoke("get_agent_configs_cmd");
+export async function getAgentGlobalConfigs(): Promise<SAgentConfigs> {
+  return await invoke("get_agent_global_configs_cmd");
 }
 
-export async function setAgentConfig(agentName: string, agentConfig: SAgentConfig): Promise<void> {
-  await invoke("set_agent_config_cmd", { agentName, agentConfig });
+export async function setAgentGlobalConfig(
+  agentName: string,
+  agentConfig: SAgentConfig,
+): Promise<void> {
+  await invoke("set_agent_global_config_cmd", { agentName, agentConfig });
 }

@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, AsyncAgent};
+use super::agent::{self, AgentConfig, AsyncAgent};
 use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::AgentMessage;
@@ -57,7 +57,7 @@ impl AgentEnv {
         let env = Self::new(tx);
 
         let agent_defs = init_agent_defs(app)?;
-        settings::init_agent_configs(app, &agent_defs)?;
+        settings::init_agent_global_configs(app, &agent_defs)?;
         {
             let mut defs = env.defs.lock().unwrap();
             *defs = agent_defs;
@@ -202,30 +202,54 @@ impl AgentEnv {
         let Some(flow) = flows.get(name) else {
             bail!("Agent flow {} not found", name);
         };
-        let mut agents = self.agents.lock().unwrap();
         for node in flow.nodes.iter() {
             if !node.enabled {
                 continue;
             }
-            if let Some(agent) = agents.get_mut(&node.id) {
-                if *agent.status() != agent::AgentStatus::Init {
-                    bail!("Agent {} is not in Init state", node.id);
-                }
-                agent.start(app)?;
-            }
+            self.start_agent(app, &node.id).unwrap_or_else(|e| {
+                log::error!("Failed to start agent {}: {}", node.id, e);
+            });
+        }
+        Ok(())
+    }
+
+    pub fn start_agent(&self, app: &AppHandle, agent_id: &str) -> Result<()> {
+        let mut agents = self.agents.lock().unwrap();
+        let Some(agent) = agents.get_mut(agent_id) else {
+            bail!("Agent {} not found", agent_id);
+        };
+        if *agent.status() == agent::AgentStatus::Init {
+            log::info!("Starting agent {}", agent_id);
+            agent.start(app)?;
         }
         Ok(())
     }
 
     pub fn stop_agent(&self, app: &AppHandle, agent_id: &str) -> Result<()> {
         let mut agents = self.agents.lock().unwrap();
-        if let Some(agent) = agents.get_mut(agent_id) {
-            if *agent.status() == agent::AgentStatus::Run {
-                log::info!("Stopping agent {}", agent_id);
-                agent.stop(app)?;
-            }
+        let Some(agent) = agents.get_mut(agent_id) else {
+            bail!("Agent {} not found", agent_id);
+        };
+        if *agent.status() == agent::AgentStatus::Run
+            || *agent.status() == agent::AgentStatus::Starting
+        {
+            log::info!("Stopping agent {}", agent_id);
+            agent.stop(app)?;
         }
         Ok(())
+    }
+
+    pub fn set_agent_config(
+        &self,
+        app: &AppHandle,
+        agent_id: &str,
+        config: AgentConfig,
+    ) -> Result<()> {
+        let mut agents = self.agents.lock().unwrap();
+        let Some(agent) = agents.get_mut(agent_id) else {
+            bail!("Agent {} not found", agent_id);
+        };
+        agent.set_config(app, config)
     }
 }
 

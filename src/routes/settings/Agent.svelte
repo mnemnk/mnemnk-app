@@ -4,7 +4,7 @@
   import Card from "@/components/Card.svelte";
   import { deserializeAgentConfig, serializeAgentFlowNodeConfig } from "@/lib/agent";
   import type { SAgentConfig, SAgentDefinition } from "@/lib/types";
-  import { setAgentConfig } from "@/lib/utils";
+  import { setAgentGlobalConfig } from "@/lib/utils";
 
   interface Props {
     agentName: string;
@@ -19,7 +19,7 @@
   function saveConfig() {
     let sconfig = serializeAgentFlowNodeConfig(config, agentDef.global_config);
     if (sconfig) {
-      setAgentConfig(agentName, sconfig);
+      setAgentGlobalConfig(agentName, sconfig);
     }
   }
 </script>
