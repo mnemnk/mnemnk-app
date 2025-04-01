@@ -23,7 +23,8 @@
 
   const agent_default_config = getAgentDefinitionsContext()?.[data.name]?.default_config;
 
-  const { updateNodeData } = useSvelteFlow();
+  // https://next.svelteflow.dev/learn/troubleshooting/migrate-to-v1#usesvelteflow
+  const { updateNodeData } = $derived(useSvelteFlow());
 </script>
 
 {#snippet title()}
