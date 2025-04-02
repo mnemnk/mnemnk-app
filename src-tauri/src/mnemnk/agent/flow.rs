@@ -190,7 +190,7 @@ fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow)
     let content = serde_json::to_string_pretty(&agent_flow_copy)?;
     std::fs::write(&path, content)?;
 
-    // upadte the path in the flow
+    // update the path in the flow
     {
         let mut flows = env.flows.lock().unwrap();
         let Some(flow) = flows.get_mut(&name) else {
