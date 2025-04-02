@@ -26,9 +26,8 @@ impl AsAgent for CommandAgent {
 
     fn start(&mut self) -> Result<()> {
         let env = self.env();
-
-        let agent_id = &self.data.id;
-        let def_name = &self.data.def_name;
+        let agent_id = self.id();
+        let def_name = self.def_name();
 
         // get agent command from agent env
         let agent_cmd;
