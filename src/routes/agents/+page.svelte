@@ -1,7 +1,7 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
 
-  import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow, MiniMap } from "@xyflow/svelte";
+  import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
   import {
@@ -255,7 +255,8 @@
     class="relative w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
   >
     <Controls />
-    <MiniMap />
+    <!-- https://github.com/mnemnk/mnemnk-app/issues/162 -->
+    <!-- <MiniMap /> -->
     <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
       <Button onclick={onPause} pill class="!bg-gray-800">
         <PauseOutline
