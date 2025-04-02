@@ -76,6 +76,26 @@ impl AgentEnv {
         Ok(flow)
     }
 
+    pub fn rename_agent_flow(&self, old_name: &str, new_name: &str) -> Result<String> {
+        // check if the new name is already used
+        let new_name = self.unique_flow_name(new_name);
+
+        let mut flows = self.flows.lock().unwrap();
+
+        // remove the original flow
+        let Some(mut flow) = flows.remove(old_name) else {
+            bail!(
+                "env::rename_agent_flow: Agent flow {} could not remove",
+                old_name
+            );
+        };
+
+        // insert renamed flow
+        flow.name = Some(new_name.clone());
+        flows.insert(new_name.clone(), flow);
+        Ok(new_name)
+    }
+
     fn unique_flow_name(&self, name: &str) -> String {
         let flows = self.flows.lock().unwrap();
         let mut new_name = name.to_string();
