@@ -11,7 +11,7 @@ use crate::mnemnk::settings;
 use super::agent::{self, AgentConfig, AsyncAgent};
 use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
-use super::message::AgentMessage;
+use super::message::{self, AgentMessage};
 
 pub struct AgentEnv {
     // agent flows
@@ -270,6 +270,18 @@ impl AgentEnv {
             bail!("Agent {} not found", agent_id);
         };
         agent.set_config(app, config)
+    }
+
+    pub async fn send_agent_out(&self, agent_id: String, kind: String, value: Value) -> Result<()> {
+        message::send_agent_out(self, agent_id, kind, value).await
+    }
+
+    pub fn try_send_agent_out(&self, agent_id: String, kind: String, value: Value) -> Result<()> {
+        message::try_send_agent_out(self, agent_id, kind, value)
+    }
+
+    pub fn try_send_board_out(&self, kind: String, value: Value) -> Result<()> {
+        message::try_send_board_out(self, kind, value)
     }
 }
 

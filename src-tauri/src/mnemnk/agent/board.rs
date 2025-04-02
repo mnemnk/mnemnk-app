@@ -1,11 +1,10 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::agent::{AgentConfig, AgentData, AsAgent};
 use super::env::AgentEnv;
-use super::message::try_send_board;
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
@@ -70,7 +69,8 @@ impl AsAgent for BoardInAgent {
         }
         let app = app.clone();
         let env = app.state::<AgentEnv>();
-        try_send_board(&env, board_name.clone(), value.clone());
+        env.try_send_board_out(board_name.clone(), value.clone())
+            .context("Failed to send board")?;
 
         emit_publish(&app, board_name, value);
 
