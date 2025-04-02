@@ -14,6 +14,9 @@ use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, AgentMessage};
 
 pub struct AgentEnv {
+    // AppHandle
+    app: AppHandle,
+
     // agent flows
     pub flows: Mutex<AgentFlows>,
 
@@ -40,8 +43,9 @@ pub struct AgentEnv {
 }
 
 impl AgentEnv {
-    fn new(tx: mpsc::Sender<AgentMessage>) -> Self {
+    fn new(app: AppHandle, tx: mpsc::Sender<AgentMessage>) -> Self {
         Self {
+            app,
             flows: Default::default(),
             defs: Default::default(),
             agents: Default::default(),
@@ -54,7 +58,7 @@ impl AgentEnv {
     }
 
     pub fn init(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> Result<()> {
-        let env = Self::new(tx);
+        let env = Self::new(app.clone(), tx);
 
         let agent_defs = init_agent_defs(app)?;
         settings::init_agent_global_configs(app, &agent_defs)?;
@@ -144,8 +148,13 @@ impl AgentEnv {
         if agents.contains_key(&node.id) {
             bail!("Agent {} already exists", node.id);
         }
-        if let Ok(agent) = agent::new_agent(self, node.id.clone(), &node.name, node.config.clone())
-        {
+        if let Ok(agent) = agent::new_agent(
+            self.app.clone(),
+            self,
+            node.id.clone(),
+            &node.name,
+            node.config.clone(),
+        ) {
             agents.insert(node.id.clone(), agent);
             log::info!("Agent {} created", node.id);
         } else {
@@ -175,7 +184,7 @@ impl AgentEnv {
         Ok(())
     }
 
-    pub fn remove_agent(&self, app: &AppHandle, agent_id: &str) -> Result<()> {
+    pub fn remove_agent(&self, agent_id: &str) -> Result<()> {
         // remove from edges
         {
             let mut edges = self.edges.lock().unwrap();
@@ -192,7 +201,7 @@ impl AgentEnv {
             edges.remove(agent_id);
         }
 
-        self.stop_agent(app, agent_id)?;
+        self.stop_agent(agent_id)?;
 
         // remove from agents
         {
@@ -217,7 +226,7 @@ impl AgentEnv {
         }
     }
 
-    pub fn start_agent_flow(&self, app: &AppHandle, name: &str) -> Result<()> {
+    pub fn start_agent_flow(&self, name: &str) -> Result<()> {
         let flows = self.flows.lock().unwrap();
         let Some(flow) = flows.get(name) else {
             bail!("Agent flow {} not found", name);
@@ -226,26 +235,26 @@ impl AgentEnv {
             if !node.enabled {
                 continue;
             }
-            self.start_agent(app, &node.id).unwrap_or_else(|e| {
+            self.start_agent(&node.id).unwrap_or_else(|e| {
                 log::error!("Failed to start agent {}: {}", node.id, e);
             });
         }
         Ok(())
     }
 
-    pub fn start_agent(&self, app: &AppHandle, agent_id: &str) -> Result<()> {
+    pub fn start_agent(&self, agent_id: &str) -> Result<()> {
         let mut agents = self.agents.lock().unwrap();
         let Some(agent) = agents.get_mut(agent_id) else {
             bail!("Agent {} not found", agent_id);
         };
         if *agent.status() == agent::AgentStatus::Init {
             log::info!("Starting agent {}", agent_id);
-            agent.start(app)?;
+            agent.start()?;
         }
         Ok(())
     }
 
-    pub fn stop_agent(&self, app: &AppHandle, agent_id: &str) -> Result<()> {
+    pub fn stop_agent(&self, agent_id: &str) -> Result<()> {
         let mut agents = self.agents.lock().unwrap();
         let Some(agent) = agents.get_mut(agent_id) else {
             bail!("Agent {} not found", agent_id);
@@ -254,22 +263,17 @@ impl AgentEnv {
             || *agent.status() == agent::AgentStatus::Starting
         {
             log::info!("Stopping agent {}", agent_id);
-            agent.stop(app)?;
+            agent.stop()?;
         }
         Ok(())
     }
 
-    pub fn set_agent_config(
-        &self,
-        app: &AppHandle,
-        agent_id: &str,
-        config: AgentConfig,
-    ) -> Result<()> {
+    pub fn set_agent_config(&self, agent_id: &str, config: AgentConfig) -> Result<()> {
         let mut agents = self.agents.lock().unwrap();
         let Some(agent) = agents.get_mut(agent_id) else {
             bail!("Agent {} not found", agent_id);
         };
-        agent.set_config(app, config)
+        agent.set_config(config)
     }
 
     pub async fn send_agent_out(&self, agent_id: String, kind: String, value: Value) -> Result<()> {
