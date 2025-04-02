@@ -1,12 +1,17 @@
 use anyhow::{Context as _, Result};
 use jsonpath_rust::JsonPath;
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use tauri::AppHandle;
 
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
-use super::definition::{AgentConfigEntry, AgentDefinition, AgentDefinitions};
+use super::definition::{
+    AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
+};
 use super::message;
+
+// Database
 
 pub struct DatabaseAgent {
     data: AgentData,
@@ -44,6 +49,54 @@ impl DatabaseAgent {
         })
     }
 }
+
+// Display Value
+
+pub struct DisplayValueAgent {
+    data: AgentData,
+}
+
+impl DisplayValueAgent {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+}
+
+impl AsAgent for DisplayValueAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+        let display_value = DisplayValue { kind, value };
+        self.display("value".to_string(), json!(display_value))
+    }
+}
+
+#[derive(Clone, Serialize)]
+struct DisplayValue {
+    kind: String,
+    value: Value,
+}
+
+// JsonPath
 
 pub struct JsonPathAgent {
     data: AgentData,
@@ -131,6 +184,19 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_title("Database")
             .with_description("Store data")
             .with_inputs(vec!["*"]),
+    );
+
+    // Display Value
+    defs.insert(
+        "$display_value".into(),
+        AgentDefinition::new("DisplayValue", "$display_value")
+            .with_title("Display Value")
+            // .with_description("Display value on the node")
+            .with_inputs(vec!["*"])
+            .with_display_config(HashMap::from([(
+                "value".into(),
+                AgentDisplayConfigEntry::new("object"),
+            )])),
     );
 
     // JsonPathAgent

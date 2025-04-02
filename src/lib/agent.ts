@@ -9,13 +9,15 @@ import type {
   AgentFlowEdge,
   AgentFlowNode,
   AgentFlowNodeConfig,
+  AgentFlowNodeDisplay,
   SAgentConfig,
-  SAgentFlow,
-  SAgentFlowEdge,
-  SAgentFlows,
-  SAgentFlowNode,
   SAgentDefaultConfig,
   SAgentDefinitions,
+  SAgentDisplayConfig,
+  SAgentFlow,
+  SAgentFlowEdge,
+  SAgentFlowNode,
+  SAgentFlows,
 } from "./types";
 
 export async function startAgent(agentId: string): Promise<void> {
@@ -118,21 +120,23 @@ export function deserializeAgentFlow(
 
 export function deserializeAgentFlowNode(
   node: SAgentFlowNode,
-  agent_configs: SAgentDefinitions,
+  agentDefs: SAgentDefinitions,
 ): AgentFlowNode {
-  const configs = agent_configs[node.name];
-  const default_config = configs?.default_config;
+  const agentDef = agentDefs[node.name];
+  const default_config = agentDef?.default_config;
+  const display_config = agentDef?.display_config;
   return {
     id: node.id,
     type: "agent",
     data: {
       name: node.name,
-      title: configs?.title ?? null,
-      description: configs?.description ?? null,
+      title: agentDef?.title ?? null,
+      description: agentDef?.description ?? null,
       enabled: node.enabled,
-      inputs: configs?.inputs ?? [],
-      outputs: configs?.outputs ?? [],
+      inputs: agentDef?.inputs ?? [],
+      outputs: agentDef?.outputs ?? [],
       config: deserializeAgentConfig(node.config, default_config),
+      display: deserializeAgentDisplayConfig(display_config),
     },
     position: {
       x: node.x,
@@ -181,6 +185,19 @@ export function deserializeAgentConfig(
     }
   }
   return agent_config;
+}
+
+export function deserializeAgentDisplayConfig(
+  display_config: SAgentDisplayConfig | null,
+): AgentFlowNodeDisplay | null {
+  if (!display_config) {
+    return null;
+  }
+  let display: AgentFlowNodeDisplay = {};
+  for (const key of Object.keys(display_config)) {
+    display[key] = null;
+  }
+  return display;
 }
 
 function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {

@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
+use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
@@ -66,10 +67,31 @@ pub trait Agent {
 
     fn input(&mut self, kind: String, value: Value) -> Result<()>;
 
-    fn try_output(&mut self, kind: String, value: Value) -> Result<()> {
+    fn try_output(&self, kind: String, value: Value) -> Result<()> {
         let env = self.env();
         env.try_send_agent_out(self.id().to_string(), kind, value)
     }
+
+    fn display(&self, key: String, value: Value) -> Result<()> {
+        let message = DisplayMessage {
+            agent_id: self.id().to_string(),
+            key,
+            value,
+        };
+        self.app()
+            .emit(EMIT_DISPLAY, message)
+            .context("Failed to emit display message")?;
+        Ok(())
+    }
+}
+
+const EMIT_DISPLAY: &str = "mnemnk:display";
+
+#[derive(Clone, Serialize)]
+struct DisplayMessage {
+    agent_id: String,
+    key: String,
+    value: Value,
 }
 
 pub struct AgentData {
@@ -192,6 +214,15 @@ pub fn new_agent(
         "Database" => {
             let agent =
                 super::builtin::DatabaseAgent::new(app, agent_id, def_name.to_string(), config)?;
+            return Ok(Box::new(agent));
+        }
+        "DisplayValue" => {
+            let agent = super::builtin::DisplayValueAgent::new(
+                app,
+                agent_id,
+                def_name.to_string(),
+                config,
+            )?;
             return Ok(Box::new(agent));
         }
         "JsonPath" => {

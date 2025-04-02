@@ -12,13 +12,23 @@ export type SAgentDefinition = {
   inputs: string[] | null;
   outputs: string[] | null;
   default_config: SAgentDefaultConfig | null;
-  global_config: SAgentDefaultConfig | null;
+  global_config: SAgentGlobalConfig | null;
+  display_config: SAgentDisplayConfig | null;
 };
 
 export type SAgentDefaultConfig = Record<string, SAgentConfigEntry>;
+export type SAgentGlobalConfig = Record<string, SAgentConfigEntry>;
 
 export type SAgentConfigEntry = {
   value: any;
+  type: string | null;
+  title?: string | null;
+  description?: string | null;
+};
+
+export type SAgentDisplayConfig = Record<string, SAgentDisplayConfigEntry>;
+
+export type SAgentDisplayConfigEntry = {
   type: string | null;
   title?: string | null;
   description?: string | null;
@@ -68,9 +78,11 @@ export type AgentFlowNodeData = {
   name: string;
   enabled: boolean;
   config: AgentFlowNodeConfig | null;
+  display: AgentFlowNodeDisplay | null;
 };
 
 export type AgentFlowNodeConfig = Record<string, any>;
+export type AgentFlowNodeDisplay = Record<string, any>;
 
 export type AgentFlowEdge = Edge;
 
@@ -124,4 +136,10 @@ export type BoardMessage = {
   kind: string;
   value: any;
   time: number;
+};
+
+export type DisplayMessage = {
+  agent_id: string;
+  key: string;
+  value: any;
 };

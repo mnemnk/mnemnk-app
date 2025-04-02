@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
   import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
@@ -7,7 +9,8 @@
     serializeAgentFlowNodeConfig,
     setAgentConfig,
   } from "@/lib/agent";
-  import type { AgentFlowNodeConfig } from "@/lib/types";
+  import { subscribeDisplayMessage } from "@/lib/shared.svelte";
+  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
 
@@ -20,12 +23,34 @@
       inputs: string[];
       outputs: string[];
       config: AgentFlowNodeConfig;
+      display: AgentFlowNodeDisplay;
     };
   };
 
   let { id, data }: Props = $props();
 
   const agentDefaultConfig = getAgentDefinitionsContext()?.[data.name]?.default_config;
+  const agentDisplayConfig = getAgentDefinitionsContext()?.[data.name]?.display_config;
+
+  onMount(() => {
+    if (!agentDisplayConfig) return;
+
+    let unsubscribers = [];
+    for (const key of Object.keys(agentDisplayConfig)) {
+      unsubscribers.push(
+        subscribeDisplayMessage(id, key, (value) => {
+          const newDisplay = { ...data.display, [key]: value };
+          updateNodeData(id, { display: newDisplay });
+        }),
+      );
+    }
+
+    return () => {
+      for (const unsub of unsubscribers) {
+        unsub();
+      }
+    };
+  });
 
   const { updateNodeData } = useSvelteFlow();
 
@@ -47,6 +72,7 @@
   {#if data.description}
     <h4 class="text-sm pl-4 pb-4">{data.description}</h4>
   {/if}
+
   <form class="grid grid-cols-6 gap-4 p-4">
     {#each Object.keys(data.config) as key}
       {@const default_config = agentDefaultConfig?.[key]}
@@ -91,6 +117,38 @@
       </Label>
     {/each}
   </form>
+
+  {#if agentDisplayConfig}
+    <div class="grid grid-cols-6 gap-4 p-4">
+      {#each Object.keys(data.display) as key}
+        {@const display_config = agentDisplayConfig[key]}
+        {@const display = data.display[key]}
+        <Label class="col-span-6 space-y-2">
+          <h3>{display_config?.title || key}</h3>
+          <p class="text-xs text-gray-500">{display_config?.description}</p>
+          {#if display_config?.type === "boolean"}
+            {#if display}
+              <div>true</div>
+            {:else}
+              <div>false</div>
+            {/if}
+          {:else if display_config?.type === "integer"}
+            <div>{display}</div>
+          {:else if display_config?.type === "number"}
+            <div>{display}</div>
+          {:else if display_config?.type === "string" || display_config?.type === "string?"}
+            <pre>{display}</pre>
+          {:else if display_config?.type === "string[]"}
+            <pre>{display.join("\n")}</pre>
+          {:else if display_config?.type === "object"}
+            <pre>{JSON.stringify(display, null, 2)}</pre>
+          {:else}
+            <pre>{JSON.stringify(display, null, 2)}</pre>
+          {/if}
+        </Label>
+      {/each}
+    </div>
+  {/if}
 {/snippet}
 
 <NodeBase
