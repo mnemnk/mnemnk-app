@@ -68,10 +68,9 @@ impl AsAgent for JsonPathAgent {
         let data = json!(vec![value]);
         let result: Vec<&Value> = data.query(jsonpath).context("Failed to query jsonpath")?;
 
-        let env = self.env();
         for r in result {
-            env.try_send_agent_out(self.data.id.clone(), kind.clone(), r.clone())
-                .context("Failed to send agent out")?;
+            self.try_output(kind.clone(), r.clone())
+                .context("Failed to output jsonpath result")?;
         }
         Ok(())
     }

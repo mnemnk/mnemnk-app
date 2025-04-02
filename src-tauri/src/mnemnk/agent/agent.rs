@@ -34,7 +34,6 @@ pub trait Agent {
         self.app().state::<AgentEnv>()
     }
 
-    #[allow(unused)]
     fn id(&self) -> &str;
 
     fn status(&self) -> &AgentStatus;
@@ -66,6 +65,11 @@ pub trait Agent {
     fn stop(&mut self) -> Result<()>;
 
     fn input(&mut self, kind: String, value: Value) -> Result<()>;
+
+    fn try_output(&mut self, kind: String, value: Value) -> Result<()> {
+        let env = self.env();
+        env.try_send_agent_out(self.id().to_string(), kind, value)
+    }
 }
 
 pub struct AgentData {
@@ -108,10 +112,6 @@ pub trait AsAgent {
 impl<T: AsAgent> Agent for T {
     fn app(&self) -> &AppHandle {
         &self.data().app
-    }
-
-    fn env(&self) -> State<AgentEnv> {
-        self.data().app.state::<AgentEnv>()
     }
 
     fn id(&self) -> &str {
