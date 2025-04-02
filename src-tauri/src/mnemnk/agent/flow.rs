@@ -17,6 +17,7 @@ pub struct AgentFlow {
     pub nodes: Vec<AgentFlowNode>,
     pub edges: Vec<AgentFlowEdge>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
     #[serde(skip)]
@@ -94,29 +95,24 @@ fn read_agent_flows<P: AsRef<Path>>(dir: P) -> Result<AgentFlows> {
             // TODO: subdirectories support
             continue;
         }
-        let mut flow = read_agent_flow(&path)?;
-
-        flow.path = Some(path);
-
-        let name = flow
-            .path
-            .as_ref()
-            .unwrap()
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-        flows.insert(name, flow);
+        let flow = read_agent_flow(path)?;
+        flows.insert(flow.name.clone().unwrap(), flow);
     }
     Ok(flows)
 }
 
-fn read_agent_flow(path: &PathBuf) -> Result<AgentFlow> {
+fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
     if !path.is_file() || path.extension().unwrap_or_default() != "json" {
         return Err(anyhow::anyhow!("Invalid file extension"));
     }
-    let content = std::fs::read_to_string(path)?;
-    let flow = serde_json::from_str(&content)?;
+    let content = std::fs::read_to_string(&path)?;
+    let mut flow: AgentFlow = serde_json::from_str(&content)?;
+
+    let name = path.file_stem().unwrap().to_string_lossy().to_string();
+    flow.name = Some(name);
+
+    flow.path = Some(path);
+
     Ok(flow)
 }
 
@@ -135,6 +131,30 @@ pub fn get_agent_flows_cmd(env: State<AgentEnv>) -> Result<Value, String> {
 pub fn new_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<AgentFlow, String> {
     let flow = env.new_agent_flow(&name).map_err(|e| e.to_string())?;
     Ok(flow)
+}
+
+#[tauri::command]
+pub fn rename_agent_flow_cmd(
+    env: State<AgentEnv>,
+    old_name: String,
+    new_name: String,
+) -> Result<String, String> {
+    rename_agent_flow(&env, &old_name, &new_name).map_err(|e| e.to_string())
+}
+
+fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<String> {
+    let new_name = env.rename_agent_flow(old_name, new_name)?;
+    let mut flows = env.flows.lock().unwrap();
+    let Some(flow) = flows.get_mut(&new_name) else {
+        bail!("flow::rename_agent_flow: Agent flow {} not found", new_name);
+    };
+    if let Some(path) = &flow.path {
+        // Rename the file
+        let new_path = path.with_file_name(&new_name).with_extension("json");
+        std::fs::rename(&path, &new_path)?;
+        flow.path = Some(new_path);
+    }
+    Ok(new_name)
 }
 
 #[tauri::command]
@@ -163,8 +183,22 @@ fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow)
             path = dir.join(name.clone()).with_extension("json");
         }
     }
-    let content = serde_json::to_string_pretty(&agent_flow)?;
+
+    // remove the name field from the saving flow before saving
+    let mut agent_flow_copy = agent_flow.clone();
+    agent_flow_copy.name = None;
+    let content = serde_json::to_string_pretty(&agent_flow_copy)?;
     std::fs::write(&path, content)?;
+
+    // update the path in the flow
+    {
+        let mut flows = env.flows.lock().unwrap();
+        let Some(flow) = flows.get_mut(&name) else {
+            bail!("Agent flow {} not found", name);
+        };
+        flow.path = Some(path);
+    }
+
     Ok(())
 }
 
@@ -175,7 +209,7 @@ pub fn import_agent_flow_cmd(env: State<AgentEnv>, path: String) -> Result<Agent
 
 fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
-    let mut flow = read_agent_flow(&path)?;
+    let mut flow = read_agent_flow(path)?;
 
     // refresh the node and edge ids
     let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
@@ -191,7 +225,7 @@ fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let mut agent_flows = env.flows.lock().unwrap();
     let name = unique_flow_name(
         &agent_flows,
-        &path.file_stem().unwrap().to_string_lossy().to_string(),
+        flow.name.as_deref().context("Agent flow name not set")?,
     );
     flow.name = Some(name.clone());
 

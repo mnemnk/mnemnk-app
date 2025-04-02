@@ -46,6 +46,10 @@ export async function newAgentFlow(name: string): Promise<SAgentFlow> {
   return await invoke("new_agent_flow_cmd", { name });
 }
 
+export async function renameAgentFlow(oldName: string, newName: string): Promise<string> {
+  return await invoke("rename_agent_flow_cmd", { oldName, newName });
+}
+
 export async function saveAgentFlow(agentFlow: SAgentFlow): Promise<void> {
   await invoke("save_agent_flow_cmd", { agentFlow });
 }

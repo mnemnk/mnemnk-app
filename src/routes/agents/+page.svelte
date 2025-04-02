@@ -34,6 +34,7 @@
     setAgentDefinitionsContext,
     startAgent,
     stopAgent,
+    renameAgentFlow,
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
@@ -150,6 +151,29 @@
     flowName = flow.name;
   }
 
+  // Rename Flow
+
+  let renameFlowModal = $state(false);
+  let renameFlowName = $state("");
+
+  async function onRenameFlow() {
+    renameFlowName = flowName;
+    renameFlowModal = true;
+  }
+
+  async function renameFlow() {
+    renameFlowModal = false;
+    if (!renameFlowName || renameFlowName === flowName) return;
+    const oldName = flowName;
+    const newName = await renameAgentFlow(flowName, renameFlowName);
+    if (!newName) return;
+    const flow = flows[oldName];
+    flow.name = newName;
+    flows[newName] = flow;
+    flowName = newName;
+    delete flows[oldName];
+  }
+
   async function onSaveFlow() {
     if (flowName in flows) {
       const flow = serializeAgentFlow(nodes, edges, flowName, data.agent_defs);
@@ -253,6 +277,7 @@
       </NavLi>
       <Dropdown class="!bg-gray-100 dark:!bg-gray-900">
         <DropdownItem onclick={onNewFlow}>New</DropdownItem>
+        <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
         <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
         <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
         <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
@@ -284,6 +309,26 @@
       </div>
       <div class="flex justify-end mt-4">
         <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
+      </div>
+    </Modal>
+  {/if}
+
+  {#if renameFlowModal}
+    <Modal title="Rename Flow" bind:open={renameFlowModal}>
+      <div class="flex flex-col">
+        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >Flow Name</label
+        >
+        <input
+          type="text"
+          id="flow_name"
+          bind:value={renameFlowName}
+          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Flow Name"
+        />
+      </div>
+      <div class="flex justify-end mt-4">
+        <GradientButton color="pinkToOrange" onclick={renameFlow}>Rename</GradientButton>
       </div>
     </Modal>
   {/if}

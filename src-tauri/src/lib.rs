@@ -66,6 +66,7 @@ pub fn run() {
             mnemnk::agent::env::get_agent_defs_cmd,
             mnemnk::agent::flow::get_agent_flows_cmd,
             mnemnk::agent::flow::new_agent_flow_cmd,
+            mnemnk::agent::flow::rename_agent_flow_cmd,
             mnemnk::agent::flow::add_agent_flow_edge_cmd,
             mnemnk::agent::flow::remove_agent_flow_edge_cmd,
             mnemnk::agent::flow::add_agent_flow_node_cmd,
