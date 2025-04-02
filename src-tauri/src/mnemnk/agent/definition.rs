@@ -40,6 +40,7 @@ pub struct AgentDefinition {
     pub outputs: Option<Vec<String>>,
     pub default_config: Option<AgentDefaultConfig>,
     pub global_config: Option<AgentGlobalConfig>,
+    pub display_config: Option<AgentDisplayConfig>,
 
     // CommandAgent
     pub command: Option<CommandConfig>,
@@ -57,6 +58,17 @@ pub struct AgentConfigEntry {
 
     pub title: Option<String>,
 
+    pub description: Option<String>,
+}
+
+pub type AgentDisplayConfig = HashMap<String, AgentDisplayConfigEntry>;
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct AgentDisplayConfigEntry {
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
+
+    pub title: Option<String>,
     pub description: Option<String>,
 }
 
@@ -97,8 +109,19 @@ impl AgentDefinition {
         self
     }
 
-    pub fn with_default_config(mut self, config: HashMap<String, AgentConfigEntry>) -> Self {
+    pub fn with_default_config(mut self, config: AgentDefaultConfig) -> Self {
         self.default_config = Some(config);
+        self
+    }
+
+    #[allow(unused)]
+    pub fn with_global_config(mut self, config: AgentGlobalConfig) -> Self {
+        self.global_config = Some(config);
+        self
+    }
+
+    pub fn with_display_config(mut self, config: AgentDisplayConfig) -> Self {
+        self.display_config = Some(config);
         self
     }
 }
@@ -117,6 +140,27 @@ impl AgentConfigEntry {
         self
     }
 
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+}
+
+impl AgentDisplayConfigEntry {
+    pub fn new(type_: &str) -> Self {
+        Self {
+            type_: Some(type_.into()),
+            ..Default::default()
+        }
+    }
+
+    #[allow(unused)]
+    pub fn with_title(mut self, title: &str) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    #[allow(unused)]
     pub fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.into());
         self

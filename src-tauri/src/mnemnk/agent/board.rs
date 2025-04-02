@@ -37,6 +37,22 @@ impl BoardInAgent {
             board_name,
         })
     }
+
+    fn emit_publish(&self, kind: String, value: Value) {
+        // remove image from the value. it's too big to send to frontend
+        let mut value = value;
+        if value.get("image").is_some() {
+            value.as_object_mut().unwrap().remove("image");
+        }
+
+        // emit the message to frontend
+        let message = WriteBoardMessage { kind, value };
+        self.app()
+            .emit(EMIT_PUBLISH, Some(message))
+            .unwrap_or_else(|e| {
+                log::error!("Failed to emit message: {}", e);
+            });
+    }
 }
 
 impl AsAgent for BoardInAgent {
@@ -75,7 +91,7 @@ impl AsAgent for BoardInAgent {
         env.try_send_board_out(board_name.clone(), value.clone())
             .context("Failed to send board")?;
 
-        emit_publish(self.app(), board_name, value);
+        self.emit_publish(board_name, value);
 
         Ok(())
     }
@@ -182,18 +198,4 @@ fn normalize_board_name(config: &AgentConfig) -> Option<String> {
         return None;
     }
     return Some(board_name.to_string());
-}
-
-fn emit_publish(app: &AppHandle, kind: String, value: Value) {
-    // remove image from the value. it's too big to send to frontend
-    let mut value = value;
-    if value.get("image").is_some() {
-        value.as_object_mut().unwrap().remove("image");
-    }
-
-    // emit the message to frontend
-    let message = WriteBoardMessage { kind, value };
-    app.emit(EMIT_PUBLISH, Some(message)).unwrap_or_else(|e| {
-        log::error!("Failed to emit message: {}", e);
-    });
 }
