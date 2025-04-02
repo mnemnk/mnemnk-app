@@ -61,14 +61,12 @@ impl AsAgent for JsonPathAgent {
             .as_str()
             .context("jsonpath is not a string")?;
         let data = json!(vec![value]);
-        let result: Vec<&Value> = data.query(jsonpath).map_err(|e| {
-            log::error!("Failed to query jsonpath: {}", e);
-            e
-        })?;
+        let result: Vec<&Value> = data.query(jsonpath).context("Failed to query jsonpath")?;
 
         let env = app.state::<AgentEnv>();
         for r in result {
-            message::try_send_agent_out(&env, self.data.id.clone(), kind.clone(), r.clone());
+            env.try_send_agent_out(self.data.id.clone(), kind.clone(), r.clone())
+                .context("Failed to send agent out")?;
         }
         Ok(())
     }

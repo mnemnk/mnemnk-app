@@ -7,8 +7,6 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-use crate::mnemnk::agent::message::send_agent_out;
-
 use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentDefinition, AgentDefinitionError};
 use super::env::AgentEnv;
@@ -126,13 +124,15 @@ impl AsAgent for CommandAgent {
                                     continue;
                                 }
                                 let env = app_handle.state::<AgentEnv>();
-                                send_agent_out(
-                                    &env,
+                                env.send_agent_out(
                                     agent_id.clone(),
                                     kind.to_string(),
                                     value.unwrap(),
                                 )
-                                .await;
+                                .await
+                                .unwrap_or_else(|e| {
+                                    log::error!("Failed to send agent out: {}", e);
+                                });
                             }
                             _ => {
                                 log::error!("Unknown command: {} {}", agent_id, cmd);
