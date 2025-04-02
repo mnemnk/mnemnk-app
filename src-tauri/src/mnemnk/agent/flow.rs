@@ -67,7 +67,7 @@ pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
         });
     }
     for (name, _agent_flow) in &agent_flows {
-        env.start_agent_flow(app, name).unwrap_or_else(|e| {
+        env.start_agent_flow(name).unwrap_or_else(|e| {
             log::error!("Failed to start agent flow: {}", e);
         });
     }
@@ -305,26 +305,20 @@ pub fn add_agent_flow_node(env: &AgentEnv, flow_name: &str, node: &AgentFlowNode
 
 #[tauri::command]
 pub fn remove_agent_flow_node_cmd(
-    app: AppHandle,
     env: State<AgentEnv>,
     flow_name: String,
     node_id: String,
 ) -> Result<(), String> {
-    remove_agent_flow_node(&app, &env, &flow_name, &node_id).map_err(|e| e.to_string())
+    remove_agent_flow_node(&env, &flow_name, &node_id).map_err(|e| e.to_string())
 }
 
-pub fn remove_agent_flow_node(
-    app: &AppHandle,
-    env: &AgentEnv,
-    flow_name: &str,
-    node_id: &str,
-) -> Result<()> {
+pub fn remove_agent_flow_node(env: &AgentEnv, flow_name: &str, node_id: &str) -> Result<()> {
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.get_mut(flow_name) else {
         bail!("Agent flow {} not found", flow_name);
     };
     flow.nodes.retain(|node| node.id != node_id);
-    env.remove_agent(&app, &node_id)
+    env.remove_agent(&node_id)
 }
 
 #[tauri::command]

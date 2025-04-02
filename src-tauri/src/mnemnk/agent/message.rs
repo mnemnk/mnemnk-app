@@ -122,7 +122,7 @@ async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: V
             target_handle.clone()
         };
 
-        send_message_to(app, &env, &target_node, kind, value.clone())
+        send_message_to(&env, &target_node, kind, value.clone())
     }
 }
 
@@ -156,14 +156,14 @@ async fn board_out(app: &AppHandle, kind: String, value: Value) {
             } else {
                 sub_handle
             };
-            send_message_to(app, &env, &sub_node, target_kind, value.clone())
+            send_message_to(&env, &sub_node, target_kind, value.clone())
         }
     }
 }
 
-fn send_message_to(app: &AppHandle, env: &AgentEnv, target_id: &str, kind: String, value: Value) {
+fn send_message_to(env: &AgentEnv, target_id: &str, kind: String, value: Value) {
     if let Some(target_node) = env.agents.lock().unwrap().get_mut(target_id) {
-        target_node.input(app, kind, value).unwrap_or_else(|e| {
+        target_node.input(kind, value).unwrap_or_else(|e| {
             log::error!("Failed to send message to {}: {}", target_id, e);
         });
     }

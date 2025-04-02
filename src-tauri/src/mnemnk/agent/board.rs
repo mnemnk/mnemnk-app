@@ -1,10 +1,9 @@
 use anyhow::{Context as _, Result};
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
-use super::agent::{AgentConfig, AgentData, AsAgent};
-use super::env::AgentEnv;
+use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
@@ -20,10 +19,16 @@ pub struct BoardInAgent {
 }
 
 impl BoardInAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
             data: AgentData {
+                app,
                 id,
                 status: Default::default(),
                 def_name,
@@ -43,13 +48,13 @@ impl AsAgent for BoardInAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, _app: &AppHandle, config: AgentConfig) -> Result<()> {
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.board_name = normalize_board_name(&config);
         self.data.config = Some(config);
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
         let mut board_name = self.board_name.clone().unwrap_or_default();
         if board_name.is_empty() {
             // if board_name is not set, stop processing
@@ -62,17 +67,15 @@ impl AsAgent for BoardInAgent {
             }
             board_name = kind;
         }
+        let env = self.env();
         {
-            let env = app.state::<AgentEnv>();
             let mut board_values = env.board_values.lock().unwrap();
             board_values.insert(board_name.clone(), value.clone());
         }
-        let app = app.clone();
-        let env = app.state::<AgentEnv>();
         env.try_send_board_out(board_name.clone(), value.clone())
             .context("Failed to send board")?;
 
-        emit_publish(&app, board_name, value);
+        emit_publish(self.app(), board_name, value);
 
         Ok(())
     }
@@ -84,10 +87,16 @@ pub struct BoardOutAgent {
 }
 
 impl BoardOutAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
             data: AgentData {
+                app,
                 id,
                 status: Default::default(),
                 def_name,
@@ -107,9 +116,9 @@ impl AsAgent for BoardOutAgent {
         &mut self.data
     }
 
-    fn start(&mut self, app: &AppHandle) -> Result<()> {
+    fn start(&mut self) -> Result<()> {
         if let Some(board_name) = &self.board_name {
-            let env = app.state::<AgentEnv>();
+            let env = self.env();
             let mut board_nodes = env.board_nodes.lock().unwrap();
             if let Some(nodes) = board_nodes.get_mut(board_name) {
                 nodes.push(self.data.id.clone());
@@ -120,9 +129,9 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn stop(&mut self, app: &AppHandle) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         if let Some(board_name) = &self.board_name {
-            let env = app.state::<AgentEnv>();
+            let env = self.env();
             let mut board_nodes = env.board_nodes.lock().unwrap();
             if let Some(nodes) = board_nodes.get_mut(board_name) {
                 nodes.retain(|x| x != &self.data.id);
@@ -131,18 +140,18 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()> {
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
             if let Some(board_name) = &self.board_name {
-                let env = app.state::<AgentEnv>();
+                let env = self.env();
                 let mut board_nodes = env.board_nodes.lock().unwrap();
                 if let Some(nodes) = board_nodes.get_mut(board_name) {
                     nodes.retain(|x| x != &self.data.id);
                 }
             }
             if let Some(board_name) = &board_name {
-                let env = app.state::<AgentEnv>();
+                let env = self.env();
                 let mut board_nodes = env.board_nodes.lock().unwrap();
                 if let Some(nodes) = board_nodes.get_mut(board_name) {
                     nodes.push(self.data.id.clone());
@@ -156,7 +165,8 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn input(&mut self, _app: &AppHandle, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        // do nothing
         Ok(())
     }
 }

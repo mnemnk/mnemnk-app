@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use serde_json::Value;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
@@ -28,6 +28,12 @@ pub enum AgentStatus {
 }
 
 pub trait Agent {
+    fn app(&self) -> &AppHandle;
+
+    fn env(&self) -> State<AgentEnv> {
+        self.app().state::<AgentEnv>()
+    }
+
     #[allow(unused)]
     fn id(&self) -> &str;
 
@@ -36,17 +42,17 @@ pub trait Agent {
     #[allow(unused)]
     fn def_name(&self) -> &str;
 
-    fn config(&self, app: &AppHandle) -> Option<&AgentConfig>;
+    fn config(&self) -> Option<&AgentConfig>;
 
-    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()>;
+    fn set_config(&mut self, config: AgentConfig) -> Result<()>;
 
-    fn global_config(&self, app: &AppHandle) -> Option<AgentConfig> {
-        settings::get_agent_global_config(app, self.def_name())
+    fn global_config(&self) -> Option<AgentConfig> {
+        settings::get_agent_global_config(self.app(), self.def_name())
     }
 
-    fn merged_config(&self, app: &AppHandle) -> Option<AgentConfig> {
-        let mut merged_config = self.global_config(app).unwrap_or_default();
-        let config = self.config(app);
+    fn merged_config(&self) -> Option<AgentConfig> {
+        let mut merged_config = self.global_config().unwrap_or_default();
+        let config = self.config();
         if let Some(config) = config {
             for (key, value) in config.iter() {
                 merged_config.insert(key.clone(), value.clone());
@@ -55,14 +61,16 @@ pub trait Agent {
         Some(merged_config)
     }
 
-    fn start(&mut self, app: &AppHandle) -> Result<()>;
+    fn start(&mut self) -> Result<()>;
 
-    fn stop(&mut self, app: &AppHandle) -> Result<()>;
+    fn stop(&mut self) -> Result<()>;
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, kind: String, value: Value) -> Result<()>;
 }
 
 pub struct AgentData {
+    pub app: AppHandle,
+
     pub id: String,
     pub status: AgentStatus,
     pub def_name: String,
@@ -77,27 +85,35 @@ pub trait AsAgent {
 
     fn mut_data(&mut self) -> &mut AgentData;
 
-    fn config(&self, _app: &AppHandle) -> Option<&AgentConfig> {
+    fn config(&self) -> Option<&AgentConfig> {
         self.data().config.as_ref()
     }
 
-    fn set_config(&mut self, _app: &AppHandle, config: AgentConfig) -> Result<()> {
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
         Ok(())
     }
 
-    fn start(&mut self, _app: &AppHandle) -> Result<()> {
+    fn start(&mut self) -> Result<()> {
         Ok(())
     }
 
-    fn stop(&mut self, _app: &AppHandle) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, kind: String, value: Value) -> Result<()>;
 }
 
 impl<T: AsAgent> Agent for T {
+    fn app(&self) -> &AppHandle {
+        &self.data().app
+    }
+
+    fn env(&self) -> State<AgentEnv> {
+        self.data().app.state::<AgentEnv>()
+    }
+
     fn id(&self) -> &str {
         self.data().id.as_str()
     }
@@ -110,30 +126,30 @@ impl<T: AsAgent> Agent for T {
         self.data().def_name.as_str()
     }
 
-    fn config(&self, app: &AppHandle) -> Option<&AgentConfig> {
-        self.config(app)
+    fn config(&self) -> Option<&AgentConfig> {
+        self.config()
     }
 
-    fn set_config(&mut self, app: &AppHandle, config: AgentConfig) -> Result<()> {
-        self.set_config(app, config)
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.set_config(config)
     }
 
-    fn start(&mut self, app: &AppHandle) -> Result<()> {
+    fn start(&mut self) -> Result<()> {
         self.mut_data().status = AgentStatus::Starting;
-        self.start(app)?;
+        self.start()?;
         self.mut_data().status = AgentStatus::Run;
         Ok(())
     }
 
-    fn stop(&mut self, app: &AppHandle) -> Result<()> {
+    fn stop(&mut self) -> Result<()> {
         self.mut_data().status = AgentStatus::Stopping;
-        self.stop(app)?;
+        self.stop()?;
         self.mut_data().status = AgentStatus::Init;
         Ok(())
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
-        self.input(app, kind, value)
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+        self.input(kind, value)
     }
 }
 
@@ -141,6 +157,7 @@ pub trait AsyncAgent: Agent + Send + Sync {}
 impl<T: Agent + Send + Sync> AsyncAgent for T {}
 
 pub fn new_agent(
+    app: AppHandle,
     env: &AgentEnv,
     agent_id: String,
     def_name: &str,
@@ -158,23 +175,28 @@ pub fn new_agent(
     // TODO: Prepare a mapping from kind to the corresponding new function and use it to create the Agent
     match def.kind.as_str() {
         "Command" => {
-            let agent = super::command::CommandAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent =
+                super::command::CommandAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "BoardIn" => {
-            let agent = super::board::BoardInAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent =
+                super::board::BoardInAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "BoardOut" => {
-            let agent = super::board::BoardOutAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent =
+                super::board::BoardOutAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "Database" => {
-            let agent = super::builtin::DatabaseAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent =
+                super::builtin::DatabaseAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         "JsonPath" => {
-            let agent = super::builtin::JsonPathAgent::new(agent_id, def_name.to_string(), config)?;
+            let agent =
+                super::builtin::JsonPathAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
@@ -182,30 +204,21 @@ pub fn new_agent(
 }
 
 #[tauri::command]
-pub fn start_agent_cmd(
-    env: State<AgentEnv>,
-    app: AppHandle,
-    agent_id: String,
-) -> Result<(), String> {
-    env.start_agent(&app, &agent_id).map_err(|e| e.to_string())
+pub fn start_agent_cmd(env: State<AgentEnv>, agent_id: String) -> Result<(), String> {
+    env.start_agent(&agent_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn stop_agent_cmd(
-    env: State<AgentEnv>,
-    app: AppHandle,
-    agent_id: String,
-) -> Result<(), String> {
-    env.stop_agent(&app, &agent_id).map_err(|e| e.to_string())
+pub fn stop_agent_cmd(env: State<AgentEnv>, agent_id: String) -> Result<(), String> {
+    env.stop_agent(&agent_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn set_agent_config_cmd(
     env: State<AgentEnv>,
-    app: AppHandle,
     agent_id: String,
     config: AgentConfig,
 ) -> Result<(), String> {
-    env.set_agent_config(&app, &agent_id, config)
+    env.set_agent_config(&agent_id, config)
         .map_err(|e| e.to_string())
 }

@@ -2,11 +2,10 @@ use anyhow::{Context as _, Result};
 use jsonpath_rust::JsonPath;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-use super::agent::{AgentConfig, AgentData, AsAgent};
+use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
 use super::definition::{AgentConfigEntry, AgentDefinition, AgentDefinitions};
-use super::env::AgentEnv;
 use super::message;
 
 pub struct DatabaseAgent {
@@ -22,15 +21,21 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
-        message::try_send_store(app, kind, value)
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+        message::try_send_store(self.app(), kind, value)
     }
 }
 
 impl DatabaseAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
         Ok(Self {
             data: AgentData {
+                app,
                 id,
                 status: Default::default(),
                 def_name,
@@ -53,7 +58,7 @@ impl AsAgent for JsonPathAgent {
         &mut self.data
     }
 
-    fn input(&mut self, app: &AppHandle, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
         let jsonpath = config
             .get("jsonpath")
@@ -63,7 +68,7 @@ impl AsAgent for JsonPathAgent {
         let data = json!(vec![value]);
         let result: Vec<&Value> = data.query(jsonpath).context("Failed to query jsonpath")?;
 
-        let env = app.state::<AgentEnv>();
+        let env = self.env();
         for r in result {
             env.try_send_agent_out(self.data.id.clone(), kind.clone(), r.clone())
                 .context("Failed to send agent out")?;
@@ -73,9 +78,15 @@ impl AsAgent for JsonPathAgent {
 }
 
 impl JsonPathAgent {
-    pub fn new(id: String, def_name: String, config: Option<AgentConfig>) -> Result<Self> {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
         Ok(Self {
             data: AgentData {
+                app,
                 id,
                 status: Default::default(),
                 def_name,
