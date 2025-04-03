@@ -1,5 +1,4 @@
 use anyhow::{Context as _, Result};
-use jsonpath_rust::JsonPath;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -95,58 +94,6 @@ impl AsAgent for DisplayValueAgent {
 struct DisplayValue {
     kind: String,
     value: Value,
-}
-
-// JsonPath
-
-pub struct JsonPathAgent {
-    data: AgentData,
-}
-
-impl AsAgent for JsonPathAgent {
-    fn data(&self) -> &AgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AgentData {
-        &mut self.data
-    }
-
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
-        let config = self.data.config.as_ref().context("Missing config")?;
-        let jsonpath = config
-            .get("jsonpath")
-            .context("Missing jsonpath")?
-            .as_str()
-            .context("jsonpath is not a string")?;
-        let data = json!(vec![value]);
-        let result: Vec<&Value> = data.query(jsonpath).context("Failed to query jsonpath")?;
-
-        for r in result {
-            self.try_output(kind.clone(), r.clone())
-                .context("Failed to output jsonpath result")?;
-        }
-        Ok(())
-    }
-}
-
-impl JsonPathAgent {
-    pub fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
-        })
-    }
 }
 
 // Regex Filter
@@ -273,21 +220,6 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             .with_display_config(HashMap::from([(
                 "value".into(),
                 AgentDisplayConfigEntry::new("object"),
-            )])),
-    );
-
-    // JsonPathAgent
-    defs.insert(
-        "$jsonpath".into(),
-        AgentDefinition::new("JsonPath", "$jsonpath")
-            .with_title("JsonPath")
-            .with_inputs(vec!["*"])
-            .with_outputs(vec!["*"])
-            .with_default_config(HashMap::from([(
-                "jsonpath".into(),
-                AgentConfigEntry::new(json!("$[*]"), "string")
-                    .with_title("JSON Path")
-                    .with_description(r#"ex. $[?search(@.url, "https://github.com/.*")]"#),
             )])),
     );
 
