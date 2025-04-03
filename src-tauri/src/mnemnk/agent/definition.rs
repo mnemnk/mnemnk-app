@@ -53,8 +53,8 @@ pub struct AgentDefinition {
     pub new_boxed: Option<AgentNewBoxedFn>,
 }
 
-pub type AgentDefaultConfig = HashMap<String, AgentConfigEntry>;
-pub type AgentGlobalConfig = HashMap<String, AgentConfigEntry>;
+pub type AgentDefaultConfig = Vec<(String, AgentConfigEntry)>;
+pub type AgentGlobalConfig = Vec<(String, AgentConfigEntry)>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentConfigEntry {
@@ -68,7 +68,7 @@ pub struct AgentConfigEntry {
     pub description: Option<String>,
 }
 
-pub type AgentDisplayConfig = HashMap<String, AgentDisplayConfigEntry>;
+pub type AgentDisplayConfig = Vec<(String, AgentDisplayConfigEntry)>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentDisplayConfigEntry {

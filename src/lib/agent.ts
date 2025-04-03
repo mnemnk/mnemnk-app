@@ -84,27 +84,6 @@ export async function removeAgentFlowEdge(flowName: string, edgeId: string): Pro
 
 // Agent Flow
 
-// export function addAgentNode(
-//   agent_name: string,
-//   nodes: Writable<AgentFlowNode[]>,
-//   settings: SAgentDefinitions,
-// ) {
-//   const new_node = newAgentFlowNode(agent_name, settings);
-//   nodes.update((nodes) => {
-//     return [...nodes, new_node];
-//   });
-// }
-
-// export async function updateAgentFlow(
-//   nodes: Writable<AgentFlowNode[]>,
-//   edges: Writable<AgentFlowEdge[]>,
-//   flow_index: number,
-//   agent_configs: SAgentDefinitions,
-// ) {
-//   const flow = serializeAgentFlow(get(nodes), get(edges), agent_configs);
-//   await saveAgentFlow(flow, flow_index);
-// }
-
 // deserialize: SAgentFlow -> AgentFlow
 
 export function deserializeAgentFlow(
@@ -151,39 +130,41 @@ export function deserializeAgentConfig(
   node_config: SAgentConfig | null,
   default_config: SAgentDefaultConfig | null,
 ): AgentFlowNodeConfig {
-  if (!node_config) {
-    node_config = {};
+  let agent_config: AgentFlowNodeConfig = {};
+  let config_types: Record<string, string | null> = {};
+
+  if (!!default_config) {
+    default_config.forEach(([key, entry]) => {
+      agent_config[key] = entry.value;
+      config_types[key] = entry.type;
+    });
   }
-  if (default_config) {
-    for (const key of Object.keys(default_config)) {
-      if (node_config[key] === undefined) {
-        node_config[key] = default_config[key].value;
-      }
+
+  if (!!node_config) {
+    for (const [key, entry] of Object.entries(node_config)) {
+      agent_config[key] = entry;
     }
   }
-  const agent_config: AgentFlowNodeConfig = {};
-  for (const key of Object.keys(node_config)) {
-    const t = default_config?.[key].type;
-    if (t === null) {
-      agent_config[key] = node_config[key];
-    } else if (t === "boolean") {
-      agent_config[key] = node_config[key] === true ? "true" : "false";
+
+  for (const [key, value] of Object.entries(agent_config)) {
+    const t = config_types[key];
+    if (t === "boolean") {
+      agent_config[key] = value === "true";
     } else if (t === "integer") {
-      agent_config[key] = node_config[key].toString();
+      agent_config[key] = value.toString();
     } else if (t === "number") {
-      agent_config[key] = node_config[key].toString();
+      agent_config[key] = value.toString();
     } else if (t === "string") {
-      agent_config[key] = node_config[key];
+      agent_config[key] = value;
     } else if (t === "string?") {
-      agent_config[key] = node_config[key] ?? "";
+      agent_config[key] = value ?? "";
     } else if (t === "string[]") {
-      agent_config[key] = node_config[key].join("\n");
+      agent_config[key] = value.join("\n");
     } else if (t === "object") {
-      agent_config[key] = JSON.stringify(node_config[key], null, 2);
-    } else {
-      agent_config[key] = node_config[key];
+      agent_config[key] = JSON.stringify(value, null, 2);
     }
   }
+
   return agent_config;
 }
 
@@ -247,39 +228,34 @@ export function serializeAgentFlowNode(
 export function serializeAgentFlowNodeConfig(
   node_config: AgentFlowNodeConfig | null,
   default_config: SAgentDefaultConfig | null,
-): Record<string, any> | null {
+): SAgentConfig | null {
   if (node_config === null) {
     return null;
   }
 
   if (default_config === null) {
-    const config: Record<string, any> = {};
-    for (const key of Object.keys(node_config)) {
-      config[key] = node_config[key];
-    }
-    return config;
+    return Object.entries(node_config);
   }
 
-  const config: Record<string, any> = {};
-  for (const key of Object.keys(node_config)) {
-    const t = default_config[key].type;
-    const value = node_config[key];
+  const config: SAgentConfig = [];
+  for (const [key, value] of Object.entries(node_config)) {
+    const t = default_config.find((entry) => entry[0] === key)?.[1].type;
     if (t === "boolean") {
-      config[key] = value === "true";
+      config.push([key, value === "true"]);
     } else if (t === "integer") {
-      config[key] = parseInt(value);
+      config.push([key, parseInt(value)]);
     } else if (t === "number") {
-      config[key] = parseFloat(value);
+      config.push([key, parseFloat(value)]);
     } else if (t === "string") {
-      config[key] = value;
+      config.push([key, value]);
     } else if (t === "string?") {
-      config[key] = value === "" ? null : value;
+      config.push([key, value === "" ? null : value]);
     } else if (t === "string[]") {
-      config[key] = value.split("\n");
+      config.push([key, value.split("\n")]);
     } else if (t === "object") {
-      config[key] = JSON.parse(value);
+      config.push([key, JSON.parse(value)]);
     } else {
-      config[key] = value;
+      config.push([key, value]);
     }
   }
   return config;
@@ -297,11 +273,8 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
 
 export function newAgentFlowNode(def_name: string, agent_defs: SAgentDefinitions): SAgentFlowNode {
   const id = newNodeId(def_name);
-  const default_config = agent_defs[def_name].default_config ?? {};
-  const config: Record<string, any> = {};
-  for (const key of Object.keys(default_config)) {
-    config[key] = default_config[key].value;
-  }
+  const default_config = agent_defs[def_name].default_config ?? [];
+  const config: SAgentConfig = default_config.map(([key, entry]) => [key, entry.value]);
   const node_data = {
     id,
     name: def_name,
