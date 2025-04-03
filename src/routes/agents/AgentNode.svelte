@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
   import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
@@ -35,15 +36,15 @@
   onMount(() => {
     if (!agentDisplayConfig) return;
 
-    let unsubscribers = [];
-    for (const key of Object.keys(agentDisplayConfig)) {
+    let unsubscribers: Unsubscriber[] = [];
+    agentDisplayConfig.forEach(([key, _]) => {
       unsubscribers.push(
         subscribeDisplayMessage(id, key, (value) => {
           const newDisplay = { ...data.display, [key]: value };
           updateNodeData(id, { display: newDisplay });
         }),
       );
-    }
+    });
 
     return () => {
       for (const unsub of unsubscribers) {
