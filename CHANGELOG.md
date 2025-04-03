@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.13.1](https://github.com/mnemnk/mnemnk-app/compare/v0.13.0...v0.13.1) (2025-04-03)
+
+
+### Features
+
+* 🎸 resize node ([#174](https://github.com/mnemnk/mnemnk-app/issues/174)) ([3741764](https://github.com/mnemnk/mnemnk-app/commit/3741764901c5d498c869932c70c573cc8961ba7a)), closes [#170](https://github.com/mnemnk/mnemnk-app/issues/170)
+
+### Bug Fixes
+
+* 🐛 display value does not show any value ([#178](https://github.com/mnemnk/mnemnk-app/issues/178)) ([00c6e3a](https://github.com/mnemnk/mnemnk-app/commit/00c6e3ad48075afe4fd1e71f4b842e8fbb70810c)), closes [#177](https://github.com/mnemnk/mnemnk-app/issues/177)
+* 🐛 save flow ([#176](https://github.com/mnemnk/mnemnk-app/issues/176)) ([45f0273](https://github.com/mnemnk/mnemnk-app/commit/45f02735c190609438e45278394f1df52e3e8a11)), closes [#175](https://github.com/mnemnk/mnemnk-app/issues/175)
+
 ## [0.13.0](https://github.com/mnemnk/mnemnk-app/compare/v0.12.1...v0.13.0) (2025-04-03)
 
 
