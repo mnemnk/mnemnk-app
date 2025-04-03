@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.13.0](https://github.com/mnemnk/mnemnk-app/compare/v0.12.1...v0.13.0) (2025-04-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 configs are changed from record to list in mnemnk.json
+
+### Features
+
+* 🎸 display value on node ([#168](https://github.com/mnemnk/mnemnk-app/issues/168)) ([5375d5d](https://github.com/mnemnk/mnemnk-app/commit/5375d5d11fad96d206e11cac68383261080ed976))
+* 🎸 regex filter ([#169](https://github.com/mnemnk/mnemnk-app/issues/169)) ([095b139](https://github.com/mnemnk/mnemnk-app/commit/095b1395272cc016c84655a3d36fa2eb9bff57ae))
+* 🎸 remove JsonPath agent ([#171](https://github.com/mnemnk/mnemnk-app/issues/171)) ([23eeee9](https://github.com/mnemnk/mnemnk-app/commit/23eeee90aa25626338d66062a4ad05fc2543be28))
+* 🎸 rename agent flow ([#163](https://github.com/mnemnk/mnemnk-app/issues/163)) ([d08a8d7](https://github.com/mnemnk/mnemnk-app/commit/d08a8d7e488b4211570f81f4ca6f6e5daa0884aa)), closes [#160](https://github.com/mnemnk/mnemnk-app/issues/160)
+* 🎸 use vec for configs in agent def ([#173](https://github.com/mnemnk/mnemnk-app/issues/173)) ([1dc50cd](https://github.com/mnemnk/mnemnk-app/commit/1dc50cdd5aa37e2ecd97ec0d2915557c243abcf7))
+
+
+### Bug Fixes
+
+* 🐛 remove MiniMap for now ([#164](https://github.com/mnemnk/mnemnk-app/issues/164)) ([80c33fd](https://github.com/mnemnk/mnemnk-app/commit/80c33fd4b9bd97b25dac28a0e258ab9982883c1a)), closes [#162](https://github.com/mnemnk/mnemnk-app/issues/162)
+
 ## [0.12.1](https://github.com/mnemnk/mnemnk-app/compare/v0.12.0...v0.12.1) (2025-04-01)
 
 
