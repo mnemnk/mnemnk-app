@@ -81,11 +81,11 @@ impl AsAgent for DisplayValueAgent {
 
     fn input(&mut self, kind: String, value: Value) -> Result<()> {
         let display_value = DisplayValue { kind, value };
-        self.display("value".to_string(), json!(display_value))
+        self.emit_display("value".to_string(), json!(display_value))
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct DisplayValue {
     kind: String,
     value: Value,

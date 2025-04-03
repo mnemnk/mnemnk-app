@@ -81,7 +81,7 @@ pub trait Agent {
         env.try_send_agent_out(self.id().to_string(), kind, value)
     }
 
-    fn display(&self, key: String, value: Value) -> Result<()> {
+    fn emit_display(&self, key: String, value: Value) -> Result<()> {
         let message = DisplayMessage {
             agent_id: self.id().to_string(),
             key,

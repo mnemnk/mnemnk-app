@@ -177,9 +177,9 @@ export function deserializeAgentDisplayConfig(
     return null;
   }
   let display: AgentFlowNodeDisplay = {};
-  for (const key of Object.keys(display_config)) {
+  display_config.forEach(([key, _entry]) => {
     display[key] = null;
-  }
+  });
   return display;
 }
 
