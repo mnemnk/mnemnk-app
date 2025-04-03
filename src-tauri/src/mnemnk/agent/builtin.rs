@@ -1,5 +1,6 @@
 use anyhow::{Context as _, Result};
 use jsonpath_rust::JsonPath;
+use regex::Regex;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -148,6 +149,82 @@ impl JsonPathAgent {
     }
 }
 
+// Regex Filter
+
+pub struct RegexFilterAgent {
+    data: AgentData,
+}
+
+impl RegexFilterAgent {
+    pub fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+}
+
+impl AsAgent for RegexFilterAgent {
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+        let config = self.data.config.as_ref().context("Missing config")?;
+
+        let field = config
+            .get("field")
+            .context("Missing field")?
+            .as_str()
+            .context("field is not a string")?;
+        if field.is_empty() {
+            // field is not set
+            return Ok(());
+        }
+
+        let regex = config
+            .get("regex")
+            .context("Missing regex")?
+            .as_str()
+            .context("regex is not a string")?;
+        if regex.is_empty() {
+            // regex is not set
+            return Ok(());
+        }
+        let regex = Regex::new(regex).context("Failed to compile regex")?;
+
+        let Some(field_value) = value.get(field) else {
+            // value does not have the field
+            return Ok(());
+        };
+        let field_value = field_value
+            .as_str()
+            .context("value is not a string")?
+            .to_string();
+        if regex.is_match(&field_value) {
+            // value matches the regex
+            self.try_output(kind.clone(), value.into())
+                .context("Failed to output regex result")?;
+        }
+
+        Ok(())
+    }
+}
+
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
 
@@ -212,6 +289,25 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
                     .with_title("JSON Path")
                     .with_description(r#"ex. $[?search(@.url, "https://github.com/.*")]"#),
             )])),
+    );
+
+    // RegexFilterAgent
+    defs.insert(
+        "$regex_filter".into(),
+        AgentDefinition::new("RegexFilter", "$regex_filter")
+            .with_title("Regex Filter")
+            .with_inputs(vec!["*"])
+            .with_outputs(vec!["*"])
+            .with_default_config(HashMap::from([
+                (
+                    "field".into(),
+                    AgentConfigEntry::new(json!(""), "string").with_title("Field"),
+                ),
+                (
+                    "regex".into(),
+                    AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
+                ),
+            ])),
     );
 
     defs

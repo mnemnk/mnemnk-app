@@ -230,6 +230,11 @@ pub fn new_agent(
                 super::builtin::JsonPathAgent::new(app, agent_id, def_name.to_string(), config)?;
             return Ok(Box::new(agent));
         }
+        "RegexFilter" => {
+            let agent =
+                super::builtin::RegexFilterAgent::new(app, agent_id, def_name.to_string(), config)?;
+            return Ok(Box::new(agent));
+        }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
 }
