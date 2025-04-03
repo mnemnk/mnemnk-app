@@ -16,8 +16,8 @@ export type SAgentDefinition = {
   display_config: SAgentDisplayConfig | null;
 };
 
-export type SAgentDefaultConfig = Record<string, SAgentConfigEntry>;
-export type SAgentGlobalConfig = Record<string, SAgentConfigEntry>;
+export type SAgentDefaultConfig = [string, SAgentConfigEntry][];
+export type SAgentGlobalConfig = [string, SAgentConfigEntry][];
 
 export type SAgentConfigEntry = {
   value: any;
@@ -26,7 +26,7 @@ export type SAgentConfigEntry = {
   description?: string | null;
 };
 
-export type SAgentDisplayConfig = Record<string, SAgentDisplayConfigEntry>;
+export type SAgentDisplayConfig = [string, SAgentDisplayConfigEntry][];
 
 export type SAgentDisplayConfigEntry = {
   type: string | null;

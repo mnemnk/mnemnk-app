@@ -73,55 +73,55 @@
     <h4 class="text-sm pl-4 pb-4">{data.description}</h4>
   {/if}
 
-  <form class="grid grid-cols-6 gap-4 p-4">
-    {#each Object.keys(data.config) as key}
-      {@const default_config = agentDefaultConfig?.[key]}
-      {@const config = data.config[key]}
-      <Label class="col-span-6 space-y-2">
-        <h3>{default_config?.title || key}</h3>
-        <p class="text-xs text-gray-500">{default_config?.description}</p>
-        {#if default_config?.type === "boolean"}
-          <Toggle checked={config} onchange={() => updateConfig(key, !data.config[key])} />
-        {:else if default_config?.type === "integer"}
-          <NumberInput
-            value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-          />
-        {:else if default_config?.type === "number"}
-          <Input
-            type="text"
-            value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-          />
-        {:else if default_config?.type === "string" || default_config?.type === "string?"}
-          <Input
-            type="text"
-            value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-          />
-        {:else if default_config?.type === "string[]"}
-          <Textarea
-            value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-            rows={4}
-          />
-        {:else if default_config?.type === "object"}
-          <Textarea
-            value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-            rows={4}
-          />
-        {:else}
-          <Input type="text" value={JSON.stringify(config, null, 2)} disabled />
-        {/if}
-      </Label>
-    {/each}
-  </form>
+  {#if agentDefaultConfig}
+    <form class="grid grid-cols-6 gap-4 p-4">
+      {#each agentDefaultConfig as [key, default_config]}
+        {@const config = data.config[key]}
+        <Label class="col-span-6 space-y-2">
+          <h3>{default_config?.title || key}</h3>
+          <p class="text-xs text-gray-500">{default_config?.description}</p>
+          {#if default_config?.type === "boolean"}
+            <Toggle checked={config} onchange={() => updateConfig(key, !data.config[key])} />
+          {:else if default_config?.type === "integer"}
+            <NumberInput
+              value={config}
+              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            />
+          {:else if default_config?.type === "number"}
+            <Input
+              type="text"
+              value={config}
+              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            />
+          {:else if default_config?.type === "string" || default_config?.type === "string?"}
+            <Input
+              type="text"
+              value={config}
+              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            />
+          {:else if default_config?.type === "string[]"}
+            <Textarea
+              value={config}
+              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+              rows={4}
+            />
+          {:else if default_config?.type === "object"}
+            <Textarea
+              value={config}
+              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+              rows={4}
+            />
+          {:else}
+            <Input type="text" value={JSON.stringify(config, null, 2)} disabled />
+          {/if}
+        </Label>
+      {/each}
+    </form>
+  {/if}
 
   {#if agentDisplayConfig}
     <div class="grid grid-cols-6 gap-4 p-4">
-      {#each Object.keys(data.display) as key}
-        {@const display_config = agentDisplayConfig[key]}
+      {#each agentDisplayConfig as [key, display_config]}
         {@const display = data.display[key]}
         <Label class="col-span-6 space-y-2">
           <h3>{display_config?.title || key}</h3>

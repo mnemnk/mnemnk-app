@@ -2,7 +2,6 @@ use anyhow::{Context as _, Result};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
 use tauri::AppHandle;
 
 use super::agent::{new_boxed, Agent, AgentConfig, AgentData, AsAgent};
@@ -179,12 +178,12 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         )
         .with_title("Board In")
         .with_inputs(vec!["*"])
-        .with_default_config(HashMap::from([(
+        .with_default_config(vec![(
             "board_name".into(),
             AgentConfigEntry::new(json!(""), "string")
                 .with_title("Board Name")
                 .with_description("* = source kind"),
-        )])),
+        )]),
     );
 
     // BoardOutAgent
@@ -197,10 +196,10 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         )
         .with_title("Board Out")
         .with_outputs(vec!["*"])
-        .with_default_config(HashMap::from([(
+        .with_default_config(vec![(
             "board_name".into(),
             AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
-        )])),
+        )]),
     );
 
     // DatabaseAgent
@@ -223,10 +222,10 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         .with_title("Display Value")
         // .with_description("Display value on the node")
         .with_inputs(vec!["*"])
-        .with_display_config(HashMap::from([(
+        .with_display_config(vec![(
             "value".into(),
             AgentDisplayConfigEntry::new("object"),
-        )])),
+        )]),
     );
 
     // RegexFilterAgent
@@ -240,7 +239,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         .with_title("Regex Filter")
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
-        .with_default_config(HashMap::from([
+        .with_default_config(vec![
             (
                 "field".into(),
                 AgentConfigEntry::new(json!(""), "string").with_title("Field"),
@@ -249,7 +248,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
                 "regex".into(),
                 AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
             ),
-        ])),
+        ]),
     );
 
     defs
