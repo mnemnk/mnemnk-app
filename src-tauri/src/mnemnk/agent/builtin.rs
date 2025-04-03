@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use tauri::AppHandle;
 
-use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
+use super::agent::{new_boxed, Agent, AgentConfig, AgentData, AsAgent};
 use super::definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
 };
@@ -18,6 +18,23 @@ pub struct DatabaseAgent {
 }
 
 impl AsAgent for DatabaseAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -31,33 +48,14 @@ impl AsAgent for DatabaseAgent {
     }
 }
 
-impl DatabaseAgent {
-    pub fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
-        })
-    }
-}
-
 // Display Value
 
 pub struct DisplayValueAgent {
     data: AgentData,
 }
 
-impl DisplayValueAgent {
-    pub fn new(
+impl AsAgent for DisplayValueAgent {
+    fn new(
         app: AppHandle,
         id: String,
         def_name: String,
@@ -73,9 +71,7 @@ impl DisplayValueAgent {
             },
         })
     }
-}
 
-impl AsAgent for DisplayValueAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -102,8 +98,8 @@ pub struct RegexFilterAgent {
     data: AgentData,
 }
 
-impl RegexFilterAgent {
-    pub fn new(
+impl AsAgent for RegexFilterAgent {
+    fn new(
         app: AppHandle,
         id: String,
         def_name: String,
@@ -119,9 +115,7 @@ impl RegexFilterAgent {
             },
         })
     }
-}
 
-impl AsAgent for RegexFilterAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -178,33 +172,41 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
     // BoardInAgent
     defs.insert(
         "$board_in".into(),
-        AgentDefinition::new("BoardIn", "$board_in")
-            .with_title("Board In")
-            .with_inputs(vec!["*"])
-            .with_default_config(HashMap::from([(
-                "board_name".into(),
-                AgentConfigEntry::new(json!(""), "string")
-                    .with_title("Board Name")
-                    .with_description("* = source kind"),
-            )])),
+        AgentDefinition::new(
+            "BoardIn",
+            "$board_in",
+            Some(new_boxed::<super::board::BoardInAgent>),
+        )
+        .with_title("Board In")
+        .with_inputs(vec!["*"])
+        .with_default_config(HashMap::from([(
+            "board_name".into(),
+            AgentConfigEntry::new(json!(""), "string")
+                .with_title("Board Name")
+                .with_description("* = source kind"),
+        )])),
     );
 
     // BoardOutAgent
     defs.insert(
         "$board_out".into(),
-        AgentDefinition::new("BoardOut", "$board_out")
-            .with_title("Board Out")
-            .with_outputs(vec!["*"])
-            .with_default_config(HashMap::from([(
-                "board_name".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
-            )])),
+        AgentDefinition::new(
+            "BoardOut",
+            "$board_out",
+            Some(new_boxed::<super::board::BoardOutAgent>),
+        )
+        .with_title("Board Out")
+        .with_outputs(vec!["*"])
+        .with_default_config(HashMap::from([(
+            "board_name".into(),
+            AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
+        )])),
     );
 
     // DatabaseAgent
     defs.insert(
         "$database".into(),
-        AgentDefinition::new("Database", "$database")
+        AgentDefinition::new("Database", "$database", Some(new_boxed::<DatabaseAgent>))
             .with_title("Database")
             .with_description("Store data")
             .with_inputs(vec!["*"]),
@@ -213,33 +215,41 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
     // Display Value
     defs.insert(
         "$display_value".into(),
-        AgentDefinition::new("DisplayValue", "$display_value")
-            .with_title("Display Value")
-            // .with_description("Display value on the node")
-            .with_inputs(vec!["*"])
-            .with_display_config(HashMap::from([(
-                "value".into(),
-                AgentDisplayConfigEntry::new("object"),
-            )])),
+        AgentDefinition::new(
+            "DisplayValue",
+            "$display_value",
+            Some(new_boxed::<DisplayValueAgent>),
+        )
+        .with_title("Display Value")
+        // .with_description("Display value on the node")
+        .with_inputs(vec!["*"])
+        .with_display_config(HashMap::from([(
+            "value".into(),
+            AgentDisplayConfigEntry::new("object"),
+        )])),
     );
 
     // RegexFilterAgent
     defs.insert(
         "$regex_filter".into(),
-        AgentDefinition::new("RegexFilter", "$regex_filter")
-            .with_title("Regex Filter")
-            .with_inputs(vec!["*"])
-            .with_outputs(vec!["*"])
-            .with_default_config(HashMap::from([
-                (
-                    "field".into(),
-                    AgentConfigEntry::new(json!(""), "string").with_title("Field"),
-                ),
-                (
-                    "regex".into(),
-                    AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
-                ),
-            ])),
+        AgentDefinition::new(
+            "RegexFilter",
+            "$regex_filter",
+            Some(new_boxed::<RegexFilterAgent>),
+        )
+        .with_title("Regex Filter")
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["*"])
+        .with_default_config(HashMap::from([
+            (
+                "field".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Field"),
+            ),
+            (
+                "regex".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
+            ),
+        ])),
     );
 
     defs

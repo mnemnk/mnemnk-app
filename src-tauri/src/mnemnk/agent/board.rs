@@ -19,25 +19,6 @@ pub struct BoardInAgent {
 }
 
 impl BoardInAgent {
-    pub fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        let board_name = config.as_ref().and_then(normalize_board_name);
-        Ok(Self {
-            data: AgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
-            board_name,
-        })
-    }
-
     fn emit_publish(&self, kind: String, value: Value) {
         // remove image from the value. it's too big to send to frontend
         let mut value = value;
@@ -56,6 +37,25 @@ impl BoardInAgent {
 }
 
 impl AsAgent for BoardInAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        let board_name = config.as_ref().and_then(normalize_board_name);
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+            board_name,
+        })
+    }
+
     fn data(&self) -> &AgentData {
         &self.data
     }
@@ -102,8 +102,8 @@ pub struct BoardOutAgent {
     board_name: Option<String>,
 }
 
-impl BoardOutAgent {
-    pub fn new(
+impl AsAgent for BoardOutAgent {
+    fn new(
         app: AppHandle,
         id: String,
         def_name: String,
@@ -121,9 +121,7 @@ impl BoardOutAgent {
             board_name,
         })
     }
-}
 
-impl AsAgent for BoardOutAgent {
     fn data(&self) -> &AgentData {
         &self.data
     }

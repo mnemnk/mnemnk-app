@@ -7,7 +7,11 @@ use serde_json::Value;
 use tauri::AppHandle;
 use thiserror::Error;
 
-use super::{builtin::builtin_agent_defs, command::CommandAgent};
+use super::{
+    agent::{AgentConfig, AsyncAgent},
+    builtin::builtin_agent_defs,
+    command::CommandAgent,
+};
 use crate::mnemnk::settings;
 
 static AGENTS_DIR: &str = "agents";
@@ -44,6 +48,9 @@ pub struct AgentDefinition {
 
     // CommandAgent
     pub command: Option<CommandConfig>,
+
+    #[serde(skip)]
+    pub new_boxed: Option<AgentNewBoxedFn>,
 }
 
 pub type AgentDefaultConfig = HashMap<String, AgentConfigEntry>;
@@ -80,11 +87,19 @@ pub struct CommandConfig {
     pub dir: Option<String>,
 }
 
+pub type AgentNewBoxedFn = fn(
+    app: AppHandle,
+    id: String,
+    def_name: String,
+    config: Option<AgentConfig>,
+) -> Result<Box<dyn AsyncAgent>>;
+
 impl AgentDefinition {
-    pub fn new(kind: &str, name: &str) -> Self {
+    pub fn new(kind: &str, name: &str, new_boxed: Option<AgentNewBoxedFn>) -> Self {
         Self {
             kind: kind.into(),
             name: name.into(),
+            new_boxed,
             ..Default::default()
         }
     }
