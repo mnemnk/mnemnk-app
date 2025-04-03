@@ -27,7 +27,7 @@
     };
   };
 
-  let { id, data }: Props = $props();
+  let { id, data, ...props }: Props = $props();
 
   const agentDefaultConfig = getAgentDefinitionsContext()?.[data.name]?.default_config;
   const agentDisplayConfig = getAgentDefinitionsContext()?.[data.name]?.display_config;
@@ -151,11 +151,4 @@
   {/if}
 {/snippet}
 
-<NodeBase
-  {id}
-  enabled={data.enabled}
-  inputs={data.inputs}
-  outputs={data.outputs}
-  {title}
-  {contents}
-/>
+<NodeBase {id} {data} {title} {contents} {...props} />

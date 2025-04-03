@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  import { Handle, Position, useSvelteFlow } from "@xyflow/svelte";
-  import type { NodeProps } from "@xyflow/svelte";
+  import { Handle, NodeResizer, Position, useSvelteFlow } from "@xyflow/svelte";
+  import type { NodeProps, ResizeDragEvent, ResizeParams } from "@xyflow/svelte";
   import { Toggle } from "flowbite-svelte";
 
   import { startAgent, stopAgent } from "@/lib/agent";
@@ -10,14 +10,16 @@
   const DEFAULT_HANDLE_STYLE = "width: 10px; height: 10px;";
 
   type Props = NodeProps & {
-    enabled: boolean;
-    inputs: string[];
-    outputs: string[];
+    data: {
+      enabled: boolean;
+      inputs: string[];
+      outputs: string[];
+    };
     title: Snippet;
     contents: Snippet;
   };
 
-  let { id, enabled, inputs, outputs, title, contents }: Props = $props();
+  let { id, data, selected, height, title, contents }: Props = $props();
 
   const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
 
@@ -31,9 +33,16 @@
       await stopAgent(id);
     }
   }
+
+  let ht = $state(height);
+
+  function onResize(_ev: ResizeDragEvent, params: ResizeParams) {
+    ht = params.height;
+  }
 </script>
 
-{#each inputs as input, idx}
+<NodeResizer isVisible={selected} {onResize} />
+{#each data.inputs as input, idx}
   <Handle
     id={input}
     type="target"
@@ -48,14 +57,15 @@
   </div>
 {/each}
 <div
-  class={`${bgColors[enabled ? 1 : 0]} p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
+  class={`${bgColors[data.enabled ? 1 : 0]} p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
+  style:height={ht ? `${ht}px` : "auto"}
 >
   <div class="w-full flex justify-between pl-4 pr-0 mb-2">
     {@render title()}
     <div class="flex-none w-8"></div>
     <Toggle
-      checked={enabled}
-      onchange={() => updateEnabled(!enabled)}
+      checked={data.enabled}
+      onchange={() => updateEnabled(!data.enabled)}
       size="custom"
       customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
       class="col-span-6 pt-1"
@@ -63,7 +73,7 @@
   </div>
   {@render contents()}
 </div>
-{#each outputs as output, idx}
+{#each data.outputs as output, idx}
   <div
     class="absolute text-white opacity-20 hover:opacity-100"
     style={`top: ${idx * 30 + 30}px; left: 105%;`}
