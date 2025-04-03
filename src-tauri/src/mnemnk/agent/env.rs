@@ -148,7 +148,7 @@ impl AgentEnv {
         if agents.contains_key(&node.id) {
             bail!("Agent {} already exists", node.id);
         }
-        if let Ok(agent) = agent::new_agent(
+        if let Ok(agent) = agent::agent_new(
             self.app.clone(),
             self,
             node.id.clone(),

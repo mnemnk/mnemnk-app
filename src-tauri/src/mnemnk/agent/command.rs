@@ -16,6 +16,15 @@ pub struct CommandAgent {
 }
 
 impl AsAgent for CommandAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        CommandAgent::new(app, id, def_name, config)
+    }
+
     fn data(&self) -> &AgentData {
         &self.data
     }

@@ -29,6 +29,15 @@ pub enum AgentStatus {
 }
 
 pub trait Agent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self>
+    where
+        Self: Sized;
+
     fn app(&self) -> &AppHandle;
 
     fn env(&self) -> State<AgentEnv> {
@@ -107,6 +116,15 @@ pub type AgentConfigs = HashMap<String, AgentConfig>;
 pub type AgentConfig = HashMap<String, Value>;
 
 pub trait AsAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self>
+    where
+        Self: Sized;
+
     fn data(&self) -> &AgentData;
 
     fn mut_data(&mut self) -> &mut AgentData;
@@ -132,6 +150,17 @@ pub trait AsAgent {
 }
 
 impl<T: AsAgent> Agent for T {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        let mut agent = T::new(app, id, def_name, config)?;
+        agent.mut_data().status = AgentStatus::Init;
+        Ok(agent)
+    }
+
     fn app(&self) -> &AppHandle {
         &self.data().app
     }
@@ -175,10 +204,19 @@ impl<T: AsAgent> Agent for T {
     }
 }
 
-pub trait AsyncAgent: Agent + Send + Sync {}
-impl<T: Agent + Send + Sync> AsyncAgent for T {}
+pub trait AsyncAgent: Agent + Send + Sync + 'static {}
+impl<T: Agent + Send + Sync + 'static> AsyncAgent for T {}
 
-pub fn new_agent(
+pub fn new_boxed<T: AsyncAgent>(
+    app: AppHandle,
+    id: String,
+    def_name: String,
+    config: Option<AgentConfig>,
+) -> Result<Box<dyn AsyncAgent>> {
+    Ok(Box::new(T::new(app, id, def_name, config)?))
+}
+
+pub fn agent_new(
     app: AppHandle,
     env: &AgentEnv,
     agent_id: String,
@@ -194,41 +232,18 @@ pub fn new_agent(
             .clone();
     }
 
-    // TODO: Prepare a mapping from kind to the corresponding new function and use it to create the Agent
+    if let Some(new_boxed) = def.new_boxed {
+        return new_boxed(app, agent_id, def_name.to_string(), config);
+    }
+
     match def.kind.as_str() {
         "Command" => {
-            let agent =
-                super::command::CommandAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
-        }
-        "BoardIn" => {
-            let agent =
-                super::board::BoardInAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
-        }
-        "BoardOut" => {
-            let agent =
-                super::board::BoardOutAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
-        }
-        "Database" => {
-            let agent =
-                super::builtin::DatabaseAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
-        }
-        "DisplayValue" => {
-            let agent = super::builtin::DisplayValueAgent::new(
+            return new_boxed::<super::command::CommandAgent>(
                 app,
                 agent_id,
                 def_name.to_string(),
                 config,
-            )?;
-            return Ok(Box::new(agent));
-        }
-        "RegexFilter" => {
-            let agent =
-                super::builtin::RegexFilterAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
+            );
         }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
