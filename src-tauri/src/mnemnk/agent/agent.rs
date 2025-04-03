@@ -225,11 +225,6 @@ pub fn new_agent(
             )?;
             return Ok(Box::new(agent));
         }
-        "JsonPath" => {
-            let agent =
-                super::builtin::JsonPathAgent::new(app, agent_id, def_name.to_string(), config)?;
-            return Ok(Box::new(agent));
-        }
         "RegexFilter" => {
             let agent =
                 super::builtin::RegexFilterAgent::new(app, agent_id, def_name.to_string(), config)?;
