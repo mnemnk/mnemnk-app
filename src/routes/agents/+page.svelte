@@ -61,9 +61,11 @@
   const flows = data.agentFlows;
 
   let flowNames = $state<string[]>([]);
+
   function updateFlowNames() {
-    flowNames = Object.keys(flows);
+    flowNames = Object.keys(flows).sort();
   }
+
   $effect(() => {
     updateFlowNames();
   });
@@ -72,6 +74,7 @@
     // TODO: homepage in core setting
     defaultFlowName(),
   );
+
   function defaultFlowName() {
     return flows["main"] ? "main" : (Object.keys(flows)[0] ?? "");
   }
@@ -83,6 +86,7 @@
 
   let nodes = $state.raw<AgentFlowNode[]>([]);
   let edges = $state.raw<AgentFlowEdge[]>([]);
+
   $effect(() => {
     if (flowName in flows) {
       nodes = [...flows[flowName].nodes];
@@ -119,6 +123,7 @@
   $effect(() => {
     checkNodeChange(nodes);
   });
+
   $effect(() => {
     checkEdgeChange(edges);
   });
