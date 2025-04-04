@@ -12,7 +12,6 @@ import type {
   AgentFlowNodeDisplay,
   SAgentConfig,
   SAgentDefaultConfig,
-  SAgentDefinition,
   SAgentDefinitions,
   SAgentDisplayConfig,
   SAgentFlow,
