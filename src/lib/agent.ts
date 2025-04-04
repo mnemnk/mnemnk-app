@@ -158,9 +158,7 @@ export function deserializeAgentConfig(
       agent_config[key] = value.toString();
     } else if (t === "string") {
       agent_config[key] = value;
-    } else if (t === "string?") {
-      agent_config[key] = value ?? "";
-    } else if (t === "string[]") {
+    } else if (t === "text") {
       agent_config[key] = Array.isArray(value) ? value.join("\n") : "";
     } else if (t === "object") {
       agent_config[key] = JSON.stringify(value, null, 2);
@@ -256,9 +254,7 @@ export function serializeAgentFlowNodeConfig(
       config[key] = parseFloat(value);
     } else if (t === "string") {
       config[key] = value;
-    } else if (t === "string?") {
-      config[key] = value === "" ? null : value;
-    } else if (t === "string[]") {
+    } else if (t === "text") {
       config[key] = value.split("\n");
     } else if (t === "object") {
       config[key] = JSON.parse(value);
