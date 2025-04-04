@@ -158,6 +158,28 @@ fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<S
 }
 
 #[tauri::command]
+pub fn delete_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<(), String> {
+    delete_agent_flow(&env, &name).map_err(|e| e.to_string())
+}
+
+fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
+    let mut flows = env.flows.lock().unwrap();
+    let Some(flow) = flows.remove(name) else {
+        bail!("flow::delete_agent_flow: Agent flow {} not found", name);
+    };
+
+    let Some(path) = &flow.path else {
+        // Flow is not saved to a file, so just remove it from the flows
+        return Ok(());
+    };
+
+    // Delete the file
+    std::fs::remove_file(path).context("Failed to delete agent flow file")?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn save_agent_flow_cmd(
     app: AppHandle,
     env: State<AgentEnv>,

@@ -2,15 +2,15 @@
   import { MegaMenu } from "flowbite-svelte";
 
   interface Props {
-    flows: Record<string, any>;
+    flowNames: string[];
     onChangeFlow?: (flowName: string) => void;
     open?: boolean;
   }
 
-  let { flows, onChangeFlow, open = $bindable(false) }: Props = $props();
+  let { flowNames, onChangeFlow, open = $bindable(false) }: Props = $props();
 
   let flowMenuItems = $derived(
-    Object.keys(flows).map((key) => {
+    flowNames.map((key) => {
       return { name: key };
     }),
   );
