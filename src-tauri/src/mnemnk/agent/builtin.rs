@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::AppHandle;
 
-use super::agent::{new_boxed, Agent, AgentConfig, AgentData, AsAgent};
+use super::agent::{new_boxed, Agent, AgentConfig, AgentData, AgentStatus, AsAgent};
 use super::definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
 };
@@ -198,15 +198,21 @@ impl AsAgent for BooleanInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("boolean")
-            .context("Missing boolean")?;
-        self.try_output("boolean".to_string(), value.clone())
-            .context("Failed to output value")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("boolean")
+                .context("Missing boolean")?;
+            self.try_output("boolean".to_string(), value.clone())
+                .context("Failed to output value")?;
+        }
+
         Ok(())
     }
 
@@ -248,15 +254,21 @@ impl AsAgent for IntegerInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("integer")
-            .context("Missing integer")?;
-        self.try_output("integer".to_string(), value.clone())
-            .context("Failed to output value")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("integer")
+                .context("Missing integer")?;
+            self.try_output("integer".to_string(), value.clone())
+                .context("Failed to output value")?;
+        }
+
         Ok(())
     }
 
@@ -298,15 +310,21 @@ impl AsAgent for NumberInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("number")
-            .context("Missing number")?;
-        self.try_output("number".to_string(), value.clone())
-            .context("Failed to output value")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("number")
+                .context("Missing number")?;
+            self.try_output("number".to_string(), value.clone())
+                .context("Failed to output value")?;
+        }
+
         Ok(())
     }
 
@@ -348,15 +366,21 @@ impl AsAgent for StringInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("string")
-            .context("Missing string")?;
-        self.try_output("string".to_string(), value.clone())
-            .context("Failed to output value")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("string")
+                .context("Missing string")?;
+            self.try_output("string".to_string(), value.clone())
+                .context("Failed to output value")?;
+        }
+
         Ok(())
     }
 
@@ -398,15 +422,21 @@ impl AsAgent for TextInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("text")
-            .context("Missing text")?;
-        self.try_output("text".to_string(), value.clone())
-            .context("Failed to output text")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("text")
+                .context("Missing text")?;
+            self.try_output("text".to_string(), value.clone())
+                .context("Failed to output text")?;
+        }
+
         Ok(())
     }
 
@@ -448,15 +478,21 @@ impl AsAgent for ObjectInputAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.mut_data().config = Some(config);
-        let value = self
-            .data
-            .config
-            .as_ref()
-            .context("Missing config")?
-            .get("object")
-            .context("Missing object")?;
-        self.try_output("object".to_string(), value.clone())
-            .context("Failed to output value")?;
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            let value = self
+                .data
+                .config
+                .as_ref()
+                .context("Missing config")?
+                .get("object")
+                .context("Missing object")?;
+            self.try_output("object".to_string(), value.clone())
+                .context("Failed to output value")?;
+        }
+
         Ok(())
     }
 

@@ -3,7 +3,7 @@ use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter};
 
-use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
+use super::agent::{Agent, AgentConfig, AgentData, AgentStatus, AsAgent};
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
@@ -157,20 +157,22 @@ impl AsAgent for BoardOutAgent {
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
-            if let Some(board_name) = &self.board_name {
-                let env = self.env();
-                let mut board_nodes = env.board_nodes.lock().unwrap();
-                if let Some(nodes) = board_nodes.get_mut(board_name) {
-                    nodes.retain(|x| x != &self.data.id);
+            if *self.status() == AgentStatus::Run {
+                if let Some(board_name) = &self.board_name {
+                    let env = self.env();
+                    let mut board_nodes = env.board_nodes.lock().unwrap();
+                    if let Some(nodes) = board_nodes.get_mut(board_name) {
+                        nodes.retain(|x| x != &self.data.id);
+                    }
                 }
-            }
-            if let Some(board_name) = &board_name {
-                let env = self.env();
-                let mut board_nodes = env.board_nodes.lock().unwrap();
-                if let Some(nodes) = board_nodes.get_mut(board_name) {
-                    nodes.push(self.data.id.clone());
-                } else {
-                    board_nodes.insert(board_name.clone(), vec![self.data.id.clone()]);
+                if let Some(board_name) = &board_name {
+                    let env = self.env();
+                    let mut board_nodes = env.board_nodes.lock().unwrap();
+                    if let Some(nodes) = board_nodes.get_mut(board_name) {
+                        nodes.push(self.data.id.clone());
+                    } else {
+                        board_nodes.insert(board_name.clone(), vec![self.data.id.clone()]);
+                    }
                 }
             }
             self.board_name = board_name;
