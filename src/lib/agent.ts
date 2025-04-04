@@ -151,7 +151,7 @@ export function deserializeAgentConfig(
     if (t === null) {
       continue;
     } else if (t === "boolean") {
-      agent_config[key] = value ? "true" : "false";
+      agent_config[key] = value;
     } else if (t === "integer") {
       agent_config[key] = value.toString();
     } else if (t === "number") {
@@ -161,7 +161,7 @@ export function deserializeAgentConfig(
     } else if (t === "string?") {
       agent_config[key] = value ?? "";
     } else if (t === "string[]") {
-      agent_config[key] = value.join("\n");
+      agent_config[key] = Array.isArray(value) ? value.join("\n") : "";
     } else if (t === "object") {
       agent_config[key] = JSON.stringify(value, null, 2);
     }
@@ -249,7 +249,7 @@ export function serializeAgentFlowNodeConfig(
     const t = entry.type;
     const value = node_config[key];
     if (t === "boolean") {
-      config[key] = value === "true";
+      config[key] = value;
     } else if (t === "integer") {
       config[key] = parseInt(value);
     } else if (t === "number") {
