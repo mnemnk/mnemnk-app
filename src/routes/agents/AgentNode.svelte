@@ -70,83 +70,88 @@
 {/snippet}
 
 {#snippet contents()}
-  {#if data.description}
-    <h4 class="text-sm pl-4 pb-4">{data.description}</h4>
-  {/if}
+  <h4 class="flex-none text-xs text-gray-500 pl-4 pb-4">{data.description}</h4>
 
   {#if agentDefaultConfig}
-    <form class="grid grid-cols-6 gap-4 p-4">
+    <form class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDefaultConfig as [key, default_config]}
         {@const config = data.config[key]}
-        <Label class="col-span-6 space-y-2">
-          <h3>{default_config?.title || key}</h3>
-          <p class="text-xs text-gray-500">{default_config?.description}</p>
-          {#if default_config?.type === "boolean"}
-            <Toggle checked={config} onchange={() => updateConfig(key, !data.config[key])} />
-          {:else if default_config?.type === "integer"}
-            <NumberInput
-              value={config}
-              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-            />
-          {:else if default_config?.type === "number"}
-            <Input
-              type="text"
-              value={config}
-              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-            />
-          {:else if default_config?.type === "string"}
-            <Input
-              type="text"
-              value={config}
-              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-            />
-          {:else if default_config?.type === "text"}
-            <Textarea
-              value={config}
-              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-              rows={4}
-            />
-          {:else if default_config?.type === "object"}
-            <Textarea
-              value={config}
-              onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
-              rows={4}
-            />
-          {:else}
-            <Input type="text" value={JSON.stringify(config, null, 2)} disabled />
-          {/if}
-        </Label>
+        {@const ty = default_config?.type}
+        <h3 class="flex-none">{default_config?.title || key}</h3>
+        {#if default_config?.description}
+          <p class="flex-none text-xs text-gray-500">{default_config?.description}</p>
+        {/if}
+        {#if ty === "boolean"}
+          <Toggle
+            class="flex-none"
+            checked={config}
+            onchange={() => updateConfig(key, !data.config[key])}
+          />
+        {:else if ty === "integer"}
+          <NumberInput
+            class="flex-none"
+            value={config}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+          />
+        {:else if ty === "number"}
+          <Input
+            class="flex-none"
+            type="text"
+            value={config}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+          />
+        {:else if ty === "string"}
+          <Input
+            class="flex-none"
+            type="text"
+            value={config}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+          />
+        {:else if ty === "text"}
+          <Textarea
+            class="grow"
+            value={config}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+          />
+        {:else if ty === "object"}
+          <Textarea
+            class="grow"
+            value={config}
+            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+          />
+        {:else}
+          <Textarea class="grow" value={JSON.stringify(config, null, 2)} disabled />
+        {/if}
       {/each}
     </form>
   {/if}
 
   {#if agentDisplayConfig}
-    <div class="grid grid-cols-6 gap-4 p-4">
+    <div class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDisplayConfig as [key, display_config]}
+        <h3 class="flex-none">{display_config?.title || key}</h3>
+        <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
         {@const display = data.display[key]}
-        <Label class="col-span-6 space-y-2">
-          <h3>{display_config?.title || key}</h3>
-          <p class="text-xs text-gray-500">{display_config?.description}</p>
-          {#if display_config?.type === "boolean"}
-            {#if display}
-              <div>true</div>
-            {:else}
-              <div>false</div>
-            {/if}
-          {:else if display_config?.type === "integer"}
-            <div>{display}</div>
-          {:else if display_config?.type === "number"}
-            <div>{display}</div>
-          {:else if display_config?.type === "string"}
-            <pre>{display}</pre>
-          {:else if display_config?.type === "text"}
-            <pre>{display.join("\n")}</pre>
-          {:else if display_config?.type === "object"}
-            <pre>{JSON.stringify(display, null, 2)}</pre>
+        {@const ty = display_config?.type}
+        {#if ty === "boolean"}
+          {#if display}
+            <div class="flex-none">true</div>
           {:else}
-            <pre>{JSON.stringify(display, null, 2)}</pre>
+            <div class="flex-none">false</div>
           {/if}
-        </Label>
+        {:else if ty === "integer"}
+          <div class="flex-none">{display}</div>
+        {:else if ty === "number"}
+          <div class="flex-none">{display}</div>
+        {:else if ty === "string"}
+          <pre class="flex-none">{display}</pre>
+        {:else if ty === "text"}
+          <pre class="grow">{display.join("\n")}</pre>
+        {:else if ty === "object"}
+          <pre class="grow">{JSON.stringify(display, null, 2)}</pre>
+        {:else}
+          <pre class="grow">{JSON.stringify(display, null, 2)}</pre>
+        {/if}
       {/each}
     </div>
   {/if}
