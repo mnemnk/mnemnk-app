@@ -165,6 +165,306 @@ impl AsAgent for RegexFilterAgent {
     }
 }
 
+// Boolean Input
+pub struct BooleanInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for BooleanInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("boolean")
+            .context("Missing boolean")?;
+        self.try_output("boolean".to_string(), value.clone())
+            .context("Failed to output value")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+// Integer Input
+pub struct IntegerInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for IntegerInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("integer")
+            .context("Missing integer")?;
+        self.try_output("integer".to_string(), value.clone())
+            .context("Failed to output value")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+// Number Input
+pub struct NumberInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for NumberInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("number")
+            .context("Missing number")?;
+        self.try_output("number".to_string(), value.clone())
+            .context("Failed to output value")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+// String Input
+pub struct StringInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for StringInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("string")
+            .context("Missing string")?;
+        self.try_output("string".to_string(), value.clone())
+            .context("Failed to output value")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+// Text Input
+pub struct TextInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for TextInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("text")
+            .context("Missing text")?;
+        self.try_output("text".to_string(), value.clone())
+            .context("Failed to output text")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+// Object Input
+pub struct ObjectInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for ObjectInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+        let value = self
+            .data
+            .config
+            .as_ref()
+            .context("Missing config")?
+            .get("object")
+            .context("Missing object")?;
+        self.try_output("object".to_string(), value.clone())
+            .context("Failed to output value")?;
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
 
@@ -249,6 +549,102 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
                 AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
             ),
         ]),
+    );
+
+    // Boolean Input
+    defs.insert(
+        "$boolean_input".into(),
+        AgentDefinition::new(
+            "BooleanInput",
+            "$boolean_input",
+            Some(new_boxed::<BooleanInputAgent>),
+        )
+        .with_title("Boolean Input")
+        .with_outputs(vec!["boolean"])
+        .with_default_config(vec![(
+            "boolean".into(),
+            AgentConfigEntry::new(json!(false), "boolean"),
+        )]),
+    );
+
+    // Integer Input
+    defs.insert(
+        "$integer_input".into(),
+        AgentDefinition::new(
+            "IntegerInput",
+            "$integer_input",
+            Some(new_boxed::<IntegerInputAgent>),
+        )
+        .with_title("Integer Input")
+        .with_outputs(vec!["integer"])
+        .with_default_config(vec![(
+            "integer".into(),
+            AgentConfigEntry::new(json!(0), "integer"),
+        )]),
+    );
+
+    // Number Input
+    defs.insert(
+        "$number_input".into(),
+        AgentDefinition::new(
+            "NumberInput",
+            "$number_input",
+            Some(new_boxed::<NumberInputAgent>),
+        )
+        .with_title("Number Input")
+        .with_outputs(vec!["number"])
+        .with_default_config(vec![(
+            "number".into(),
+            AgentConfigEntry::new(json!(0.0), "number"),
+        )]),
+    );
+
+    // String Input
+    defs.insert(
+        "$string_input".into(),
+        AgentDefinition::new(
+            "StringInput",
+            "$string_input",
+            Some(new_boxed::<StringInputAgent>),
+        )
+        .with_title("String Input")
+        .with_outputs(vec!["string"])
+        .with_default_config(vec![(
+            "string".into(),
+            AgentConfigEntry::new(json!(""), "string"),
+        )]),
+    );
+
+    // Text Input
+    defs.insert(
+        "$text_input".into(),
+        AgentDefinition::new(
+            "TextInput",
+            "$text_input",
+            Some(new_boxed::<TextInputAgent>),
+        )
+        .with_title("Text Input")
+        .with_outputs(vec!["text"])
+        .with_default_config(vec![(
+            "text".into(),
+            AgentConfigEntry::new(json!(""), "string[]"),
+        )]),
+    );
+
+    // Object Input
+    defs.insert(
+        "$object_input".into(),
+        AgentDefinition::new(
+            "ObjectInput",
+            "$object_input",
+            Some(new_boxed::<ObjectInputAgent>),
+        )
+        .with_title("Object Input")
+        .with_outputs(vec!["object"])
+        .with_default_config(vec![(
+            "object".into(),
+            AgentConfigEntry::new(Value::Null, "object"),
+        )]),
     );
 
     defs
