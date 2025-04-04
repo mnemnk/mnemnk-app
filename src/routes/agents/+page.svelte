@@ -15,7 +15,12 @@
     NavLi,
     NavUl,
   } from "flowbite-svelte";
-  import { ChevronDownOutline, PauseOutline, PlayOutline } from "flowbite-svelte-icons";
+  import {
+    ChevronDownOutline,
+    ExclamationCircleOutline,
+    PauseOutline,
+    PlayOutline,
+  } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
 
   import {
@@ -35,6 +40,7 @@
     startAgent,
     stopAgent,
     renameAgentFlow,
+    deleteAgentFlow,
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
@@ -54,29 +60,35 @@
   const agentDefs = data.agentDefs;
   const flows = data.agentFlows;
 
-  let nodes = $state.raw<AgentFlowNode[]>([]);
-  let edges = $state.raw<AgentFlowEdge[]>([]);
+  let flowNames = $state<string[]>([]);
+  function updateFlowNames() {
+    flowNames = Object.keys(flows);
+  }
+  $effect(() => {
+    updateFlowNames();
+  });
+
   let flowName = $state(
     // TODO: homepage in core setting
-    flows["main"] ? "main" : (Object.keys(flows)[0] ?? ""),
+    defaultFlowName(),
   );
-
-  $effect(() => {
-    if (flowName in flows) {
-      nodes = [...flows[flowName].nodes];
-      edges = [...flows[flowName].edges];
-    }
-  });
+  function defaultFlowName() {
+    return flows["main"] ? "main" : (Object.keys(flows)[0] ?? "");
+  }
 
   function changeFlowName(name: string) {
     syncFlow();
     flowName = name;
   }
 
-  function syncFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
-    flows[flowName] = deserializeAgentFlow(flow, agentDefs);
-  }
+  let nodes = $state.raw<AgentFlowNode[]>([]);
+  let edges = $state.raw<AgentFlowEdge[]>([]);
+  $effect(() => {
+    if (flowName in flows) {
+      nodes = [...flows[flowName].nodes];
+      edges = [...flows[flowName].edges];
+    }
+  });
 
   async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
@@ -110,6 +122,11 @@
   $effect(() => {
     checkEdgeChange(edges);
   });
+
+  function syncFlow() {
+    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
+    flows[flowName] = deserializeAgentFlow(flow, agentDefs);
+  }
 
   // shortcuts
 
@@ -145,7 +162,7 @@
   let newFlowModal = $state(false);
   let newFlowName = $state("");
 
-  async function onNewFlow() {
+  function onNewFlow() {
     newFlowName = "";
     newFlowModal = true;
   }
@@ -156,6 +173,7 @@
     const flow = await newAgentFlow(newFlowName);
     if (!flow) return;
     flows[flow.name] = deserializeAgentFlow(flow, agentDefs);
+    updateFlowNames();
     changeFlowName(flow.name);
   }
 
@@ -164,7 +182,7 @@
   let renameFlowModal = $state(false);
   let renameFlowName = $state("");
 
-  async function onRenameFlow() {
+  function onRenameFlow() {
     renameFlowName = flowName;
     renameFlowModal = true;
   }
@@ -179,7 +197,27 @@
     flow.name = newName;
     flows[newName] = flow;
     delete flows[oldName];
+    updateFlowNames();
     changeFlowName(newName);
+  }
+
+  // Delete Flow
+
+  let deleteFlowModal = $state(false);
+
+  function onDeleteFlow() {
+    deleteFlowModal = true;
+  }
+
+  async function deleteFlow() {
+    deleteFlowModal = false;
+    const flow = flows[flowName];
+    if (!flow) return;
+    await deleteAgentFlow(flowName);
+    delete flows[flowName];
+    updateFlowNames();
+    // TODO: create a new flow when deleting the last flow
+    flowName = defaultFlowName();
   }
 
   async function onSaveFlow() {
@@ -211,6 +249,7 @@
     if (!sflow.nodes || !sflow.edges) return;
     const flow = deserializeAgentFlow(sflow, agentDefs);
     flows[flow.name] = flow;
+    updateFlowNames();
     changeFlowName(flow.name);
   }
 
@@ -285,6 +324,7 @@
       <Dropdown class="!bg-gray-100 dark:!bg-gray-900">
         <DropdownItem onclick={onNewFlow}>New</DropdownItem>
         <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
+        <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
         <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
         <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
         <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
@@ -292,7 +332,7 @@
       <NavLi>
         {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
-      <FlowMegaMenu {flows} onChangeFlow={changeFlowName} bind:open={openFlow} />
+      <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
       <NavLi>
         Agents<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
@@ -336,6 +376,19 @@
       </div>
       <div class="flex justify-end mt-4">
         <GradientButton color="pinkToOrange" onclick={renameFlow}>Rename</GradientButton>
+      </div>
+    </Modal>
+  {/if}
+
+  {#if deleteFlowModal}
+    <Modal title="Delete Flow" bind:open={deleteFlowModal} size="xs" autoclose>
+      <div class="text-center">
+        <ExclamationCircleOutline class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" />
+        <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+          Are you sure you want to delete this flow?
+        </h3>
+        <Button onclick={deleteFlow} color="red" class="me-2">Delete</Button>
+        <Button color="alternative">Cancel</Button>
       </div>
     </Modal>
   {/if}
