@@ -113,11 +113,8 @@ export function deserializeAgentFlowNode(
     type: "agent",
     data: {
       name: node.name,
-      title: agentDef?.title ?? null,
-      description: agentDef?.description ?? null,
       enabled: node.enabled,
-      inputs: agentDef?.inputs ?? [],
-      outputs: agentDef?.outputs ?? [],
+      title: node.title,
       config: deserializeAgentConfig(node.config, default_config),
       display: deserializeAgentDisplayConfig(display_config),
     },
@@ -217,11 +214,12 @@ export function serializeAgentFlowNode(
   return {
     id: node.id,
     name: node.data.name,
+    enabled: node.data.enabled,
     config: serializeAgentFlowNodeConfig(
       node.data.config,
       agent_configs[node.data.name].default_config,
     ),
-    enabled: node.data.enabled,
+    title: node.data.title,
     x: node.position.x,
     y: node.position.y,
     width: node.width,
@@ -291,6 +289,7 @@ export function newAgentFlowNode(def_name: string, agent_defs: SAgentDefinitions
     name: def_name,
     enabled: false,
     config,
+    title: null,
     x: 0,
     y: 0,
   };

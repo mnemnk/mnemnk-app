@@ -49,8 +49,9 @@ export type SAgentConfig = Record<string, any>;
 export type SAgentFlowNode = {
   id: string;
   name: string;
-  config: SAgentConfig | null;
   enabled: boolean;
+  config: SAgentConfig | null;
+  title: string | null;
   x: number;
   y: number;
   width?: number;
@@ -78,6 +79,7 @@ export type AgentFlowNode = Node & {
 export type AgentFlowNodeData = {
   name: string;
   enabled: boolean;
+  title: string | null;
   config: AgentFlowNodeConfig | null;
   display: AgentFlowNodeDisplay | null;
 };

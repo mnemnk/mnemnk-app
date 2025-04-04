@@ -3,7 +3,7 @@
   import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
-  import { Input, Label, NumberInput, Textarea, Toggle } from "flowbite-svelte";
+  import { Input, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
   import {
     getAgentDefinitionsContext,
@@ -11,18 +11,15 @@
     setAgentConfig,
   } from "@/lib/agent";
   import { subscribeDisplayMessage } from "@/lib/shared.svelte";
-  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
+  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay, SAgentDefinition } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
 
   type Props = NodeProps & {
     data: {
       name: string;
+      title: string | null;
       enabled: boolean;
-      title?: string | null;
-      description?: string | null;
-      inputs: string[];
-      outputs: string[];
       config: AgentFlowNodeConfig;
       display: AgentFlowNodeDisplay;
     };
@@ -30,8 +27,10 @@
 
   let { id, data, ...props }: Props = $props();
 
-  const agentDefaultConfig = getAgentDefinitionsContext()?.[data.name]?.default_config;
-  const agentDisplayConfig = getAgentDefinitionsContext()?.[data.name]?.display_config;
+  const agentDef = getAgentDefinitionsContext()?.[data.name];
+  const agentDefaultConfig = agentDef?.default_config;
+  const agentDisplayConfig = agentDef?.display_config;
+  const description = agentDef?.description;
 
   onMount(() => {
     if (!agentDisplayConfig) return;
@@ -63,14 +62,42 @@
       await setAgentConfig(id, sConfig);
     }
   }
+
+  let editTitle = $state(false);
 </script>
 
 {#snippet title()}
-  <h3 class="text-xl pt-2">{data.title ?? data.name}</h3>
+  {#if editTitle}
+    <div class="flex-none mt-2">
+      <Input
+        class=""
+        type="text"
+        value={data.title ?? agentDef?.title ?? data.name}
+        onblur={() => (editTitle = false)}
+        onkeydown={(evt) => {
+          if (evt.key === "Enter") {
+            const newTitle = evt.currentTarget.value;
+            if (newTitle === "" || newTitle === (agentDef?.title ?? data.name)) {
+              updateNodeData(id, { title: null });
+            } else if (newTitle !== data.title) {
+              updateNodeData(id, { title: newTitle });
+            }
+            editTitle = false;
+          }
+        }}
+      />
+    </div>
+  {:else}
+    <button type="button" onclick={() => (editTitle = true)} class="flex-none mt-2">
+      <h3 class="text-xl">
+        {data.title ?? agentDef?.title ?? data.name}
+      </h3>
+    </button>
+  {/if}
 {/snippet}
 
 {#snippet contents()}
-  <h4 class="flex-none text-xs text-gray-500 pl-4 pb-4">{data.description}</h4>
+  <h4 class="flex-none text-xs text-gray-500 pl-4 pb-4">{description}</h4>
 
   {#if agentDefaultConfig}
     <form class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
@@ -157,4 +184,4 @@
   {/if}
 {/snippet}
 
-<NodeBase {id} {data} {title} {contents} {...props} />
+<NodeBase {id} {data} {agentDef} {title} {contents} {...props} />
