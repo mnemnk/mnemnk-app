@@ -627,7 +627,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         .with_outputs(vec!["text"])
         .with_default_config(vec![(
             "text".into(),
-            AgentConfigEntry::new(json!(""), "string[]"),
+            AgentConfigEntry::new(json!(""), "text"),
         )]),
     );
 

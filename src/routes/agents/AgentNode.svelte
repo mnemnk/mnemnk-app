@@ -94,13 +94,13 @@
               value={config}
               onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
             />
-          {:else if default_config?.type === "string" || default_config?.type === "string?"}
+          {:else if default_config?.type === "string"}
             <Input
               type="text"
               value={config}
               onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
             />
-          {:else if default_config?.type === "string[]"}
+          {:else if default_config?.type === "text"}
             <Textarea
               value={config}
               onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
@@ -137,9 +137,9 @@
             <div>{display}</div>
           {:else if display_config?.type === "number"}
             <div>{display}</div>
-          {:else if display_config?.type === "string" || display_config?.type === "string?"}
+          {:else if display_config?.type === "string"}
             <pre>{display}</pre>
-          {:else if display_config?.type === "string[]"}
+          {:else if display_config?.type === "text"}
             <pre>{display.join("\n")}</pre>
           {:else if display_config?.type === "object"}
             <pre>{JSON.stringify(display, null, 2)}</pre>
