@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.13.3](https://github.com/mnemnk/mnemnk-app/compare/v0.13.2...v0.13.3) (2025-04-04)
+
+
+### Features
+
+* 🎸 agent category ([#191](https://github.com/mnemnk/mnemnk-app/issues/191)) ([9a7444b](https://github.com/mnemnk/mnemnk-app/commit/9a7444b3382f56fda9db71466a946803973272b8))
+* 🎸 agent list ([#190](https://github.com/mnemnk/mnemnk-app/issues/190)) ([77460ff](https://github.com/mnemnk/mnemnk-app/commit/77460ff6b55049d15030aac5c749b9c99b3fdc1e))
+* 🎸 rename node title ([#192](https://github.com/mnemnk/mnemnk-app/issues/192)) ([9214a03](https://github.com/mnemnk/mnemnk-app/commit/9214a03825bc47ba1ed1f32cc813078d7de17a4f)), closes [#188](https://github.com/mnemnk/mnemnk-app/issues/188)
+* 🎸 sort flow names in flow mega menu ([#193](https://github.com/mnemnk/mnemnk-app/issues/193)) ([4e21bee](https://github.com/mnemnk/mnemnk-app/commit/4e21beea228909c712a89b4254cf8f40598b7897))
+
 ## [0.13.2](https://github.com/mnemnk/mnemnk-app/compare/v0.13.1...v0.13.2) (2025-04-04)
 
 
