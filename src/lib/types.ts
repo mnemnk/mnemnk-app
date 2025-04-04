@@ -8,6 +8,7 @@ export type SAgentDefinition = {
   name: string;
   title: string | null;
   description: string | null;
+  category: string | null;
   path: string;
   inputs: string[] | null;
   outputs: string[] | null;

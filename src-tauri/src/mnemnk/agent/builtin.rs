@@ -501,6 +501,8 @@ impl AsAgent for ObjectInputAgent {
     }
 }
 
+// Agent Definitions
+
 pub fn builtin_agent_defs() -> AgentDefinitions {
     let mut defs: AgentDefinitions = Default::default();
 
@@ -513,6 +515,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<super::board::BoardInAgent>),
         )
         .with_title("Board In")
+        .with_category("Core")
         .with_inputs(vec!["*"])
         .with_default_config(vec![(
             "board_name".into(),
@@ -531,6 +534,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<super::board::BoardOutAgent>),
         )
         .with_title("Board Out")
+        .with_category("Core")
         .with_outputs(vec!["*"])
         .with_default_config(vec![(
             "board_name".into(),
@@ -544,6 +548,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         AgentDefinition::new("Database", "$database", Some(new_boxed::<DatabaseAgent>))
             .with_title("Database")
             .with_description("Store data")
+            .with_category("Core")
             .with_inputs(vec!["*"]),
     );
 
@@ -557,6 +562,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         )
         .with_title("Display Value")
         // .with_description("Display value on the node")
+        .with_category("Display")
         .with_inputs(vec!["*"])
         .with_display_config(vec![(
             "value".into(),
@@ -573,6 +579,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<RegexFilterAgent>),
         )
         .with_title("Regex Filter")
+        .with_category("String")
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
         .with_default_config(vec![
@@ -596,6 +603,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<BooleanInputAgent>),
         )
         .with_title("Boolean Input")
+        .with_category("Input")
         .with_outputs(vec!["boolean"])
         .with_default_config(vec![(
             "boolean".into(),
@@ -612,6 +620,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<IntegerInputAgent>),
         )
         .with_title("Integer Input")
+        .with_category("Input")
         .with_outputs(vec!["integer"])
         .with_default_config(vec![(
             "integer".into(),
@@ -628,6 +637,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<NumberInputAgent>),
         )
         .with_title("Number Input")
+        .with_category("Input")
         .with_outputs(vec!["number"])
         .with_default_config(vec![(
             "number".into(),
@@ -644,6 +654,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<StringInputAgent>),
         )
         .with_title("String Input")
+        .with_category("Input")
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "string".into(),
@@ -660,6 +671,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<TextInputAgent>),
         )
         .with_title("Text Input")
+        .with_category("Input")
         .with_outputs(vec!["text"])
         .with_default_config(vec![(
             "text".into(),
@@ -676,6 +688,7 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<ObjectInputAgent>),
         )
         .with_title("Object Input")
+        .with_category("Input")
         .with_outputs(vec!["object"])
         .with_default_config(vec![(
             "object".into(),
