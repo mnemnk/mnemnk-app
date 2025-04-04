@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.13.2](https://github.com/mnemnk/mnemnk-app/compare/v0.13.1...v0.13.2) (2025-04-04)
+
+
+### Features
+
+* 🎸 config types ([#181](https://github.com/mnemnk/mnemnk-app/issues/181)) ([9c36181](https://github.com/mnemnk/mnemnk-app/commit/9c361816143826a710e7bf1bb274c1d276be9eab))
+* 🎸 delete agent flow ([#187](https://github.com/mnemnk/mnemnk-app/issues/187)) ([e130c43](https://github.com/mnemnk/mnemnk-app/commit/e130c432f0200c05cd2dd399a662c866342896cb)), closes [#161](https://github.com/mnemnk/mnemnk-app/issues/161)
+* 🎸 grow textarea on resizing nodes ([#189](https://github.com/mnemnk/mnemnk-app/issues/189)) ([82c300d](https://github.com/mnemnk/mnemnk-app/commit/82c300de32628122f9e3a0fd507dd5ace8124dee)), closes [#170](https://github.com/mnemnk/mnemnk-app/issues/170)
+* 🎸 input agents ([#180](https://github.com/mnemnk/mnemnk-app/issues/180)) ([bb6b774](https://github.com/mnemnk/mnemnk-app/commit/bb6b774583eda0f6e97ab2ff6c597d03b8551c4a))
+
+
+### Bug Fixes
+
+* 🐛 disabled agents still work ([#182](https://github.com/mnemnk/mnemnk-app/issues/182)) ([a8cb918](https://github.com/mnemnk/mnemnk-app/commit/a8cb91855fb3f56bb34bd02b66f87d6fb1f63d73)), closes [#179](https://github.com/mnemnk/mnemnk-app/issues/179)
+* 🐛 inconsistent state between nodes and flows ([#184](https://github.com/mnemnk/mnemnk-app/issues/184)) ([c603576](https://github.com/mnemnk/mnemnk-app/commit/c6035765df156b912a8fc33cb3f32e48d9337174)), closes [#183](https://github.com/mnemnk/mnemnk-app/issues/183)
+* 🐛 re-enable MiniMap ([#186](https://github.com/mnemnk/mnemnk-app/issues/186)) ([6734a6e](https://github.com/mnemnk/mnemnk-app/commit/6734a6e3432aa1c5e69460b30d11997f81c8d2cf)), closes [#162](https://github.com/mnemnk/mnemnk-app/issues/162)
+
 ## [0.13.1](https://github.com/mnemnk/mnemnk-app/compare/v0.13.0...v0.13.1) (2025-04-03)
 
 
