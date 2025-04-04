@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::store;
 
-use super::env::AgentEnv;
+use super::{agent::AgentStatus, env::AgentEnv};
 
 #[derive(Clone, Debug)]
 pub enum AgentMessage {
@@ -83,10 +83,6 @@ pub fn try_send_store(app: &AppHandle, kind: String, value: Value) -> Result<()>
 
 // Processing AgentOut message
 async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
-    // Retrieve targets and enabled_nodes from agent_commands
-    // Nodes that are not enabled should have been removed from targets in sync_agent_flow,
-    // but consider the possibility that enabled_nodes may have changed since then.
-
     let env = app.state::<AgentEnv>();
 
     let targets;
@@ -140,6 +136,8 @@ async fn board_out(app: &AppHandle, kind: String, value: Value) {
     };
 
     for node in board_nodes {
+        // Perhaps we could process this by send_message_to BoardOutAgent
+
         let edges;
         {
             let env_edges = env.edges.lock().unwrap();
@@ -163,6 +161,9 @@ async fn board_out(app: &AppHandle, kind: String, value: Value) {
 
 fn send_message_to(env: &AgentEnv, target_id: &str, kind: String, value: Value) {
     if let Some(target_node) = env.agents.lock().unwrap().get_mut(target_id) {
+        if *target_node.status() != AgentStatus::Run {
+            return;
+        }
         target_node.input(kind, value).unwrap_or_else(|e| {
             log::error!("Failed to send message to {}: {}", target_id, e);
         });

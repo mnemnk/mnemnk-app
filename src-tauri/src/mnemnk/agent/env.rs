@@ -260,7 +260,7 @@ impl AgentEnv {
             bail!("Agent {} not found", agent_id);
         };
         if *agent.status() == agent::AgentStatus::Run
-            || *agent.status() == agent::AgentStatus::Starting
+            || *agent.status() == agent::AgentStatus::Start
         {
             log::info!("Stopping agent {}", agent_id);
             agent.stop()?;

@@ -23,9 +23,9 @@ pub enum AgentError {
 pub enum AgentStatus {
     #[default]
     Init,
-    Starting,
+    Start,
     Run,
-    Stopping,
+    Stop,
 }
 
 pub trait Agent {
@@ -186,14 +186,14 @@ impl<T: AsAgent> Agent for T {
     }
 
     fn start(&mut self) -> Result<()> {
-        self.mut_data().status = AgentStatus::Starting;
+        self.mut_data().status = AgentStatus::Start;
         self.start()?;
         self.mut_data().status = AgentStatus::Run;
         Ok(())
     }
 
     fn stop(&mut self) -> Result<()> {
-        self.mut_data().status = AgentStatus::Stopping;
+        self.mut_data().status = AgentStatus::Stop;
         self.stop()?;
         self.mut_data().status = AgentStatus::Init;
         Ok(())
