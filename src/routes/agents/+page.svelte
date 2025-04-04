@@ -44,7 +44,7 @@
   } from "@/lib/agent";
   import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
 
-  import AgentMegaMenu from "./AgentMegaMenu.svelte";
+  import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
   import FlowMegaMenu from "./FlowMegaMenu.svelte";
 
@@ -130,7 +130,7 @@
 
   // shortcuts
 
-  let openAgent = $state(false);
+  let hiddenAgents = $state(true);
   const key_open_agent = "a";
 
   let openFlow = $state(false);
@@ -143,7 +143,7 @@
     });
 
     hotkeys(key_open_agent, () => {
-      openAgent = !openAgent;
+      hiddenAgents = !hiddenAgents;
     });
 
     hotkeys(key_open_flow, () => {
@@ -316,6 +316,19 @@
     </ButtonGroup>
   </SvelteFlow>
 
+  <Button
+    onclick={() => {
+      console.log("clicked");
+      hiddenAgents = false;
+    }}
+    class="absolute top-4 right-4 z-20"
+    color="alternative"
+    size="xs"
+  >
+    Agents
+  </Button>
+  <AgentList {agentDefs} {onAddAgent} bind:hidden={hiddenAgents} />
+
   <Navbar class="fixed top-4 left-0 z-10 !bg-transparent">
     <NavUl>
       <NavLi>
@@ -333,10 +346,6 @@
         {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
       <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
-      <NavLi>
-        Agents<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
-      </NavLi>
-      <AgentMegaMenu {agentDefs} {onAddAgent} bind:open={openAgent} />
     </NavUl>
   </Navbar>
 
