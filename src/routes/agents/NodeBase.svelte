@@ -1,3 +1,7 @@
+<script lang="ts" module>
+  const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
+</script>
+
 <script lang="ts">
   import type { Snippet } from "svelte";
 
@@ -6,22 +10,23 @@
   import { Toggle } from "flowbite-svelte";
 
   import { startAgent, stopAgent } from "@/lib/agent";
+  import type { SAgentDefinition } from "@/lib/types";
 
   const DEFAULT_HANDLE_STYLE = "width: 10px; height: 10px;";
 
   type Props = NodeProps & {
     data: {
       enabled: boolean;
-      inputs: string[];
-      outputs: string[];
     };
+    agentDef: SAgentDefinition;
     title: Snippet;
     contents: Snippet;
   };
 
-  let { id, data, selected, height, title, contents }: Props = $props();
+  let { id, data, agentDef, selected, height, title, contents }: Props = $props();
 
-  const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
+  const inputs = agentDef?.inputs ?? [];
+  const outputs = agentDef?.outputs ?? [];
 
   const { updateNodeData } = useSvelteFlow();
 
@@ -42,7 +47,7 @@
 </script>
 
 <NodeResizer isVisible={selected} {onResize} />
-{#each data.inputs as input, idx}
+{#each inputs as input, idx}
   <Handle
     id={input}
     type="target"
@@ -75,7 +80,7 @@
     {@render contents()}
   </div>
 </div>
-{#each data.outputs as output, idx}
+{#each outputs as output, idx}
   <div
     class="absolute text-white opacity-20 hover:opacity-100"
     style={`top: ${idx * 30 + 30}px; left: 105%;`}
