@@ -1,14 +1,17 @@
 import type { SAgentDefinitions } from "$lib/types";
 
-import { getAgentFlows, getAgentDefs } from "@/lib/agent";
+import { deserializeAgentFlow, getAgentFlows, getAgentDefs } from "@/lib/agent";
 
 export async function load() {
-  const agent_defs: SAgentDefinitions = await getAgentDefs();
+  const agentDefs: SAgentDefinitions = await getAgentDefs();
 
-  let agent_flows = await getAgentFlows();
+  const sAgentFlows = await getAgentFlows();
+  const agentFlows = Object.fromEntries(
+    Object.entries(sAgentFlows).map(([key, flow]) => [key, deserializeAgentFlow(flow, agentDefs)]),
+  );
 
   return {
-    agent_defs,
-    agent_flows,
+    agentDefs,
+    agentFlows,
   };
 }
