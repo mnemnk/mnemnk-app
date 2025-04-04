@@ -45,32 +45,38 @@
   let { data } = $props();
 
   const { screenToFlowPosition, updateNodeData } = $derived(useSvelteFlow());
-  setAgentDefinitionsContext(data.agent_defs);
+  setAgentDefinitionsContext(data.agentDefs);
 
   const nodeTypes: NodeTypes = {
     agent: AgentNode,
   };
 
-  const agent_defs = data.agent_defs;
+  const agentDefs = data.agentDefs;
+  const flows = data.agentFlows;
 
   let nodes = $state.raw<AgentFlowNode[]>([]);
   let edges = $state.raw<AgentFlowEdge[]>([]);
-  let flows = $state(
-    Object.fromEntries(
-      Object.entries(data.agent_flows).map(([key, flow]) => [
-        key,
-        deserializeAgentFlow(flow, data.agent_defs),
-      ]),
-    ),
+  let flowName = $state(
+    // TODO: homepage in core setting
+    flows["main"] ? "main" : (Object.keys(flows)[0] ?? ""),
   );
-  let flowName = $state("main" in flows ? "main" : Object.keys(flows)[0] || "");
 
   $effect(() => {
     if (flowName in flows) {
-      nodes = flows[flowName].nodes;
-      edges = flows[flowName].edges;
+      nodes = [...flows[flowName].nodes];
+      edges = [...flows[flowName].edges];
     }
   });
+
+  function changeFlowName(name: string) {
+    syncFlow();
+    flowName = name;
+  }
+
+  function syncFlow() {
+    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
+    flows[flowName] = deserializeAgentFlow(flow, agentDefs);
+  }
 
   async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
@@ -100,6 +106,8 @@
 
   $effect(() => {
     checkNodeChange(nodes);
+  });
+  $effect(() => {
     checkEdgeChange(edges);
   });
 
@@ -147,8 +155,8 @@
     if (!newFlowName) return;
     const flow = await newAgentFlow(newFlowName);
     if (!flow) return;
-    flows[flow.name] = deserializeAgentFlow(flow, agent_defs);
-    flowName = flow.name;
+    flows[flow.name] = deserializeAgentFlow(flow, agentDefs);
+    changeFlowName(flow.name);
   }
 
   // Rename Flow
@@ -170,20 +178,20 @@
     const flow = flows[oldName];
     flow.name = newName;
     flows[newName] = flow;
-    flowName = newName;
     delete flows[oldName];
+    changeFlowName(newName);
   }
 
   async function onSaveFlow() {
     if (flowName in flows) {
-      const flow = serializeAgentFlow(nodes, edges, flowName, data.agent_defs);
+      const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
       await saveAgentFlow(flow);
-      flows[flowName] = deserializeAgentFlow(flow, data.agent_defs);
+      flows[flowName] = deserializeAgentFlow(flow, agentDefs);
     }
   }
 
   function onExportFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowName, agent_defs);
+    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -201,14 +209,13 @@
     if (!file) return;
     const sflow = await importAgentFlow(file);
     if (!sflow.nodes || !sflow.edges) return;
-    const flow = deserializeAgentFlow(sflow, agent_defs);
-    nodes = flow.nodes;
-    edges = flow.edges;
-    flowName = flow.name;
+    const flow = deserializeAgentFlow(sflow, agentDefs);
+    flows[flow.name] = flow;
+    changeFlowName(flow.name);
   }
 
   async function onAddAgent(agent_name: string) {
-    const snode = newAgentFlowNode(agent_name, agent_defs);
+    const snode = newAgentFlowNode(agent_name, agentDefs);
     const xy = screenToFlowPosition({
       x: window.innerWidth * 0.45,
       y: window.innerHeight * 0.3,
@@ -216,7 +223,7 @@
     snode.x = xy.x;
     snode.y = xy.y;
     await addAgentFlowNode(flowName, snode);
-    const new_node = deserializeAgentFlowNode(snode, agent_defs);
+    const new_node = deserializeAgentFlowNode(snode, agentDefs);
     flows[flowName].nodes.push(new_node);
     nodes = [...nodes, new_node];
   }
@@ -286,11 +293,11 @@
       <NavLi>
         {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
-      <FlowMegaMenu {flows} bind:flowName bind:open={openFlow} />
+      <FlowMegaMenu {flows} onChangeFlow={changeFlowName} bind:open={openFlow} />
       <NavLi>
         Agents<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
-      <AgentMegaMenu agentDefs={data.agent_defs} {onAddAgent} bind:open={openAgent} />
+      <AgentMegaMenu {agentDefs} {onAddAgent} bind:open={openAgent} />
     </NavUl>
   </Navbar>
 

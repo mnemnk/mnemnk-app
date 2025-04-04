@@ -3,11 +3,11 @@
 
   interface Props {
     flows: Record<string, any>;
-    flowName: string;
+    onChangeFlow?: (flowName: string) => void;
     open?: boolean;
   }
 
-  let { flows, flowName = $bindable(), open = $bindable(false) }: Props = $props();
+  let { flows, onChangeFlow, open = $bindable(false) }: Props = $props();
 
   let flowMenuItems = $derived(
     Object.keys(flows).map((key) => {
@@ -22,7 +22,7 @@
   let:item
   class="!bg-gray-100 dark:!bg-gray-900 border-none"
 >
-  <button type="button" onclick={() => (flowName = item.name)} class="m-1">
+  <button type="button" onclick={() => onChangeFlow?.(item.name)} class="m-1">
     {item.name}
   </button>
 </MegaMenu>
