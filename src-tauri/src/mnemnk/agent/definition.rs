@@ -40,6 +40,7 @@ pub struct AgentDefinition {
     pub name: String,
     pub title: Option<String>,
     pub description: Option<String>,
+    pub category: Option<String>,
     pub inputs: Option<Vec<String>>,
     pub outputs: Option<Vec<String>>,
     pub default_config: Option<AgentDefaultConfig>,
@@ -111,6 +112,11 @@ impl AgentDefinition {
 
     pub fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_category(mut self, category: &str) -> Self {
+        self.category = Some(category.into());
         self
     }
 
