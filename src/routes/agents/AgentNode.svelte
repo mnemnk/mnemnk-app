@@ -11,7 +11,7 @@
     setAgentConfig,
   } from "@/lib/agent";
   import { subscribeDisplayMessage } from "@/lib/shared.svelte";
-  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay, SAgentDefinition } from "@/lib/types";
+  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
 
