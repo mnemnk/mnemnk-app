@@ -91,6 +91,60 @@ struct DisplayValue {
     value: Value,
 }
 
+// Display Messages
+pub struct DisplayMessagesAgent {
+    data: AgentData,
+    messages: Vec<Value>,
+}
+
+impl AsAgent for DisplayMessagesAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+            messages: Default::default(),
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn input(&mut self, _kind: String, value: Value) -> Result<()> {
+        self.messages.push(value.clone());
+
+        let config = self.data.config.as_ref().context("Missing config")?;
+        let max_messages = config
+            .get("max_messages")
+            .context("Missing max_messages")?
+            .as_i64()
+            .context("max_messages is not a number")?;
+        if self.messages.len() > max_messages as usize {
+            self.messages.remove(0);
+        }
+
+        let display_value = DisplayValue {
+            kind: "messages".to_string(),
+            value: serde_json::to_value(&self.messages).context("Failed to serialize messages")?,
+        };
+        self.emit_display("messages".to_string(), json!(display_value))
+    }
+}
+
 // Regex Filter
 
 pub struct RegexFilterAgent {
@@ -567,6 +621,30 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         .with_display_config(vec![(
             "value".into(),
             AgentDisplayConfigEntry::new("object"),
+        )]),
+    );
+
+    // Display Messages
+    defs.insert(
+        "$display_messages".into(),
+        AgentDefinition::new(
+            "DisplayMessages",
+            "$display_messages",
+            Some(new_boxed::<DisplayMessagesAgent>),
+        )
+        .with_title("Display Messages")
+        .with_description("Display messages on the node")
+        .with_category("LLM")
+        .with_inputs(vec!["*"])
+        .with_default_config(vec![(
+            "max_messages".into(),
+            AgentConfigEntry::new(json!(10), "integer")
+                .with_title("Max Messages")
+                .with_description("Max number of messages to display"),
+        )])
+        .with_display_config(vec![(
+            "messages".into(),
+            AgentDisplayConfigEntry::new("messages"),
         )]),
     );
 
