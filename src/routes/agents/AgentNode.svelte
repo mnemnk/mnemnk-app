@@ -221,13 +221,13 @@
         {:else if ty === "number"}
           <div class="flex-none">{display}</div>
         {:else if ty === "string"}
-          <pre class="flex-none">{display}</pre>
+          <pre class="flex-none text-wrap">{display}</pre>
         {:else if ty === "text"}
-          <pre class="grow">{display.join("\n")}</pre>
+          <pre class="grow text-wrap">{display.join("\n")}</pre>
         {:else if ty === "object"}
-          <pre class="grow">{JSON.stringify(display, null, 2)}</pre>
+          <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
         {:else}
-          <pre class="grow">{JSON.stringify(display, null, 2)}</pre>
+          <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
         {/if}
       {/each}
     </div>
