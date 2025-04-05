@@ -23,31 +23,36 @@
 >
   <BottomNavItem btnName="Home" href="/" appBtnPosition="left">
     <HomeOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 focus:outline-none"
+      tabindex={-1}
     />
     <Tooltip arrow={false}>Home</Tooltip>
   </BottomNavItem>
   <BottomNavItem btnName="Monitor" href="/monitor" appBtnPosition="middle">
     <GridOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 focus:outline-none"
+      tabindex={-1}
     />
     <Tooltip arrow={false}>Monitor</Tooltip>
   </BottomNavItem>
   <BottomNavItem btnName="Agents" href="/agents" appBtnPosition="middle">
     <UsersOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 focus:outline-none"
+      tabindex={-1}
     />
     <Tooltip arrow={false}>Agents</Tooltip>
   </BottomNavItem>
   <BottomNavItem btnName="Search" href="/search" appBtnPosition="middle">
     <SearchOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 focus:outline-none"
+      tabindex={-1}
     />
     <Tooltip arrow={false}>Search</Tooltip>
   </BottomNavItem>
   <BottomNavItem btnName="Settings" href="/settings" appBtnPosition="right">
     <CogOutline
-      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+      class="w-4 h-4 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 focus:outline-none"
+      tabindex={-1}
     />
     <Tooltip arrow={false}>Settings</Tooltip>
   </BottomNavItem>
