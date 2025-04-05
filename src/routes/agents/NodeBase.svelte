@@ -74,6 +74,7 @@
       size="custom"
       customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
       class="flex-none pt-1"
+      tabindex={-1}
     ></Toggle>
   </div>
   <div class="w-full grow flex flex-col">

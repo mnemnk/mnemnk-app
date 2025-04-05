@@ -88,7 +88,7 @@
       />
     </div>
   {:else}
-    <button type="button" onclick={() => (editTitle = true)} class="flex-none mt-2">
+    <button type="button" onclick={() => (editTitle = true)} class="flex-none mt-2" tabindex={-1}>
       <h3 class="text-xl">
         {data.title ?? agentDef?.title ?? data.name}
       </h3>
