@@ -5,6 +5,7 @@
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
   import { Input, NumberInput, Textarea, Toggle, Tooltip } from "flowbite-svelte";
 
+  import Messages from "@/components/Messages.svelte";
   import {
     getAgentDefinitionsContext,
     serializeAgentFlowNodeConfig,
@@ -226,6 +227,8 @@
           <pre class="grow text-wrap">{display.join("\n")}</pre>
         {:else if ty === "object"}
           <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
+        {:else if ty === "messages"}
+          <Messages messages={display?.value} />
         {:else}
           <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
         {/if}
