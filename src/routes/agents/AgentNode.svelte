@@ -118,33 +118,80 @@
           <NumberInput
             class="flex-none"
             value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            onkeydown={(evt) => {
+              if (evt.key === "Enter") {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
+            onchange={(evt) => {
+              if (evt.currentTarget.value !== data.config[key]) {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
           />
         {:else if ty === "number"}
           <Input
             class="flex-none"
             type="text"
             value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            onkeydown={(evt) => {
+              if (evt.key === "Enter") {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
+            onchange={(evt) => {
+              if (evt.currentTarget.value !== data.config[key]) {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
           />
         {:else if ty === "string"}
           <Input
             class="flex-none"
             type="text"
             value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            onkeydown={(evt) => {
+              if (evt.key === "Enter") {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
+            onchange={(evt) => {
+              if (evt.currentTarget.value !== data.config[key]) {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
           />
         {:else if ty === "text"}
           <Textarea
             class="grow"
             value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            onkeydown={(evt) => {
+              if (evt.shiftKey && evt.key === "Enter") {
+                evt.preventDefault();
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
+            onchange={(evt) => {
+              if (evt.currentTarget.value !== data.config[key]) {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
           />
         {:else if ty === "object"}
           <Textarea
             class="grow"
             value={config}
-            onchange={(evt) => updateConfig(key, evt.currentTarget.value)}
+            onkeydown={(evt) => {
+              if (evt.shiftKey && evt.key === "Enter") {
+                evt.preventDefault();
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
+            onchange={(evt) => {
+              if (evt.currentTarget.value !== data.config[key]) {
+                updateConfig(key, evt.currentTarget.value);
+              }
+            }}
           />
         {:else}
           <Textarea class="grow" value={JSON.stringify(config, null, 2)} disabled />
