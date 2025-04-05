@@ -3,7 +3,7 @@
   import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
-  import { Input, NumberInput, Textarea, Toggle } from "flowbite-svelte";
+  import { Input, NumberInput, Textarea, Toggle, Tooltip } from "flowbite-svelte";
 
   import {
     getAgentDefinitionsContext,
@@ -93,6 +93,9 @@
         {data.title ?? agentDef?.title ?? data.name}
       </h3>
     </button>
+    {#if data.title}
+      <Tooltip placement="left">{agentDef?.title ?? data.name}</Tooltip>
+    {/if}
   {/if}
 {/snippet}
 
