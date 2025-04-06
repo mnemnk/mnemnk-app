@@ -302,7 +302,7 @@ fn copy_sub_flow(
             continue;
         };
         let mut new_edge = edge.clone();
-        new_edge.id = new_edge_id(source, target);
+        new_edge.id = new_edge_id(source, &edge.source_handle, target, &edge.target_handle);
         new_edge.source = source.clone();
         new_edge.target = target.clone();
         new_edges.push(new_edge);
@@ -315,9 +315,11 @@ fn new_node_id(def_name: &str) -> String {
     format!("{}_{}", def_name, nanoid!())
 }
 
-fn new_edge_id(source: &str, target: &str) -> String {
-    // not sure if we need to align the prefix
-    format!("xy-edge__{}-{}", source, target)
+fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &str) -> String {
+    format!(
+        "xy-edge__{}{}-{}{}",
+        source, source_handle, target, target_handle
+    )
 }
 
 #[tauri::command]
