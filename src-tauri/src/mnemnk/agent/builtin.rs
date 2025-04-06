@@ -206,6 +206,55 @@ impl AsAgent for RegexFilterAgent {
     }
 }
 
+// Unit Input
+pub struct UnitInputAgent {
+    data: AgentData,
+}
+
+impl AsAgent for UnitInputAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config);
+
+        // Since set_config is called even when the agent is not running,
+        // we need to check the status before outputting the value.
+        if *self.status() == AgentStatus::Run {
+            self.try_output("unit".to_string(), json!(()))
+                .context("Failed to output value")?;
+        }
+
+        Ok(())
+    }
+
+    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+        Ok(())
+    }
+}
+
 // Boolean Input
 pub struct BooleanInputAgent {
     data: AgentData,
@@ -734,6 +783,23 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         .with_display_config(vec![(
             "messages".into(),
             AgentDisplayConfigEntry::new("messages"),
+        )]),
+    );
+
+    // Unit Input
+    defs.insert(
+        "$unit_input".into(),
+        AgentDefinition::new(
+            "UnitInput",
+            "$unit_input",
+            Some(new_boxed::<UnitInputAgent>),
+        )
+        .with_title("Unit Input")
+        .with_category("Input")
+        .with_outputs(vec!["unit"])
+        .with_default_config(vec![(
+            "unit".into(),
+            AgentConfigEntry::new(json!(()), "unit"),
         )]),
     );
 
