@@ -317,7 +317,7 @@ fn new_node_id(def_name: &str) -> String {
 
 fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &str) -> String {
     format!(
-        "xy-edge__{}-{}-{}-{}",
+        "xy-edge__{}{}-{}{}",
         source, source_handle, target, target_handle
     )
 }
