@@ -737,30 +737,6 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         )]),
     );
 
-    // RegexFilterAgent
-    defs.insert(
-        "$regex_filter".into(),
-        AgentDefinition::new(
-            "RegexFilter",
-            "$regex_filter",
-            Some(new_boxed::<RegexFilterAgent>),
-        )
-        .with_title("Regex Filter")
-        .with_category("String")
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"])
-        .with_default_config(vec![
-            (
-                "field".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Field"),
-            ),
-            (
-                "regex".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
-            ),
-        ]),
-    );
-
     // Boolean Input
     defs.insert(
         "$boolean_input".into(),
@@ -881,6 +857,30 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
         )]),
     );
 
+    // RegexFilterAgent
+    defs.insert(
+        "$regex_filter".into(),
+        AgentDefinition::new(
+            "RegexFilter",
+            "$regex_filter",
+            Some(new_boxed::<RegexFilterAgent>),
+        )
+        .with_title("Regex Filter")
+        .with_category("Core/String")
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["*"])
+        .with_default_config(vec![
+            (
+                "field".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Field"),
+            ),
+            (
+                "regex".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
+            ),
+        ]),
+    );
+
     // Template String Agent
     defs.insert(
         "$template_string".into(),
@@ -890,12 +890,33 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<TemplateStringAgent>),
         )
         .with_title("Template String")
-        .with_category("Core")
+        .with_category("Core/String")
         .with_inputs(vec!["*"])
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "template".into(),
             AgentConfigEntry::new(json!(""), "string"),
+        )]),
+    );
+
+    // Template Text Agent
+    defs.insert(
+        "$template_text".into(),
+        AgentDefinition::new(
+            // We can use the kind as TemplateStringAgent,
+            // since the only difference is the config type,
+            // and we can use the same agent for both.
+            "TemplateString",
+            "$template_text",
+            Some(new_boxed::<TemplateStringAgent>),
+        )
+        .with_title("Template Text")
+        .with_category("Core/String")
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["string"])
+        .with_default_config(vec![(
+            "template".into(),
+            AgentConfigEntry::new(json!(""), "text"),
         )]),
     );
 
