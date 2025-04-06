@@ -168,16 +168,16 @@ impl AgentEnv {
         if let Some(targets) = edges.get_mut(&edge.source) {
             targets.push((
                 edge.target.clone(),
-                normalize_handle(&edge.source_handle),
-                normalize_handle(&edge.target_handle),
+                edge.source_handle.clone(),
+                edge.target_handle.clone(),
             ));
         } else {
             edges.insert(
                 edge.source.clone(),
                 vec![(
                     edge.target.clone(),
-                    normalize_handle(&edge.source_handle),
-                    normalize_handle(&edge.target_handle),
+                    edge.source_handle.clone(),
+                    edge.target_handle.clone(),
                 )],
             );
         }
@@ -287,17 +287,6 @@ impl AgentEnv {
     pub fn try_send_board_out(&self, kind: String, value: Value) -> Result<()> {
         message::try_send_board_out(self, kind, value)
     }
-}
-
-fn normalize_handle(handle: &str) -> String {
-    let mut handle = handle;
-
-    // "" -> "*"
-    if handle.is_empty() {
-        handle = "*";
-    }
-
-    handle.to_string()
 }
 
 #[tauri::command]
