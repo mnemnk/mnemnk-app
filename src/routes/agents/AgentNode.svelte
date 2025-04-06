@@ -224,7 +224,7 @@
         {:else if ty === "string"}
           <pre class="flex-none text-wrap">{display}</pre>
         {:else if ty === "text"}
-          <pre class="grow text-wrap">{display.join("\n")}</pre>
+          <pre class="grow text-wrap">{display}</pre>
         {:else if ty === "object"}
           <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
         {:else if ty === "messages"}
