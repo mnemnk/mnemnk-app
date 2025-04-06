@@ -94,9 +94,39 @@ export function deserializeAgentFlow(
   flow: SAgentFlow,
   agent_settings: SAgentDefinitions,
 ): AgentFlow {
+  // Deserialize nodes first
+  const nodes = flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings));
+
+  // Create a map to retrieve available handles from node IDs
+  const nodeHandles = new Map<string, { inputs: string[]; outputs: string[] }>();
+
+  nodes.forEach((node) => {
+    const def = agent_settings[node.data.name];
+    if (def) {
+      nodeHandles.set(node.id, {
+        inputs: def.inputs || [],
+        outputs: def.outputs || [],
+      });
+    }
+  });
+
+  // Filter only valid edges
+  const validEdges = flow.edges.filter((edge) => {
+    const sourceNode = nodeHandles.get(edge.source);
+    const targetNode = nodeHandles.get(edge.target);
+
+    if (!sourceNode || !targetNode) return false;
+
+    // Ensure that the source and target handles actually exist
+    const isSourceValid = sourceNode.outputs.includes(edge.source_handle ?? "");
+    const isTargetValid = targetNode.inputs.includes(edge.target_handle ?? "");
+
+    return isSourceValid && isTargetValid;
+  });
+
   return {
-    nodes: flow.nodes.map((node) => deserializeAgentFlowNode(node, agent_settings)),
-    edges: flow.edges.map((edge) => deserializeAgentFlowEdge(edge)),
+    nodes: nodes,
+    edges: validEdges.map((edge) => deserializeAgentFlowEdge(edge)),
     name: flow.name,
   };
 }
