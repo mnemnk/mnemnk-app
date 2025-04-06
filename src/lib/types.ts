@@ -22,18 +22,36 @@ export type SAgentGlobalConfig = [string, SAgentConfigEntry][];
 
 export type SAgentConfigEntry = {
   value: any;
-  type: string | null;
+  type: SAgentConfigValueType | null;
   title?: string | null;
   description?: string | null;
 };
+
+export type SAgentConfigValueType =
+  | "unit"
+  | "boolean"
+  | "integer"
+  | "number"
+  | "string"
+  | "text"
+  | "object";
 
 export type SAgentDisplayConfig = [string, SAgentDisplayConfigEntry][];
 
 export type SAgentDisplayConfigEntry = {
-  type: string | null;
+  type: SAgentDisplayConfigType | null;
   title?: string | null;
   description?: string | null;
 };
+
+export type SAgentDisplayConfigType =
+  | "boolean"
+  | "integer"
+  | "number"
+  | "string"
+  | "text"
+  | "object"
+  | "messages";
 
 export type SAgentFlows = Record<string, SAgentFlow>;
 

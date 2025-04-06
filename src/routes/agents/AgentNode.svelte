@@ -3,7 +3,7 @@
   import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
-  import { Input, NumberInput, Textarea, Toggle, Tooltip } from "flowbite-svelte";
+  import { Button, Input, NumberInput, Textarea, Toggle, Tooltip } from "flowbite-svelte";
 
   import Messages from "@/components/Messages.svelte";
   import {
@@ -112,7 +112,9 @@
         {#if default_config?.description}
           <p class="flex-none text-xs text-gray-500">{default_config?.description}</p>
         {/if}
-        {#if ty === "boolean"}
+        {#if ty === "unit"}
+          <Button color="alternative" class="flex-none" onclick={() => updateConfig(key, {})} />
+        {:else if ty === "boolean"}
           <Toggle
             class="flex-none"
             checked={config}
