@@ -900,11 +900,12 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
     );
 
     // Template Text Agent
-    // We can use the same agent as TemplateStringAgent,
-    // since the only difference is the config type.
     defs.insert(
         "$template_text".into(),
         AgentDefinition::new(
+            // We can use the kind as TemplateStringAgent,
+            // since the only difference is the config type,
+            // and we can use the same agent for both.
             "TemplateString",
             "$template_text",
             Some(new_boxed::<TemplateStringAgent>),
