@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use handlebars::Handlebars;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -592,6 +593,63 @@ impl AsAgent for AsKindAgent {
     }
 }
 
+// Template String Agent
+pub struct TemplateStringAgent {
+    data: AgentData,
+}
+
+impl AsAgent for TemplateStringAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AgentData {
+        &mut self.data
+    }
+
+    fn input(&mut self, _kind: String, value: Value) -> Result<()> {
+        if !value.is_object() {
+            // value is not an object
+            return Ok(());
+        }
+
+        let config = self.data.config.as_ref().context("Missing config")?;
+        let template = config
+            .get("template")
+            .context("Missing template")?
+            .as_str()
+            .context("template is not a string")?;
+        if template.is_empty() {
+            // template is not set
+            return Ok(());
+        }
+
+        let reg = Handlebars::new();
+        let out_value = reg.render_template(template, &value)?;
+
+        self.try_output("string".to_string(), json!(out_value))
+            .context("Failed to output template")?;
+        Ok(())
+    }
+}
+
 // Agent Definitions
 
 pub fn builtin_agent_defs() -> AgentDefinitions {
@@ -814,12 +872,30 @@ pub fn builtin_agent_defs() -> AgentDefinitions {
             Some(new_boxed::<AsKindAgent>),
         )
         .with_title("As Kind")
-        .with_category("Utility")
+        .with_category("Core")
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
         .with_default_config(vec![(
             "kind".into(),
             AgentConfigEntry::new(json!(""), "string").with_title("Kind"),
+        )]),
+    );
+
+    // Template String Agent
+    defs.insert(
+        "$template_string".into(),
+        AgentDefinition::new(
+            "TemplateString",
+            "$template_string",
+            Some(new_boxed::<TemplateStringAgent>),
+        )
+        .with_title("Template String")
+        .with_category("Core")
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["string"])
+        .with_default_config(vec![(
+            "template".into(),
+            AgentConfigEntry::new(json!(""), "string"),
         )]),
     );
 
