@@ -6,12 +6,12 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    Agent, AgentConfig, AgentConfigEntry, AsAgentData, AgentDefinition, AgentDefinitions, AsAgent,
 };
 
 // Regex Filter
 struct RegexFilterAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for RegexFilterAgent {
@@ -22,7 +22,7 @@ impl AsAgent for RegexFilterAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -32,11 +32,11 @@ impl AsAgent for RegexFilterAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -84,7 +84,7 @@ impl AsAgent for RegexFilterAgent {
 
 // Template String Agent
 struct TemplateStringAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for TemplateStringAgent {
@@ -95,7 +95,7 @@ impl AsAgent for TemplateStringAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -105,11 +105,11 @@ impl AsAgent for TemplateStringAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 

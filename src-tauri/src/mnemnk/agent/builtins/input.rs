@@ -4,13 +4,13 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
+    Agent, AgentConfig, AgentConfigEntry, AsAgentData, AgentDefinition, AgentDefinitions,
     AgentStatus, AsAgent,
 };
 
 // Unit Input
 struct UnitInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for UnitInputAgent {
@@ -21,7 +21,7 @@ impl AsAgent for UnitInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -31,11 +31,11 @@ impl AsAgent for UnitInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -59,7 +59,7 @@ impl AsAgent for UnitInputAgent {
 
 // Boolean Input
 struct BooleanInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for BooleanInputAgent {
@@ -70,7 +70,7 @@ impl AsAgent for BooleanInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -80,11 +80,11 @@ impl AsAgent for BooleanInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -115,7 +115,7 @@ impl AsAgent for BooleanInputAgent {
 
 // Integer Input
 struct IntegerInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for IntegerInputAgent {
@@ -126,7 +126,7 @@ impl AsAgent for IntegerInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -136,11 +136,11 @@ impl AsAgent for IntegerInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -171,7 +171,7 @@ impl AsAgent for IntegerInputAgent {
 
 // Number Input
 struct NumberInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for NumberInputAgent {
@@ -182,7 +182,7 @@ impl AsAgent for NumberInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -192,11 +192,11 @@ impl AsAgent for NumberInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -227,7 +227,7 @@ impl AsAgent for NumberInputAgent {
 
 // String Input
 struct StringInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for StringInputAgent {
@@ -238,7 +238,7 @@ impl AsAgent for StringInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -248,11 +248,11 @@ impl AsAgent for StringInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -283,7 +283,7 @@ impl AsAgent for StringInputAgent {
 
 // Text Input
 struct TextInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for TextInputAgent {
@@ -294,7 +294,7 @@ impl AsAgent for TextInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -304,11 +304,11 @@ impl AsAgent for TextInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -339,7 +339,7 @@ impl AsAgent for TextInputAgent {
 
 // Object Input
 struct ObjectInputAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for ObjectInputAgent {
@@ -350,7 +350,7 @@ impl AsAgent for ObjectInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -360,11 +360,11 @@ impl AsAgent for ObjectInputAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 

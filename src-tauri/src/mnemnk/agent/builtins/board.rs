@@ -5,8 +5,8 @@ use tauri::{AppHandle, Emitter};
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
-    AgentStatus, AsAgent,
+    Agent, AgentConfig, AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentStatus, AsAgent,
+    AsAgentData,
 };
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
@@ -18,7 +18,7 @@ struct WriteBoardMessage {
 }
 
 struct BoardInAgent {
-    data: AgentData,
+    data: AsAgentData,
     board_name: Option<String>,
 }
 
@@ -49,7 +49,7 @@ impl AsAgent for BoardInAgent {
     ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -60,11 +60,11 @@ impl AsAgent for BoardInAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -102,7 +102,7 @@ impl AsAgent for BoardInAgent {
 }
 
 struct BoardOutAgent {
-    data: AgentData,
+    data: AsAgentData,
     board_name: Option<String>,
 }
 
@@ -115,7 +115,7 @@ impl AsAgent for BoardOutAgent {
     ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -126,11 +126,11 @@ impl AsAgent for BoardOutAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -208,36 +208,28 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // BoardInAgent
     defs.insert(
         "$board_in".into(),
-        AgentDefinition::new(
-            "BoardIn",
-            "$board_in",
-            Some(new_boxed::<BoardInAgent>),
-        )
-        .with_title("Board In")
-        .with_category("Core")
-        .with_inputs(vec!["*"])
-        .with_default_config(vec![(
-            "board_name".into(),
-            AgentConfigEntry::new(json!(""), "string")
-                .with_title("Board Name")
-                .with_description("* = source kind"),
-        )]),
+        AgentDefinition::new("BoardIn", "$board_in", Some(new_boxed::<BoardInAgent>))
+            .with_title("Board In")
+            .with_category("Core")
+            .with_inputs(vec!["*"])
+            .with_default_config(vec![(
+                "board_name".into(),
+                AgentConfigEntry::new(json!(""), "string")
+                    .with_title("Board Name")
+                    .with_description("* = source kind"),
+            )]),
     );
 
     // BoardOutAgent
     defs.insert(
         "$board_out".into(),
-        AgentDefinition::new(
-            "BoardOut",
-            "$board_out",
-            Some(new_boxed::<BoardOutAgent>),
-        )
-        .with_title("Board Out")
-        .with_category("Core")
-        .with_outputs(vec!["*"])
-        .with_default_config(vec![(
-            "board_name".into(),
-            AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
-        )]),
+        AgentDefinition::new("BoardOut", "$board_out", Some(new_boxed::<BoardOutAgent>))
+            .with_title("Board Out")
+            .with_category("Core")
+            .with_outputs(vec!["*"])
+            .with_default_config(vec![(
+                "board_name".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
+            )]),
     );
 }

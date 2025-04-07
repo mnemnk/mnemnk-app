@@ -5,13 +5,13 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
+    Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
     AsAgent,
 };
 
 // Display Value
 struct DisplayValueAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for DisplayValueAgent {
@@ -22,7 +22,7 @@ impl AsAgent for DisplayValueAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -32,11 +32,11 @@ impl AsAgent for DisplayValueAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -54,7 +54,7 @@ struct DisplayValue {
 
 // Display Messages
 struct DisplayMessagesAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for DisplayMessagesAgent {
@@ -65,7 +65,7 @@ impl AsAgent for DisplayMessagesAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -75,11 +75,11 @@ impl AsAgent for DisplayMessagesAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 

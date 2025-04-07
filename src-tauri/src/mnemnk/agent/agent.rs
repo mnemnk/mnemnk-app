@@ -103,7 +103,7 @@ struct DisplayMessage {
     value: Value,
 }
 
-pub struct AgentData {
+pub struct AsAgentData {
     pub app: AppHandle,
 
     pub id: String,
@@ -125,9 +125,9 @@ pub trait AsAgent {
     where
         Self: Sized;
 
-    fn data(&self) -> &AgentData;
+    fn data(&self) -> &AsAgentData;
 
-    fn mut_data(&mut self) -> &mut AgentData;
+    fn mut_data(&mut self) -> &mut AsAgentData;
 
     fn config(&self) -> Option<&AgentConfig> {
         self.data().config.as_ref()

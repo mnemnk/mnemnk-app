@@ -4,12 +4,12 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    Agent, AgentConfig, AgentConfigEntry, AgentDefinition, AgentDefinitions, AsAgent, AsAgentData,
 };
 
 // As Kind Agent
 struct AsKindAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for AsKindAgent {
@@ -20,7 +20,7 @@ impl AsAgent for AsKindAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -30,11 +30,11 @@ impl AsAgent for AsKindAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
