@@ -129,33 +129,7 @@ fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
     Ok(flow)
 }
 
-#[tauri::command]
-pub fn get_agent_flows_cmd(env: State<AgentEnv>) -> Result<Value, String> {
-    let agent_flows;
-    {
-        let flows = env.flows.lock().unwrap();
-        agent_flows = flows.clone();
-    }
-    let value = serde_json::to_value(&agent_flows).map_err(|e| e.to_string())?;
-    Ok(value)
-}
-
-#[tauri::command]
-pub fn new_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<AgentFlow, String> {
-    let flow = env.new_agent_flow(&name).map_err(|e| e.to_string())?;
-    Ok(flow)
-}
-
-#[tauri::command]
-pub fn rename_agent_flow_cmd(
-    env: State<AgentEnv>,
-    old_name: String,
-    new_name: String,
-) -> Result<String, String> {
-    rename_agent_flow(&env, &old_name, &new_name).map_err(|e| e.to_string())
-}
-
-fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<String> {
+pub fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<String> {
     let new_name = env.rename_agent_flow(old_name, new_name)?;
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.get_mut(&new_name) else {
@@ -170,12 +144,7 @@ fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<S
     Ok(new_name)
 }
 
-#[tauri::command]
-pub fn delete_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<(), String> {
-    delete_agent_flow(&env, &name).map_err(|e| e.to_string())
-}
-
-fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
+pub fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.remove(name) else {
         bail!("flow::delete_agent_flow: Agent flow {} not found", name);
@@ -192,16 +161,7 @@ fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn save_agent_flow_cmd(
-    app: AppHandle,
-    env: State<AgentEnv>,
-    agent_flow: AgentFlow,
-) -> Result<(), String> {
-    save_agent_flow(&app, env, agent_flow).map_err(|e| e.to_string())
-}
-
-fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<()> {
+pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<()> {
     let name = agent_flow
         .name
         .clone()
@@ -237,12 +197,7 @@ fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow)
     Ok(())
 }
 
-#[tauri::command]
-pub fn import_agent_flow_cmd(env: State<AgentEnv>, path: String) -> Result<AgentFlow, String> {
-    import_agent_flow(&env, path).map_err(|e| e.to_string())
-}
-
-fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
+pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
     let mut flow = read_agent_flow(path)?;
 
@@ -322,15 +277,6 @@ fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &
     )
 }
 
-#[tauri::command]
-pub fn add_agent_flow_node_cmd(
-    env: State<AgentEnv>,
-    flow_name: String,
-    node: AgentFlowNode,
-) -> Result<(), String> {
-    add_agent_flow_node(&env, &flow_name, &node).map_err(|e| e.to_string())
-}
-
 pub fn add_agent_flow_node(env: &AgentEnv, flow_name: &str, node: &AgentFlowNode) -> Result<()> {
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.get_mut(flow_name) else {
@@ -338,15 +284,6 @@ pub fn add_agent_flow_node(env: &AgentEnv, flow_name: &str, node: &AgentFlowNode
     };
     flow.nodes.push(node.clone());
     env.add_agent(&node)
-}
-
-#[tauri::command]
-pub fn remove_agent_flow_node_cmd(
-    env: State<AgentEnv>,
-    flow_name: String,
-    node_id: String,
-) -> Result<(), String> {
-    remove_agent_flow_node(&env, &flow_name, &node_id).map_err(|e| e.to_string())
 }
 
 pub fn remove_agent_flow_node(env: &AgentEnv, flow_name: &str, node_id: &str) -> Result<()> {
@@ -358,15 +295,6 @@ pub fn remove_agent_flow_node(env: &AgentEnv, flow_name: &str, node_id: &str) ->
     env.remove_agent(&node_id)
 }
 
-#[tauri::command]
-pub fn add_agent_flow_edge_cmd(
-    env: State<AgentEnv>,
-    flow_name: String,
-    edge: AgentFlowEdge,
-) -> Result<(), String> {
-    add_agent_flow_edge(&env, &flow_name, &edge).map_err(|e| e.to_string())
-}
-
 pub fn add_agent_flow_edge(env: &AgentEnv, flow_name: &str, edge: &AgentFlowEdge) -> Result<()> {
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.get_mut(flow_name) else {
@@ -374,15 +302,6 @@ pub fn add_agent_flow_edge(env: &AgentEnv, flow_name: &str, edge: &AgentFlowEdge
     };
     flow.edges.push(edge.clone());
     env.add_edge(edge)
-}
-
-#[tauri::command]
-pub fn remove_agent_flow_edge_cmd(
-    env: State<AgentEnv>,
-    flow_name: String,
-    edge_id: String,
-) -> Result<(), String> {
-    remove_agent_flow_edge(&env, &flow_name, &edge_id).map_err(|e| e.to_string())
 }
 
 pub fn remove_agent_flow_edge(env: &AgentEnv, flow_name: &str, edge_id: &str) -> Result<()> {

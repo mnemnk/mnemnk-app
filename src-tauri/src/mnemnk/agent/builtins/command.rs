@@ -1,15 +1,13 @@
 use anyhow::{Context as _, Result};
 use serde_json::Value;
 use std::path::PathBuf;
-use std::time::Duration;
-use std::{env, vec};
+use std::vec;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-use super::env::AgentEnv;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AsAgent,
+    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
 };
 
 pub struct CommandAgent {
@@ -282,7 +280,7 @@ impl CommandAgent {
             // relative path
             let command_path = agent_dir
                 .join(&command.cmd[2..])
-                .with_extension(env::consts::EXE_EXTENSION);
+                .with_extension(std::env::consts::EXE_EXTENSION);
             if !command_path.exists() {
                 log::error!(
                     "Command not found: {} for {}",
@@ -297,49 +295,6 @@ impl CommandAgent {
             command.cmd = command_path.to_string_lossy().to_string();
         }
         Ok(())
-    }
-}
-
-pub fn quit(app: &AppHandle) {
-    let env = app.state::<AgentEnv>();
-    {
-        // send QUIT command to all agents
-        let mut agent_commands = env.commands.lock().unwrap();
-        let agent_ids = agent_commands.keys().cloned().collect::<vec::Vec<String>>();
-        for agent_id in agent_ids {
-            log::info!("Stopping agent: {}", agent_id);
-            // we cannot use stop_agent here because it will also try to lock aget_commands.
-            if let Some(child) = agent_commands.get_mut(&agent_id) {
-                child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
-                    log::error!("Failed to write to {}: {}", agent_id, e);
-                });
-            }
-        }
-    }
-
-    // wait for all agents to exit
-    for _ in 0..20 {
-        {
-            let agent_commands = env.commands.lock().unwrap();
-            if agent_commands.is_empty() {
-                return;
-            }
-        }
-        std::thread::sleep(Duration::from_millis(500));
-    }
-
-    {
-        // kill remaining agents
-        let mut agent_commands = env.commands.lock().unwrap();
-        let programs = agent_commands.keys().cloned().collect::<vec::Vec<String>>();
-        for program in programs {
-            log::warn!("Killing agent: {}", program);
-            if let Some(command) = agent_commands.remove(&program) {
-                command.kill().unwrap_or_else(|e| {
-                    log::error!("Failed to kill agent: {} {}", program, e);
-                });
-            }
-        }
     }
 }
 

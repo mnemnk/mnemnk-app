@@ -238,7 +238,7 @@ pub fn agent_new(
 
     match def.kind.as_str() {
         "Command" => {
-            return new_boxed::<super::command::CommandAgent>(
+            return new_boxed::<super::builtins::CommandAgent>(
                 app,
                 agent_id,
                 def_name.to_string(),
@@ -247,24 +247,4 @@ pub fn agent_new(
         }
         _ => return Err(AgentError::UnknownDefKind(def.kind.to_string()).into()),
     }
-}
-
-#[tauri::command]
-pub fn start_agent_cmd(env: State<AgentEnv>, agent_id: String) -> Result<(), String> {
-    env.start_agent(&agent_id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn stop_agent_cmd(env: State<AgentEnv>, agent_id: String) -> Result<(), String> {
-    env.stop_agent(&agent_id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn set_agent_config_cmd(
-    env: State<AgentEnv>,
-    agent_id: String,
-    config: AgentConfig,
-) -> Result<(), String> {
-    env.set_agent_config(&agent_id, config)
-        .map_err(|e| e.to_string())
 }

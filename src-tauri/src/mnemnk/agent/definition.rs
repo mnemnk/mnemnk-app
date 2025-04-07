@@ -7,11 +7,8 @@ use serde_json::Value;
 use tauri::AppHandle;
 use thiserror::Error;
 
+use super::agent::{AgentConfig, AsyncAgent};
 use super::builtins;
-use super::{
-    agent::{AgentConfig, AsyncAgent},
-    command::CommandAgent,
-};
 use crate::mnemnk::settings;
 
 static AGENTS_DIR: &str = "agents";
@@ -207,14 +204,12 @@ pub(super) fn init_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
     let mut defs: AgentDefinitions = Default::default();
 
     builtins::init_agent_defs(&mut defs);
+    read_mnemnk_jsons(app, &mut defs)?;
 
-    defs.extend(read_mnemnk_jsons(app)?);
     Ok(defs)
 }
 
-fn read_mnemnk_jsons(app: &AppHandle) -> Result<AgentDefinitions> {
-    let mut defs: AgentDefinitions = Default::default();
-
+fn read_mnemnk_jsons(app: &AppHandle, defs: &mut AgentDefinitions) -> Result<()> {
     // read agent definitions from agents directory
     let dir = agents_dir(app);
     if dir.is_none() {
@@ -237,7 +232,7 @@ fn read_mnemnk_jsons(app: &AppHandle) -> Result<AgentDefinitions> {
         }
     }
 
-    Ok(defs)
+    Ok(())
 }
 
 fn read_mnemnk_json(agent_dir: &PathBuf) -> Option<MnemnkJson> {
@@ -284,7 +279,7 @@ fn read_mnemnk_json(agent_dir: &PathBuf) -> Option<MnemnkJson> {
 
 fn post_process_agent_def(def: &mut AgentDefinition, agent_dir: &PathBuf) -> Result<()> {
     match def.kind.as_str() {
-        "Command" => CommandAgent::read_def(def, agent_dir)?,
+        "Command" => builtins::CommandAgent::read_def(def, agent_dir)?,
         _ => {}
     }
     Ok(())

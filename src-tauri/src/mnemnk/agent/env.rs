@@ -2,14 +2,15 @@ use anyhow::{bail, Context as _, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager, State};
+use std::time::Duration;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandChild;
 use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
 use super::agent::{self, AgentConfig, AsyncAgent};
-use super::definition::{init_agent_defs, AgentDefinition, AgentDefinitions};
+use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, AgentMessage};
 
@@ -287,15 +288,46 @@ impl AgentEnv {
     pub fn try_send_board_out(&self, kind: String, value: Value) -> Result<()> {
         message::try_send_board_out(self, kind, value)
     }
-}
 
-#[tauri::command]
-pub fn get_agent_defs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
-    let defs: HashMap<String, AgentDefinition>;
-    {
-        let env_defs = env.defs.lock().unwrap();
-        defs = env_defs.clone();
+    pub fn quit(&self) {
+        {
+            // send QUIT command to all agents
+            let mut agent_commands = self.commands.lock().unwrap();
+            let agent_ids = agent_commands.keys().cloned().collect::<Vec<String>>();
+            for agent_id in agent_ids {
+                log::info!("Stopping agent: {}", agent_id);
+                // we cannot use stop_agent here because it will also try to lock aget_commands.
+                if let Some(child) = agent_commands.get_mut(&agent_id) {
+                    child.write(".QUIT\n".as_bytes()).unwrap_or_else(|e| {
+                        log::error!("Failed to write to {}: {}", agent_id, e);
+                    });
+                }
+            }
+        }
+
+        // wait for all agents to exit
+        for _ in 0..20 {
+            {
+                let agent_commands = self.commands.lock().unwrap();
+                if agent_commands.is_empty() {
+                    return;
+                }
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+
+        {
+            // kill remaining agents
+            let mut agent_commands = self.commands.lock().unwrap();
+            let programs = agent_commands.keys().cloned().collect::<Vec<String>>();
+            for program in programs {
+                log::warn!("Killing agent: {}", program);
+                if let Some(command) = agent_commands.remove(&program) {
+                    command.kill().unwrap_or_else(|e| {
+                        log::error!("Failed to kill agent: {} {}", program, e);
+                    });
+                }
+            }
+        }
     }
-    let value = serde_json::to_value(defs).map_err(|e| e.to_string())?;
-    Ok(value)
 }
