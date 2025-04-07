@@ -7,9 +7,10 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-use super::agent::{Agent, AgentConfig, AgentData, AsAgent};
-use super::definition::{AgentDefinition, AgentDefinitionError};
 use super::env::AgentEnv;
+use crate::mnemnk::agent::{
+    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AsAgent,
+};
 
 pub struct CommandAgent {
     data: AgentData,
