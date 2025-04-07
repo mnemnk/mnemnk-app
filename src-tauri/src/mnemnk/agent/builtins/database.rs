@@ -4,13 +4,13 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    try_send_store, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    try_send_store, Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitions, AsAgent,
 };
 
 // Database
 
 struct DatabaseAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for DatabaseAgent {
@@ -21,7 +21,7 @@ impl AsAgent for DatabaseAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
@@ -31,11 +31,11 @@ impl AsAgent for DatabaseAgent {
         })
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 

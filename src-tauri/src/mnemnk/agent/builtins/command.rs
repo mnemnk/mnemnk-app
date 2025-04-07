@@ -7,11 +7,11 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
+    Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
 };
 
 pub struct CommandAgent {
-    data: AgentData,
+    data: AsAgentData,
 }
 
 impl AsAgent for CommandAgent {
@@ -24,11 +24,11 @@ impl AsAgent for CommandAgent {
         CommandAgent::new(app, id, def_name, config)
     }
 
-    fn data(&self) -> &AgentData {
+    fn data(&self) -> &AsAgentData {
         &self.data
     }
 
-    fn mut_data(&mut self) -> &mut AgentData {
+    fn mut_data(&mut self) -> &mut AsAgentData {
         &mut self.data
     }
 
@@ -249,7 +249,7 @@ impl CommandAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AgentData {
+            data: AsAgentData {
                 app,
                 id,
                 status: Default::default(),
