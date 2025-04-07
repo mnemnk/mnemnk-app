@@ -7,9 +7,9 @@ use serde_json::Value;
 use tauri::AppHandle;
 use thiserror::Error;
 
+use super::builtins;
 use super::{
     agent::{AgentConfig, AsyncAgent},
-    builtin::builtin_agent_defs,
     command::CommandAgent,
 };
 use crate::mnemnk::settings;
@@ -204,7 +204,10 @@ pub fn agents_dir(app: &AppHandle) -> Option<PathBuf> {
 }
 
 pub(super) fn init_agent_defs(app: &AppHandle) -> Result<AgentDefinitions> {
-    let mut defs = builtin_agent_defs();
+    let mut defs: AgentDefinitions = Default::default();
+
+    builtins::init_agent_defs(&mut defs);
+
     defs.extend(read_mnemnk_jsons(app)?);
     Ok(defs)
 }

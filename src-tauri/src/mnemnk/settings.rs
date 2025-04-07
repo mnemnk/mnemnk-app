@@ -9,8 +9,7 @@ use std::{
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 
-use super::agent::agent::{AgentConfig, AgentConfigs};
-use super::agent::definition::AgentDefinitions;
+use crate::mnemnk::agent::{AgentConfig, AgentConfigs, AgentDefinitions};
 
 const SETTINGS_JSON: &str = "settings.json";
 
