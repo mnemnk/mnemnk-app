@@ -230,7 +230,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         AgentDefinition::new(
             "BoardOut",
             "$board_out",
-            Some(new_boxed::<super::board::BoardOutAgent>),
+            Some(new_boxed::<BoardOutAgent>),
         )
         .with_title("Board Out")
         .with_category("Core")
