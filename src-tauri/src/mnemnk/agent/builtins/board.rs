@@ -211,7 +211,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         AgentDefinition::new(
             "BoardIn",
             "$board_in",
-            Some(new_boxed::<super::board::BoardInAgent>),
+            Some(new_boxed::<BoardInAgent>),
         )
         .with_title("Board In")
         .with_category("Core")
