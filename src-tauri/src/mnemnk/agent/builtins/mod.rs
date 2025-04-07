@@ -1,11 +1,14 @@
 use super::AgentDefinitions;
 
 mod board;
+mod command;
 mod core;
 mod database;
 mod display;
 mod input;
 mod string;
+
+pub(super) use command::CommandAgent;
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     board::init_agent_defs(defs);

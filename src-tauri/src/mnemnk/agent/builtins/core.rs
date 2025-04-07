@@ -62,18 +62,14 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // AsKindAgent
     defs.insert(
         "$as_kind_filter".into(),
-        AgentDefinition::new(
-            "AsKindAgent",
-            "$as_kind_agent",
-            Some(new_boxed::<AsKindAgent>),
-        )
-        .with_title("As Kind")
-        .with_category("Core")
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"])
-        .with_default_config(vec![(
-            "kind".into(),
-            AgentConfigEntry::new(json!(""), "string").with_title("Kind"),
-        )]),
+        AgentDefinition::new("AsKind", "$as_kind", Some(new_boxed::<AsKindAgent>))
+            .with_title("As Kind")
+            .with_category("Core")
+            .with_inputs(vec!["*"])
+            .with_outputs(vec!["*"])
+            .with_default_config(vec![(
+                "kind".into(),
+                AgentConfigEntry::new(json!(""), "string").with_title("Kind"),
+            )]),
     );
 }

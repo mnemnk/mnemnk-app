@@ -186,9 +186,8 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$template_text".into(),
         AgentDefinition::new(
-            // We can use the kind as TemplateStringAgent,
-            // since the only difference is the config type,
-            // and we can use the same agent for both.
+            // We can use TemplateStringAgent for `$template_text` too,
+            // since the only difference is the config type.
             "TemplateString",
             "$template_text",
             Some(new_boxed::<TemplateStringAgent>),
