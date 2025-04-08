@@ -4,8 +4,8 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AsAgentData, AgentDefinition, AgentDefinitions,
-    AgentStatus, AsAgent,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
+    AgentStatus, AsAgent, AsAgentData,
 };
 
 // Unit Input
@@ -45,14 +45,20 @@ impl AsAgent for UnitInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Run {
-            self.try_output("unit".to_string(), json!(()))
-                .context("Failed to output value")?;
+            self.try_output(
+                "unit".to_string(),
+                AgentData {
+                    kind: "unit".to_string(),
+                    value: json!(()),
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -100,15 +106,22 @@ impl AsAgent for BooleanInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("boolean")
-                .context("Missing boolean")?;
-            self.try_output("boolean".to_string(), value.clone())
-                .context("Failed to output value")?;
+                .context("Missing boolean")?
+                .clone();
+            self.try_output(
+                "boolean".to_string(),
+                AgentData {
+                    kind: "boolean".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -156,15 +169,22 @@ impl AsAgent for IntegerInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("integer")
-                .context("Missing integer")?;
-            self.try_output("integer".to_string(), value.clone())
-                .context("Failed to output value")?;
+                .context("Missing integer")?
+                .clone();
+            self.try_output(
+                "integer".to_string(),
+                AgentData {
+                    kind: "integer".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -212,15 +232,22 @@ impl AsAgent for NumberInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("number")
-                .context("Missing number")?;
-            self.try_output("number".to_string(), value.clone())
-                .context("Failed to output value")?;
+                .context("Missing number")?
+                .clone();
+            self.try_output(
+                "number".to_string(),
+                AgentData {
+                    kind: "number".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -268,15 +295,22 @@ impl AsAgent for StringInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("string")
-                .context("Missing string")?;
-            self.try_output("string".to_string(), value.clone())
-                .context("Failed to output value")?;
+                .context("Missing string")?
+                .clone();
+            self.try_output(
+                "string".to_string(),
+                AgentData {
+                    kind: "string".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -324,15 +358,22 @@ impl AsAgent for TextInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("text")
-                .context("Missing text")?;
-            self.try_output("text".to_string(), value.clone())
-                .context("Failed to output text")?;
+                .context("Missing text")?
+                .clone();
+            self.try_output(
+                "text".to_string(),
+                AgentData {
+                    kind: "text".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output text")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -380,15 +421,22 @@ impl AsAgent for ObjectInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("object")
-                .context("Missing object")?;
-            self.try_output("object".to_string(), value.clone())
-                .context("Failed to output value")?;
+                .context("Missing object")?
+                .clone();
+            self.try_output(
+                "object".to_string(),
+                AgentData {
+                    kind: "object".to_string(),
+                    value,
+                },
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }

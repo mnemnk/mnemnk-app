@@ -1,26 +1,27 @@
 use anyhow::{Context as _, Result};
-use serde_json::Value;
 use tauri::{AppHandle, Manager};
 use tokio::sync::mpsc;
 
 use crate::mnemnk::store;
 
-use super::{agent::AgentStatus, env::AgentEnv};
+use super::{
+    agent::{AgentData, AgentStatus},
+    env::AgentEnv,
+};
 
 #[derive(Clone, Debug)]
 pub enum AgentMessage {
     AgentOut {
         agent: String,
-        kind: String,
-        value: Value,
+        ch: String,
+        data: AgentData,
     },
     BoardOut {
-        kind: String,
-        value: Value,
+        name: String,
+        data: AgentData,
     },
     Store {
-        kind: String,
-        value: Value,
+        data: AgentData,
     },
 }
 
@@ -33,14 +34,14 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
             use AgentMessage::*;
 
             match message {
-                AgentOut { agent, kind, value } => {
-                    agent_out(&app_handle, agent, kind, value).await;
+                AgentOut { agent, ch, data } => {
+                    agent_out(&app_handle, agent, ch, data).await;
                 }
-                BoardOut { kind, value } => {
-                    board_out(&app_handle, kind, value).await;
+                BoardOut { name, data } => {
+                    board_out(&app_handle, name, data).await;
                 }
-                Store { kind, value } => {
-                    store(&app_handle, kind, value).await;
+                Store { data } => {
+                    store(&app_handle, data).await;
                 }
             }
         }
@@ -50,39 +51,44 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
 pub async fn send_agent_out(
     env: &AgentEnv,
     agent: String,
-    kind: String,
-    value: Value,
+    ch: String,
+    data: AgentData,
 ) -> Result<()> {
     let main_tx = env.tx.clone();
     main_tx
-        .send(AgentMessage::AgentOut { agent, kind, value })
+        .send(AgentMessage::AgentOut { agent, ch, data })
         .await
         .context("Failed to send AgentOut message")
 }
 
-pub fn try_send_agent_out(env: &AgentEnv, agent: String, kind: String, value: Value) -> Result<()> {
+pub fn try_send_agent_out(
+    env: &AgentEnv,
+    agent: String,
+    ch: String,
+    data: AgentData,
+) -> Result<()> {
     let main_tx = env.tx.clone();
     main_tx
-        .try_send(AgentMessage::AgentOut { agent, kind, value })
+        .try_send(AgentMessage::AgentOut { agent, ch, data })
         .context("Failed to try_send AgentOut message")
 }
 
-pub fn try_send_board_out(env: &AgentEnv, kind: String, value: Value) -> Result<()> {
+pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Result<()> {
     let main_tx = env.tx.clone();
     main_tx
-        .try_send(AgentMessage::BoardOut { kind, value })
+        .try_send(AgentMessage::BoardOut { name, data })
         .context("Failed to try_send BoardOut message")
 }
 
-pub fn try_send_store(app: &AppHandle, kind: String, value: Value) -> Result<()> {
+pub fn try_send_store(app: &AppHandle, data: AgentData) -> Result<()> {
     let env = app.state::<AgentEnv>();
     env.tx
-        .try_send(AgentMessage::Store { kind, value })
+        .try_send(AgentMessage::Store { data })
         .context("Failed to send Store message")
 }
 
 // Processing AgentOut message
-async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: Value) {
+async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let targets;
@@ -99,36 +105,31 @@ async fn agent_out(app: &AppHandle, source_agent: String, kind: String, value: V
         // In reality, targets are normalized to id/source_handle/target_handle in sync_agent_flows,
         // so unwrap should not fail.
 
-        let (target_node, source_handle, target_handle) = target;
+        let (target_agent, source_handle, target_handle) = target;
+
+        if source_handle != ch && source_handle != "*" {
+            // Skip if source_handle does not match with the given ch
+            continue;
+        }
+
         {
-            let env_nodes = env.agents.lock().unwrap();
-            if !env_nodes.contains_key(&target_node) {
+            let env_agents = env.agents.lock().unwrap();
+            if !env_agents.contains_key(&target_agent) {
                 continue;
             }
         }
 
-        if source_handle != kind && (!source_handle.is_empty() && source_handle != "*") {
-            // Skip if source_handle does not match with kind
-            continue;
-        }
-        let kind = if target_handle.is_empty() || target_handle == "*" {
-            kind.clone()
-        } else {
-            // Use target_handle as kind if it is specified
-            target_handle.clone()
-        };
-
-        send_message_to(&env, &target_node, kind, value.clone())
+        send_agent_in(&env, &target_agent, target_handle.clone(), data.clone())
     }
 }
 
-async fn board_out(app: &AppHandle, kind: String, value: Value) {
+async fn board_out(app: &AppHandle, name: String, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let board_nodes;
     {
-        let env_board_nodes = env.board_nodes.lock().unwrap();
-        board_nodes = env_board_nodes.get(&kind).cloned();
+        let env_board_nodes = env.board_out_agents.lock().unwrap();
+        board_nodes = env_board_nodes.get(&name).cloned();
     }
     let Some(board_nodes) = board_nodes else {
         // board not found
@@ -147,33 +148,25 @@ async fn board_out(app: &AppHandle, kind: String, value: Value) {
             // edges not found
             continue;
         };
-        for edge in edges {
-            let (sub_node, _src_handle, sub_handle) = edge;
-            let target_kind = if sub_handle == "*" {
-                kind.clone()
-            } else {
-                sub_handle
-            };
-            send_message_to(&env, &sub_node, target_kind, value.clone())
+        for (target_agent, _source_handle, target_handle) in edges {
+            send_agent_in(&env, &target_agent, target_handle, data.clone())
         }
     }
 }
 
-fn send_message_to(env: &AgentEnv, target_id: &str, kind: String, value: Value) {
-    if let Some(target_node) = env.agents.lock().unwrap().get_mut(target_id) {
-        if *target_node.status() != AgentStatus::Run {
+fn send_agent_in(env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
+    if let Some(agent) = env.agents.lock().unwrap().get_mut(agent_id) {
+        if *agent.status() != AgentStatus::Run {
             return;
         }
-        target_node.input(kind, value).unwrap_or_else(|e| {
-            log::error!("Failed to send message to {}: {}", target_id, e);
+        agent.input(ch, data).unwrap_or_else(|e| {
+            log::error!("Failed to send message to {}: {}", agent_id, e);
         });
     }
 }
 
-async fn store(app_handle: &AppHandle, kind: String, value: Value) {
-    store::store(app_handle, kind, value)
-        .await
-        .unwrap_or_else(|e| {
-            log::error!("Failed to store value: {}", e);
-        });
+async fn store(app_handle: &AppHandle, data: AgentData) {
+    store::store(app_handle, data).await.unwrap_or_else(|e| {
+        log::error!("Failed to store value: {}", e);
+    });
 }

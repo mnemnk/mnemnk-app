@@ -1,5 +1,4 @@
 use anyhow::{bail, Context as _, Result};
-use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -9,7 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, AgentConfig, AsyncAgent};
+use super::agent::{self, AgentConfig, AgentData, AsyncAgent};
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, AgentMessage};
@@ -24,20 +23,20 @@ pub struct AgentEnv {
     // agent def name -> agent definition
     pub defs: Mutex<AgentDefinitions>,
 
-    // node id -> agent
+    // agent id -> agent
     pub agents: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
 
-    // node id -> [node ids / subscriber handle / target handle]
+    // sourece agent id -> [target agent id / source handle / target handle]
     pub edges: Mutex<HashMap<String, Vec<(String, String, String)>>>,
 
-    // node id -> child process
+    // agent id -> child process
     pub commands: Mutex<HashMap<String, CommandChild>>,
 
-    // board name -> [node id]
-    pub board_nodes: Mutex<HashMap<String, Vec<String>>>,
+    // board name -> [board out agent id]
+    pub board_out_agents: Mutex<HashMap<String, Vec<String>>>,
 
-    // board name -> value
-    pub board_values: Mutex<HashMap<String, Value>>,
+    // board name -> data
+    pub board_data: Mutex<HashMap<String, AgentData>>,
 
     // message sender
     pub tx: mpsc::Sender<AgentMessage>,
@@ -52,8 +51,8 @@ impl AgentEnv {
             agents: Default::default(),
             edges: Default::default(),
             commands: Default::default(),
-            board_nodes: Default::default(),
-            board_values: Default::default(),
+            board_out_agents: Default::default(),
+            board_data: Default::default(),
             tx,
         }
     }
@@ -277,16 +276,21 @@ impl AgentEnv {
         agent.set_config(config)
     }
 
-    pub async fn send_agent_out(&self, agent_id: String, kind: String, value: Value) -> Result<()> {
-        message::send_agent_out(self, agent_id, kind, value).await
+    pub async fn send_agent_out(
+        &self,
+        agent_id: String,
+        ch: String,
+        data: AgentData,
+    ) -> Result<()> {
+        message::send_agent_out(self, agent_id, ch, data).await
     }
 
-    pub fn try_send_agent_out(&self, agent_id: String, kind: String, value: Value) -> Result<()> {
-        message::try_send_agent_out(self, agent_id, kind, value)
+    pub fn try_send_agent_out(&self, agent_id: String, ch: String, data: AgentData) -> Result<()> {
+        message::try_send_agent_out(self, agent_id, ch, data)
     }
 
-    pub fn try_send_board_out(&self, kind: String, value: Value) -> Result<()> {
-        message::try_send_board_out(self, kind, value)
+    pub fn try_send_board_out(&self, name: String, data: AgentData) -> Result<()> {
+        message::try_send_board_out(self, name, data)
     }
 
     pub fn quit(&self) {

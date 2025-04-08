@@ -1,10 +1,10 @@
 use anyhow::Result;
-use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    try_send_store, Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    try_send_store, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    AsAgentData,
 };
 
 // Database
@@ -39,8 +39,8 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
-        try_send_store(self.app(), kind, value)
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        try_send_store(self.app(), data)
     }
 }
 
@@ -52,6 +52,6 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_title("Database")
             .with_description("Store data")
             .with_category("Core/Database")
-            .with_inputs(vec!["*"]),
+            .with_inputs(vec!["event"]),
     );
 }

@@ -7,7 +7,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
+    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
+    AsAgentData,
 };
 
 pub struct CommandAgent {
@@ -119,29 +120,23 @@ impl AsAgent for CommandAgent {
                         let line = String::from_utf8_lossy(&line_bytes);
                         let (cmd, args) = parse_stdout(&line);
                         match cmd {
-                            ".OUT" => {
-                                let kind_value = args.split_once(" ");
-                                if kind_value.is_none() {
-                                    log::error!("Invalid OUT command: {:.40}", &line);
-                                    continue;
+                            ".OUT" => match parse_out_args(args) {
+                                Ok((ch, kind, value)) => {
+                                    let env = app_handle.state::<AgentEnv>();
+                                    env.send_agent_out(
+                                        agent_id.clone(),
+                                        ch,
+                                        AgentData { kind, value },
+                                    )
+                                    .await
+                                    .unwrap_or_else(|e| {
+                                        log::error!("Failed to send agent out: {}", e);
+                                    });
                                 }
-                                let (kind, value) = kind_value.unwrap();
-                                let value = serde_json::from_str::<Value>(value);
-                                if value.is_err() {
-                                    log::error!("Failed to parse value: {:.40}", &line);
-                                    continue;
+                                Err(e) => {
+                                    log::error!("Failed to parse OUT command: {}", e);
                                 }
-                                let env = app_handle.state::<AgentEnv>();
-                                env.send_agent_out(
-                                    agent_id.clone(),
-                                    kind.to_string(),
-                                    value.unwrap(),
-                                )
-                                .await
-                                .unwrap_or_else(|e| {
-                                    log::error!("Failed to send agent out: {}", e);
-                                });
-                            }
+                            },
                             _ => {
                                 log::error!("Unknown command: {} {}", agent_id, cmd);
                             }
@@ -150,7 +145,7 @@ impl AsAgent for CommandAgent {
 
                     CommandEvent::Stderr(line_bytes) => {
                         let line = String::from_utf8_lossy(&line_bytes);
-                        log::debug!("stderr from {} {}: {:.200}", def_name, agent_id, line);
+                        log::debug!("stderr from {} {}: {:}", def_name, agent_id, line);
                     }
 
                     CommandEvent::Terminated(status) => {
@@ -165,6 +160,7 @@ impl AsAgent for CommandAgent {
                             let mut commands = env.commands.lock().unwrap();
                             commands.remove(&agent_id);
                         }
+                        // TODO: Emit an event to the frontend indicating the agent has stopped
                         break;
                     }
 
@@ -222,21 +218,17 @@ impl AsAgent for CommandAgent {
         Ok(())
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
         let env = self.env();
         let mut env_commands = env.commands.lock().unwrap();
 
-        let command = env_commands.get_mut(&self.data.id).ok_or_else(|| {
-            log::error!("command for agent not found: {}", &self.data.id);
-            anyhow::anyhow!("command for agent not found")
-        })?;
+        let command = env_commands
+            .get_mut(self.id())
+            .context("command not found")?;
 
         command
-            .write(format!(".IN {} {}\n", kind, value.to_string()).as_bytes())
-            .map_err(|e| {
-                log::error!("Failed to write to {}: {}", &self.data.id, e);
-                anyhow::anyhow!("Failed to write to agent")
-            })?;
+            .write(format!(".IN {} {} {}\n", ch, data.kind, data.value.to_string()).as_bytes())
+            .context("Failed to write to command")?;
         Ok(())
     }
 }
@@ -301,4 +293,15 @@ impl CommandAgent {
 fn parse_stdout(line: &str) -> (&str, &str) {
     let (cmd, args) = line.split_once(" ").unwrap_or((line, ""));
     (cmd.trim(), args.trim())
+}
+
+fn parse_out_args(args: &str) -> Result<(String, String, Value)> {
+    let args = args.splitn(3, ' ').collect::<Vec<_>>();
+    if args.len() < 3 {
+        return Err(anyhow::anyhow!("Invalid OUT command"));
+    }
+    let ch = args[0].to_string();
+    let kind = args[1].to_string();
+    let value = serde_json::from_str(args[2]).context("Failed to parse OUT command")?;
+    Ok((ch, kind, value))
 }

@@ -5,16 +5,16 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AsAgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
-    AsAgent,
+    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
+    AsAgent, AsAgentData,
 };
 
 // Display Value
-struct DisplayValueAgent {
+struct DisplayDataAgent {
     data: AsAgentData,
 }
 
-impl AsAgent for DisplayValueAgent {
+impl AsAgent for DisplayDataAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -40,14 +40,17 @@ impl AsAgent for DisplayValueAgent {
         &mut self.data
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
-        let display_value = DisplayValue { kind, value };
-        self.emit_display("value".to_string(), json!(display_value))
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let display_data = DisplayData {
+            kind: data.kind,
+            value: data.value,
+        };
+        self.emit_display("data".to_string(), json!(display_data))
     }
 }
 
 #[derive(Debug, Clone, Serialize)]
-struct DisplayValue {
+struct DisplayData {
     kind: String,
     value: Value,
 }
@@ -83,30 +86,30 @@ impl AsAgent for DisplayMessagesAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _kind: String, value: Value) -> Result<()> {
-        let display_value = DisplayValue {
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let display_data = DisplayData {
             kind: "messages".to_string(),
-            value,
+            value: data.value,
         };
-        self.emit_display("messages".to_string(), json!(display_value))
+        self.emit_display("messages".to_string(), json!(display_data))
     }
 }
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
-    // Display Value
+    // Display Data
     defs.insert(
-        "$display_value".into(),
+        "$display_data".into(),
         AgentDefinition::new(
-            "DisplayValue",
-            "$display_value",
-            Some(new_boxed::<DisplayValueAgent>),
+            "DisplayData",
+            "$display_data",
+            Some(new_boxed::<DisplayDataAgent>),
         )
-        .with_title("Display Value")
+        .with_title("Display Data")
         // .with_description("Display value on the node")
         .with_category("Display")
         .with_inputs(vec!["*"])
         .with_display_config(vec![(
-            "value".into(),
+            "data".into(),
             AgentDisplayConfigEntry::new("object"),
         )]),
     );
@@ -122,7 +125,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_title("Display Messages")
         .with_description("Display messages on the node")
         .with_category("LLM")
-        .with_inputs(vec!["*"])
+        .with_inputs(vec!["messages"])
         .with_display_config(vec![(
             "messages".into(),
             AgentDisplayConfigEntry::new("messages"),

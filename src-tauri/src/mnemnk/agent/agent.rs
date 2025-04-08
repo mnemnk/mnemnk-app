@@ -28,6 +28,12 @@ pub enum AgentStatus {
     Stop,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct AgentData {
+    pub kind: String,
+    pub value: Value,
+}
+
 pub trait Agent {
     fn new(
         app: AppHandle,
@@ -74,11 +80,11 @@ pub trait Agent {
 
     fn stop(&mut self) -> Result<()>;
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()>;
 
-    fn try_output(&self, kind: String, value: Value) -> Result<()> {
+    fn try_output(&self, ch: String, data: AgentData) -> Result<()> {
         let env = self.env();
-        env.try_send_agent_out(self.id().to_string(), kind, value)
+        env.try_send_agent_out(self.id().to_string(), ch, data)
     }
 
     fn emit_display(&self, key: String, value: Value) -> Result<()> {
@@ -146,7 +152,7 @@ pub trait AsAgent {
         Ok(())
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()>;
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()>;
 }
 
 impl<T: AsAgent> Agent for T {
@@ -199,8 +205,8 @@ impl<T: AsAgent> Agent for T {
         Ok(())
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
-        self.input(kind, value)
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+        self.input(ch, data)
     }
 }
 
