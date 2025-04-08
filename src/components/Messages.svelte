@@ -17,7 +17,7 @@
   let { messages }: Props = $props();
 </script>
 
-<div class="max-h-[800px] overflow-y-auto">
+<div class="nodrag nowheel max-h-[800px] overflow-y-auto">
   {#each messages as message}
     <Card class="mb-1 min-w-full">
       <div class="flex items-center space-x-4 rtl:space-x-reverse">
