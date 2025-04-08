@@ -212,14 +212,18 @@ pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     }
 
     // Unique name for the flow
-    let mut agent_flows = env.flows.lock().unwrap();
-    let name = unique_flow_name(
-        &agent_flows,
-        flow.name.as_deref().context("Agent flow name not set")?,
-    );
+    let name;
+    {
+        let agent_flows = env.flows.lock().unwrap();
+        name = unique_flow_name(
+            &agent_flows,
+            flow.name.as_deref().context("Agent flow name not set")?,
+        );
+    }
     flow.name = Some(name.clone());
 
-    agent_flows.insert(name, flow.clone());
+    env.add_agent_flow(&flow)
+        .context("Failed to add agent flow")?;
 
     Ok(flow)
 }
