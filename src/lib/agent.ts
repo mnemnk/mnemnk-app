@@ -86,6 +86,13 @@ export async function removeAgentFlowEdge(flowName: string, edgeId: string): Pro
   await invoke("remove_agent_flow_edge_cmd", { flowName, edgeId });
 }
 
+export async function copySubFlow(
+  nodes: SAgentFlowNode[],
+  edges: SAgentFlowEdge[],
+): Promise<[SAgentFlowNode[], SAgentFlowEdge[]]> {
+  return await invoke("copy_sub_flow_cmd", { nodes, edges });
+}
+
 // Agent Flow
 
 // deserialize: SAgentFlow -> AgentFlow
@@ -212,7 +219,7 @@ export function deserializeAgentDisplayConfig(
   return display;
 }
 
-function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
+export function deserializeAgentFlowEdge(edge: SAgentFlowEdge): AgentFlowEdge {
   return {
     id: edge.id,
     source: edge.source,
@@ -228,10 +235,10 @@ export function serializeAgentFlow(
   nodes: AgentFlowNode[],
   edges: AgentFlowEdge[],
   name: string,
-  agent_configs: SAgentDefinitions,
+  agent_defs: SAgentDefinitions,
 ): SAgentFlow {
   return {
-    nodes: nodes.map((node) => serializeAgentFlowNode(node, agent_configs)),
+    nodes: nodes.map((node) => serializeAgentFlowNode(node, agent_defs)),
     edges: edges.map((edge) => serializeAgentFlowEdge(edge)),
     name,
   };
@@ -239,7 +246,7 @@ export function serializeAgentFlow(
 
 export function serializeAgentFlowNode(
   node: AgentFlowNode,
-  agent_configs: SAgentDefinitions,
+  agent_defs: SAgentDefinitions,
 ): SAgentFlowNode {
   return {
     id: node.id,
@@ -247,7 +254,7 @@ export function serializeAgentFlowNode(
     enabled: node.data.enabled,
     config: serializeAgentFlowNodeConfig(
       node.data.config,
-      agent_configs[node.data.name].default_config,
+      agent_defs[node.data.name].default_config,
     ),
     title: node.data.title,
     x: node.position.x,
