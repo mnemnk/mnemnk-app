@@ -122,7 +122,7 @@
           />
         {:else if ty === "integer"}
           <NumberInput
-            class="flex-none"
+            class="nodrag flex-none"
             value={config}
             onkeydown={(evt) => {
               if (evt.key === "Enter") {
@@ -137,7 +137,7 @@
           />
         {:else if ty === "number"}
           <Input
-            class="flex-none"
+            class="nodrag flex-none"
             type="text"
             value={config}
             onkeydown={(evt) => {
@@ -153,7 +153,7 @@
           />
         {:else if ty === "string"}
           <Input
-            class="flex-none"
+            class="nodrag flex-none"
             type="text"
             value={config}
             onkeydown={(evt) => {
@@ -169,10 +169,10 @@
           />
         {:else if ty === "text"}
           <Textarea
-            class="grow"
+            class="nodrag nowheel flex-1"
             value={config}
             onkeydown={(evt) => {
-              if (evt.shiftKey && evt.key === "Enter") {
+              if (evt.ctrlKey && evt.key === "Enter") {
                 evt.preventDefault();
                 updateConfig(key, evt.currentTarget.value);
               }
@@ -185,10 +185,10 @@
           />
         {:else if ty === "object"}
           <Textarea
-            class="grow"
+            class="nodrag nowheel flex-1"
             value={config}
             onkeydown={(evt) => {
-              if (evt.shiftKey && evt.key === "Enter") {
+              if (evt.ctrlKey && evt.key === "Enter") {
                 evt.preventDefault();
                 updateConfig(key, evt.currentTarget.value);
               }
@@ -200,7 +200,11 @@
             }}
           />
         {:else}
-          <Textarea class="grow" value={JSON.stringify(config, null, 2)} disabled />
+          <Textarea
+            class="nodrag nowheel flex-1"
+            value={JSON.stringify(config, null, 2)}
+            disabled
+          />
         {/if}
       {/each}
     </form>
@@ -224,15 +228,40 @@
         {:else if ty === "number"}
           <div class="flex-none">{display}</div>
         {:else if ty === "string"}
-          <pre class="flex-none text-wrap">{display}</pre>
+          <Input
+            type="text"
+            class="nodrag nowheel flex-none text-wrap"
+            value={display}
+            onkeydown={(evt) => {
+              evt.preventDefault();
+            }}
+          />
         {:else if ty === "text"}
-          <pre class="grow text-wrap">{display}</pre>
+          <Textarea
+            class="nodrag nowheel flex-1 text-wrap"
+            value={display}
+            onkeydown={(evt) => {
+              evt.preventDefault();
+            }}
+          />
         {:else if ty === "object"}
-          <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
+          <Textarea
+            class="nodrag nowheel flex-1 text-wrap"
+            value={JSON.stringify(display, null, 2)}
+            onkeydown={(evt) => {
+              evt.preventDefault();
+            }}
+          />
         {:else if ty === "messages"}
           <Messages messages={display?.value} />
         {:else}
-          <pre class="grow text-wrap">{JSON.stringify(display, null, 2)}</pre>
+          <Textarea
+            class="nodrag nowheel flex-1 text-wrap"
+            value={JSON.stringify(display, null, 2)}
+            onkeydown={(evt) => {
+              evt.preventDefault();
+            }}
+          />
         {/if}
       {/each}
     </div>
