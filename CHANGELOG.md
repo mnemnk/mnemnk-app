@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.14.0](https://github.com/mnemnk/mnemnk-app/compare/v0.13.3...v0.14.0) (2025-04-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 Add ch to input and output
+* 🧨 change text value in config from array to string
+
+* 💡 change text value from array to string ([#206](https://github.com/mnemnk/mnemnk-app/issues/206)) ([3fd87b0](https://github.com/mnemnk/mnemnk-app/commit/3fd87b0288d277b3e1863e765bfba65eae0dd06c))
+
+
+### Features
+
+* 🎸 Add ch to input and output ([#213](https://github.com/mnemnk/mnemnk-app/issues/213)) ([3c283c7](https://github.com/mnemnk/mnemnk-app/commit/3c283c7132081b0f7ef6d4d10a2333f4a8b4b9d7))
+* 🎸 As Kind agent ([#204](https://github.com/mnemnk/mnemnk-app/issues/204)) ([8dfb692](https://github.com/mnemnk/mnemnk-app/commit/8dfb692bde2256696fe272894a91042ddae8d5d4))
+* 🎸 Display Messages agent ([#200](https://github.com/mnemnk/mnemnk-app/issues/200)) ([c63c0f0](https://github.com/mnemnk/mnemnk-app/commit/c63c0f021145bbe18617e213a3fd2da48e0cffa2))
+* 🎸 Template String agent ([#205](https://github.com/mnemnk/mnemnk-app/issues/205)) ([d81054d](https://github.com/mnemnk/mnemnk-app/commit/d81054d07bc3d24a2d73d67aa954abdf7de9fb40))
+* 🎸 Template Text agent ([#207](https://github.com/mnemnk/mnemnk-app/issues/207)) ([a9a63de](https://github.com/mnemnk/mnemnk-app/commit/a9a63de2e9db14096c356de10e4a121f4ceffaee))
+* 🎸 Unit Input agent ([#208](https://github.com/mnemnk/mnemnk-app/issues/208)) ([a279261](https://github.com/mnemnk/mnemnk-app/commit/a2792614fff6da752a3e96640d7dfb622afe2a5f))
+* 🎸 upadte config by enter ([#195](https://github.com/mnemnk/mnemnk-app/issues/195)) ([24428cd](https://github.com/mnemnk/mnemnk-app/commit/24428cd5b37bc62d305955acc7456ae49c5a5075))
+* 🎸 update Display Messages agent ([#203](https://github.com/mnemnk/mnemnk-app/issues/203)) ([fc4ab8b](https://github.com/mnemnk/mnemnk-app/commit/fc4ab8b122c87bb401593c2c558b1462e7c93d7f))
+
+
+### Bug Fixes
+
+* 🐛 remove invalid/obsolete edges ([#202](https://github.com/mnemnk/mnemnk-app/issues/202)) ([044bdfb](https://github.com/mnemnk/mnemnk-app/commit/044bdfb26c61bc3d3c588bfcc0d3946ddaaea946))
+* 🐛 remove unused import ([#198](https://github.com/mnemnk/mnemnk-app/issues/198)) ([4429d51](https://github.com/mnemnk/mnemnk-app/commit/4429d5146b654a1dec5e8812283cbb114663872b))
+
 ## [0.13.3](https://github.com/mnemnk/mnemnk-app/compare/v0.13.2...v0.13.3) (2025-04-04)
 
 
