@@ -5,8 +5,8 @@ use tauri::{AppHandle, Emitter};
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentStatus, AsAgent,
-    AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
+    AgentStatus, AsAgent, AsAgentData,
 };
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
@@ -74,28 +74,28 @@ impl AsAgent for BoardInAgent {
         Ok(())
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
         let mut board_name = self.board_name.clone().unwrap_or_default();
         if board_name.is_empty() {
             // if board_name is not set, stop processing
             return Ok(());
         }
         if board_name == "*" {
-            if kind.is_empty() {
+            if data.kind.is_empty() {
                 // kind should not be empty, but just in case
                 return Ok(());
             }
-            board_name = kind;
+            board_name = data.kind.clone()
         }
         let env = self.env();
         {
-            let mut board_values = env.board_values.lock().unwrap();
-            board_values.insert(board_name.clone(), value.clone());
+            let mut board_data = env.board_data.lock().unwrap();
+            board_data.insert(board_name.clone(), data.clone());
         }
-        env.try_send_board_out(board_name.clone(), value.clone())
+        env.try_send_board_out(board_name.clone(), data.clone())
             .context("Failed to send board")?;
 
-        self.emit_publish(board_name, value);
+        self.emit_publish(board_name, data.value);
 
         Ok(())
     }
@@ -137,11 +137,11 @@ impl AsAgent for BoardOutAgent {
     fn start(&mut self) -> Result<()> {
         if let Some(board_name) = &self.board_name {
             let env = self.env();
-            let mut board_nodes = env.board_nodes.lock().unwrap();
-            if let Some(nodes) = board_nodes.get_mut(board_name) {
+            let mut board_out_agents = env.board_out_agents.lock().unwrap();
+            if let Some(nodes) = board_out_agents.get_mut(board_name) {
                 nodes.push(self.data.id.clone());
             } else {
-                board_nodes.insert(board_name.clone(), vec![self.data.id.clone()]);
+                board_out_agents.insert(board_name.clone(), vec![self.data.id.clone()]);
             }
         }
         Ok(())
@@ -150,8 +150,8 @@ impl AsAgent for BoardOutAgent {
     fn stop(&mut self) -> Result<()> {
         if let Some(board_name) = &self.board_name {
             let env = self.env();
-            let mut board_nodes = env.board_nodes.lock().unwrap();
-            if let Some(nodes) = board_nodes.get_mut(board_name) {
+            let mut board_out_agents = env.board_out_agents.lock().unwrap();
+            if let Some(nodes) = board_out_agents.get_mut(board_name) {
                 nodes.retain(|x| x != &self.data.id);
             }
         }
@@ -164,18 +164,18 @@ impl AsAgent for BoardOutAgent {
             if *self.status() == AgentStatus::Run {
                 if let Some(board_name) = &self.board_name {
                     let env = self.env();
-                    let mut board_nodes = env.board_nodes.lock().unwrap();
-                    if let Some(nodes) = board_nodes.get_mut(board_name) {
+                    let mut board_out_agents = env.board_out_agents.lock().unwrap();
+                    if let Some(nodes) = board_out_agents.get_mut(board_name) {
                         nodes.retain(|x| x != &self.data.id);
                     }
                 }
                 if let Some(board_name) = &board_name {
                     let env = self.env();
-                    let mut board_nodes = env.board_nodes.lock().unwrap();
-                    if let Some(nodes) = board_nodes.get_mut(board_name) {
+                    let mut board_out_agents = env.board_out_agents.lock().unwrap();
+                    if let Some(nodes) = board_out_agents.get_mut(board_name) {
                         nodes.push(self.data.id.clone());
                     } else {
-                        board_nodes.insert(board_name.clone(), vec![self.data.id.clone()]);
+                        board_out_agents.insert(board_name.clone(), vec![self.data.id.clone()]);
                     }
                 }
             }
@@ -185,7 +185,7 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn input(&mut self, _kind: String, _value: Value) -> Result<()> {
+    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         // do nothing
         Ok(())
     }

@@ -6,7 +6,6 @@ use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use image::RgbaImage;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::{fs, io::Cursor, path::PathBuf};
 use surrealdb::{
     engine::local::{Db, RocksDb},
@@ -17,7 +16,7 @@ use tauri::{
     AppHandle, Manager, State,
 };
 
-use super::tokenize::tokenize_text;
+use super::{agent::AgentData, tokenize::tokenize_text};
 use crate::mnemnk::settings::{data_dir, CoreSettings};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -85,7 +84,10 @@ pub fn quit(_app: &AppHandle) {
     // nothing
 }
 
-pub async fn store(app: &AppHandle, kind: String, mut json_value: Value) -> Result<()> {
+pub async fn store(app: &AppHandle, data: AgentData) -> Result<()> {
+    let kind = data.kind;
+    let mut json_value = data.value;
+
     // extract timestamp from the value if it exists
     let timestamp = if let Some(t) = json_value.get("t").cloned() {
         // remove timestamp from the value

@@ -1,10 +1,11 @@
 use anyhow::{Context as _, Result};
-use serde_json::{json, Value};
+use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentDefinition, AgentDefinitions, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    AsAgentData,
 };
 
 // As Kind Agent
@@ -38,7 +39,7 @@ impl AsAgent for AsKindAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
         let kind = self
             .data
             .config
@@ -52,8 +53,14 @@ impl AsAgent for AsKindAgent {
             // kind is not set
             return Ok(());
         }
-        self.try_output(kind.to_string(), value.clone())
-            .context("Failed to output")?;
+        self.try_output(
+            ch,
+            AgentData {
+                kind: kind.to_string(),
+                value: data.value,
+            },
+        )
+        .context("Failed to output")?;
         Ok(())
     }
 }

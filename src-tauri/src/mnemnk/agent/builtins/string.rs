@@ -1,12 +1,13 @@
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use handlebars::Handlebars;
 use regex::Regex;
-use serde_json::{json, Value};
+use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AsAgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
+    AsAgentData,
 };
 
 // Regex Filter
@@ -40,16 +41,16 @@ impl AsAgent for RegexFilterAgent {
         &mut self.data
     }
 
-    fn input(&mut self, kind: String, value: Value) -> Result<()> {
+    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
 
-        let field = config
-            .get("field")
-            .context("Missing field")?
+        let key = config
+            .get("key")
+            .context("Missing key")?
             .as_str()
-            .context("field is not a string")?;
-        if field.is_empty() {
-            // field is not set
+            .context("key is not a string")?;
+        if key.is_empty() {
+            // key is not set
             return Ok(());
         }
 
@@ -64,17 +65,17 @@ impl AsAgent for RegexFilterAgent {
         }
         let regex = Regex::new(regex).context("Failed to compile regex")?;
 
-        let Some(field_value) = value.get(field) else {
-            // value does not have the field
+        let Some(key_value) = data.value.get(key) else {
+            // value does not have the key
             return Ok(());
         };
-        let field_value = field_value
+        let key_value = key_value
             .as_str()
             .context("value is not a string")?
             .to_string();
-        if regex.is_match(&field_value) {
+        if regex.is_match(&key_value) {
             // value matches the regex
-            self.try_output(kind.clone(), value.into())
+            self.try_output(ch, data)
                 .context("Failed to output regex result")?;
         }
 
@@ -113,13 +114,9 @@ impl AsAgent for TemplateStringAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _kind: String, value: Value) -> Result<()> {
-        if !value.is_object() {
-            // value is not an object
-            return Ok(());
-        }
-
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
+
         let template = config
             .get("template")
             .context("Missing template")?
@@ -131,11 +128,93 @@ impl AsAgent for TemplateStringAgent {
         }
 
         let reg = Handlebars::new();
-        let out_value = reg.render_template(template, &value)?;
+        let out_value = reg.render_template(template, &data)?;
 
-        self.try_output("string".to_string(), json!(out_value))
-            .context("Failed to output template")?;
-        Ok(())
+        let kind = match self.def_name() {
+            "$template_string" => "string",
+            "$template_text" => "text",
+            _ => bail!("Invalid def_name"),
+        };
+
+        self.try_output(
+            kind.to_string(),
+            AgentData {
+                kind: kind.to_string(),
+                value: json!(out_value),
+            },
+        )
+        .context("Failed to output template")
+    }
+}
+
+// Template Data Agent
+struct TemplateDataAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for TemplateDataAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData {
+                app,
+                id,
+                status: Default::default(),
+                def_name,
+                config,
+            },
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let config = self.data.config.as_ref().context("Missing config")?;
+
+        let template = config
+            .get("template")
+            .context("Missing template")?
+            .as_str()
+            .context("template is not a string")?;
+        if template.is_empty() {
+            // template is not set
+            return Ok(());
+        }
+
+        let reg = Handlebars::new();
+        let out_json = reg.render_template(template, &data)?;
+        let out_data = serde_json::from_str::<serde_json::Value>(&out_json)
+            .context("Failed to parse rendered text")?;
+
+        let out_kind = out_data
+            .get("kind")
+            .context("Missing kind")?
+            .as_str()
+            .context("kind is not a string")?;
+        if out_kind.is_empty() {
+            bail!("kind is empty");
+        }
+
+        let out_value = out_data.get("value").context("Missing value")?;
+
+        self.try_output(
+            "data".to_string(),
+            AgentData {
+                kind: out_kind.to_string(),
+                value: out_value.clone(),
+            },
+        )
+        .context("Failed to output template")
     }
 }
 
@@ -195,7 +274,25 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_title("Template Text")
         .with_category("Core/String")
         .with_inputs(vec!["*"])
-        .with_outputs(vec!["string"])
+        .with_outputs(vec!["text"])
+        .with_default_config(vec![(
+            "template".into(),
+            AgentConfigEntry::new(json!(""), "text"),
+        )]),
+    );
+
+    // Template Data Agent
+    defs.insert(
+        "$template_data".into(),
+        AgentDefinition::new(
+            "TemplateData",
+            "$template_data",
+            Some(new_boxed::<TemplateDataAgent>),
+        )
+        .with_title("Template Data")
+        .with_category("Core/Data")
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["data"])
         .with_default_config(vec![(
             "template".into(),
             AgentConfigEntry::new(json!(""), "text"),
