@@ -29,6 +29,7 @@
     removeAgentFlowEdge,
     removeAgentFlowNode,
     deserializeAgentFlow,
+    deserializeAgentFlowEdge,
     deserializeAgentFlowNode,
     importAgentFlow,
     newAgentFlow,
@@ -36,13 +37,15 @@
     saveAgentFlow,
     serializeAgentFlow,
     serializeAgentFlowEdge,
+    serializeAgentFlowNode,
     setAgentDefinitionsContext,
     startAgent,
     stopAgent,
     renameAgentFlow,
     deleteAgentFlow,
+    copySubFlow,
   } from "@/lib/agent";
-  import type { AgentFlowNode, AgentFlowEdge } from "@/lib/types";
+  import type { AgentFlowNode, AgentFlowEdge, SAgentFlowNode, SAgentFlowEdge } from "@/lib/types";
 
   import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
@@ -50,7 +53,8 @@
 
   let { data } = $props();
 
-  const { screenToFlowPosition, updateNodeData } = $derived(useSvelteFlow());
+  const { screenToFlowPosition, updateEdge, updateNode, updateNodeData } =
+    $derived(useSvelteFlow());
   setAgentDefinitionsContext(data.agentDefs);
 
   const nodeTypes: NodeTypes = {
@@ -133,6 +137,88 @@
     flows[flowName] = deserializeAgentFlow(flow, agentDefs);
   }
 
+  // cut, copy and paste
+
+  let copiedNodes = $state.raw<SAgentFlowNode[]>([]);
+  let copiedEdges = $state.raw<SAgentFlowEdge[]>([]);
+
+  function cutNodesAndEdges() {
+    const selectedNodes = nodes.filter((node) => node.selected);
+    const selectedEdges = edges.filter((edge) => edge.selected);
+    if (!selectedNodes && !selectedEdges) {
+      return;
+    }
+    copiedNodes = selectedNodes.map((node) => serializeAgentFlowNode(node, agentDefs));
+    copiedEdges = selectedEdges.map((edge) => serializeAgentFlowEdge(edge));
+
+    nodes = nodes.filter((node) => !node.selected);
+    edges = edges.filter((edge) => !edge.selected);
+    // nodes and edges will be synced by checkNodeChange and checkEdgeChange
+  }
+
+  function copyNodesAndEdges() {
+    const selectedNodes = nodes.filter((node) => node.selected);
+    const selectedEdges = edges.filter((edge) => edge.selected);
+    if (!selectedNodes) {
+      return;
+    }
+    copiedNodes = selectedNodes.map((node) => serializeAgentFlowNode(node, agentDefs));
+    copiedEdges = selectedEdges.map((edge) => serializeAgentFlowEdge(edge));
+  }
+
+  async function pasteNodesAndEdges() {
+    nodes.forEach((node) => {
+      if (node.selected) {
+        updateNode(node.id, { selected: false });
+      }
+    });
+    edges.forEach((edge) => {
+      if (edge.selected) {
+        updateEdge(edge.id, { selected: false });
+      }
+    });
+
+    if (copiedNodes.length == 0) {
+      return;
+    }
+
+    let [cnodes, cedges] = await copySubFlow(copiedNodes, copiedEdges);
+    if (!cnodes && !cedges) return;
+
+    let new_nodes = [];
+    for (const node of cnodes) {
+      node.x += 80;
+      node.y += 80;
+      node.enabled = false;
+      await addAgentFlowNode(flowName, node);
+      const new_node = deserializeAgentFlowNode(node, agentDefs);
+      new_node.selected = true;
+      new_nodes.push(new_node);
+      flows[flowName].nodes.push(new_node);
+    }
+
+    let new_edges = [];
+    for (const edge of cedges) {
+      await addAgentFlowEdge(flowName, edge);
+      const new_edge = deserializeAgentFlowEdge(edge);
+      new_edge.selected = true;
+      new_edges.push(new_edge);
+      flows[flowName].edges.push(new_edge);
+    }
+
+    nodes = [...nodes, ...new_nodes];
+    edges = [...edges, ...new_edges];
+  }
+
+  function selectAllNodesAndEdges() {
+    nodes.forEach((node) => {
+      updateNode(node.id, { selected: true });
+    });
+    edges.forEach((edge) => {
+      updateEdge(edge.id, { selected: true });
+    });
+  }
+
   // shortcuts
 
   let hiddenAgents = $state(true);
@@ -155,10 +241,28 @@
       openFlow = !openFlow;
     });
 
+    hotkeys("ctrl+x", () => {
+      cutNodesAndEdges();
+    });
+    hotkeys("ctrl+c", () => {
+      copyNodesAndEdges();
+    });
+    hotkeys("ctrl+v", () => {
+      pasteNodesAndEdges();
+    });
+    hotkeys("ctrl+a", (ev) => {
+      ev.preventDefault();
+      selectAllNodesAndEdges();
+    });
+
     return () => {
       hotkeys.unbind("ctrl+s");
       hotkeys.unbind(key_open_agent);
       hotkeys.unbind(key_open_flow);
+      hotkeys.unbind("ctrl+x");
+      hotkeys.unbind("ctrl+c");
+      hotkeys.unbind("ctrl+v");
+      hotkeys.unbind("ctrl+a");
     };
   });
 

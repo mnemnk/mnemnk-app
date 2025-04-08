@@ -241,7 +241,7 @@ fn unique_flow_name(agent_flows: &AgentFlows, name: &str) -> String {
     new_name
 }
 
-fn copy_sub_flow(
+pub fn copy_sub_flow(
     nodes: Vec<&AgentFlowNode>,
     edges: Vec<&AgentFlowEdge>,
 ) -> (Vec<AgentFlowNode>, Vec<AgentFlowEdge>) {

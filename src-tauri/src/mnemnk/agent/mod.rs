@@ -148,3 +148,13 @@ pub fn remove_agent_flow_edge_cmd(
 ) -> Result<(), String> {
     flow::remove_agent_flow_edge(&env, &flow_name, &edge_id).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn copy_sub_flow_cmd(
+    nodes: Vec<AgentFlowNode>,
+    edges: Vec<AgentFlowEdge>,
+) -> (Vec<AgentFlowNode>, Vec<AgentFlowEdge>) {
+    let node_refs: Vec<&AgentFlowNode> = nodes.iter().collect();
+    let edge_refs: Vec<&AgentFlowEdge> = edges.iter().collect();
+    flow::copy_sub_flow(node_refs, edge_refs)
+}
