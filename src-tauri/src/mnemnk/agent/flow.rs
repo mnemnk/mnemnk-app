@@ -201,6 +201,9 @@ pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
     let mut flow = read_agent_flow(path)?;
 
+    // reset path of the flow
+    flow.path = None;
+
     // refresh the node and edge ids
     let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
     flow.nodes = nodes;
