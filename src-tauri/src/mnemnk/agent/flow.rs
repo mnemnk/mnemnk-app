@@ -61,7 +61,7 @@ pub struct AgentFlowEdge {
     pub target_handle: String,
 }
 
-pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
+pub fn init(app: &AppHandle) -> Result<()> {
     let dir = agent_flows_dir(app).context("Agent flows directory not found")?;
     let mut agent_flows: AgentFlows = read_agent_flows(&dir)?;
     if agent_flows.is_empty() {
@@ -79,8 +79,18 @@ pub(super) fn init_agent_flows(app: &AppHandle) -> Result<()> {
             log::error!("Failed to add agent flow: {}", e);
         });
     }
-    for (name, _agent_flow) in &agent_flows {
-        env.start_agent_flow(name).unwrap_or_else(|e| {
+    Ok(())
+}
+
+pub fn ready(app: &AppHandle) -> Result<()> {
+    let env = app.state::<AgentEnv>();
+    let agent_flow_names;
+    {
+        let agent_flows = env.flows.lock().unwrap();
+        agent_flow_names = agent_flows.keys().cloned().collect::<Vec<_>>();
+    }
+    for name in agent_flow_names {
+        env.start_agent_flow(&name).unwrap_or_else(|e| {
             log::error!("Failed to start agent flow: {}", e);
         });
     }

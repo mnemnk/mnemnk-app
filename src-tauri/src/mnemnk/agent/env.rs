@@ -39,11 +39,11 @@ pub struct AgentEnv {
     pub board_data: Mutex<HashMap<String, AgentData>>,
 
     // message sender
-    pub tx: mpsc::Sender<AgentMessage>,
+    pub tx: Mutex<Option<mpsc::Sender<AgentMessage>>>,
 }
 
 impl AgentEnv {
-    fn new(app: AppHandle, tx: mpsc::Sender<AgentMessage>) -> Self {
+    fn new(app: AppHandle) -> Self {
         Self {
             app,
             flows: Default::default(),
@@ -53,12 +53,12 @@ impl AgentEnv {
             commands: Default::default(),
             board_out_agents: Default::default(),
             board_data: Default::default(),
-            tx,
+            tx: Default::default(),
         }
     }
 
-    pub fn init(app: &AppHandle, tx: mpsc::Sender<AgentMessage>) -> Result<()> {
-        let env = Self::new(app.clone(), tx);
+    pub fn init(app: &AppHandle) -> Result<()> {
+        let env = Self::new(app.clone());
 
         let agent_defs = init_agent_defs(app)?;
         settings::init_agent_global_configs(app, &agent_defs)?;
@@ -68,6 +68,38 @@ impl AgentEnv {
         }
 
         app.manage(env);
+        Ok(())
+    }
+
+    pub fn spawn_message_loop(&self) -> Result<()> {
+        // TODO: settings for the channel size
+        let (tx, mut rx) = mpsc::channel(4096);
+        let env = self.app.state::<AgentEnv>();
+        {
+            let mut tx_lock = env.tx.lock().unwrap();
+            *tx_lock = Some(tx);
+        }
+
+        // spawn the main loop
+        let app_handle = self.app.clone();
+        tauri::async_runtime::spawn(async move {
+            while let Some(message) = rx.recv().await {
+                use AgentMessage::*;
+
+                match message {
+                    AgentOut { agent, ch, data } => {
+                        message::agent_out(&app_handle, agent, ch, data).await;
+                    }
+                    BoardOut { name, data } => {
+                        message::board_out(&app_handle, name, data).await;
+                    }
+                    Store { data } => {
+                        message::store(&app_handle, data);
+                    }
+                }
+            }
+        });
+
         Ok(())
     }
 

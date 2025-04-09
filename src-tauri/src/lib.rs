@@ -27,7 +27,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
+            tauri::async_runtime::block_on(async move {
                 mnemnk::settings::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize settings: {}", e);
                     app_handle.exit(1);
@@ -38,9 +38,11 @@ pub fn run() {
                 });
                 mnemnk::tray::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize tray: {}", e);
+                    app_handle.exit(1);
                 });
-                mnemnk::agent::init(&app_handle).await.unwrap_or_else(|e| {
+                mnemnk::agent::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize agent: {}", e);
+                    app_handle.exit(1);
                 });
                 mnemnk::autostart::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize autostart: {}", e);
@@ -49,11 +51,13 @@ pub fn run() {
                     log::error!("Failed to initialize shortcut: {}", e);
                 });
 
+                let app_handle2 = app_handle.clone();
                 ctrlc::set_handler(move || {
-                    app_handle.exit(0);
+                    app_handle2.exit(0);
                 })
                 .unwrap_or_else(|e| {
                     log::error!("Failed to set ctrl-c handler: {}", e);
+                    app_handle.exit(1);
                 });
             });
             Ok(())
@@ -105,8 +109,15 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
-            if let tauri::RunEvent::Exit = event {
+        .run(|app, event| match event {
+            tauri::RunEvent::Ready => {
+                mnemnk::agent::ready(app).unwrap_or_else(|e| {
+                    log::error!("Failed to start agents: {}", e);
+                });
+                log::info!("Mnemnk App is ready.");
+            }
+            tauri::RunEvent::Exit => {
+                log::info!("Exiting Mnemnk App...");
                 tauri::async_runtime::block_on(async move {
                     mnemnk::window::hide_main(app).unwrap_or_else(|e| {
                         log::error!("Failed to hide main window: {}", e);
@@ -120,6 +131,7 @@ pub fn run() {
                     mnemnk::settings::quit(app);
                 });
             }
+            _ => {}
         });
 }
 
