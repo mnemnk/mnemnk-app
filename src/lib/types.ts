@@ -148,17 +148,6 @@ export type Settings = {
 
 // emit
 
-export type WriteBoardEmit = {
-  kind: string;
-  value: any;
-};
-
-export type BoardMessage = {
-  kind: string;
-  value: any;
-  time: number;
-};
-
 export type DisplayMessage = {
   agent_id: string;
   key: string;
