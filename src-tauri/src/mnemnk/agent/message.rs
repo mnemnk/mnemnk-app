@@ -30,13 +30,16 @@ pub async fn send_agent_out(
     ch: String,
     data: AgentData,
 ) -> Result<()> {
-    let main_tx = env
-        .tx
-        .lock()
-        .unwrap()
-        .clone()
-        .context("tx is not initialized")?;
-    main_tx
+    let env_tx;
+    {
+        env_tx = env
+            .tx
+            .lock()
+            .unwrap()
+            .clone()
+            .context("tx is not initialized")?;
+    }
+    env_tx
         .send(AgentMessage::AgentOut { agent, ch, data })
         .await
         .context("Failed to send AgentOut message")
@@ -48,38 +51,47 @@ pub fn try_send_agent_out(
     ch: String,
     data: AgentData,
 ) -> Result<()> {
-    let main_tx = env
-        .tx
-        .lock()
-        .unwrap()
-        .clone()
-        .context("tx is not initialized")?;
-    main_tx
+    let env_tx;
+    {
+        env_tx = env
+            .tx
+            .lock()
+            .unwrap()
+            .clone()
+            .context("tx is not initialized")?;
+    }
+    env_tx
         .try_send(AgentMessage::AgentOut { agent, ch, data })
         .context("Failed to try_send AgentOut message")
 }
 
 pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Result<()> {
-    let main_tx = env
-        .tx
-        .lock()
-        .unwrap()
-        .clone()
-        .context("tx is not initialized")?;
-    main_tx
+    let env_tx;
+    {
+        env_tx = env
+            .tx
+            .lock()
+            .unwrap()
+            .clone()
+            .context("tx is not initialized")?;
+    }
+    env_tx
         .try_send(AgentMessage::BoardOut { name, data })
         .context("Failed to try_send BoardOut message")
 }
 
 pub fn try_send_store(app: &AppHandle, data: AgentData) -> Result<()> {
     let env = app.state::<AgentEnv>();
-    let main_tx = env
-        .tx
-        .lock()
-        .unwrap()
-        .clone()
-        .context("tx is not initialized")?;
-    main_tx
+    let env_tx;
+    {
+        env_tx = env
+            .tx
+            .lock()
+            .unwrap()
+            .clone()
+            .context("tx is not initialized")?;
+    }
+    env_tx
         .try_send(AgentMessage::Store { data })
         .context("Failed to send Store message")
 }
