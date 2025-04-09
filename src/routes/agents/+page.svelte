@@ -142,9 +142,14 @@
   let copiedNodes = $state.raw<SAgentFlowNode[]>([]);
   let copiedEdges = $state.raw<SAgentFlowEdge[]>([]);
 
-  function cutNodesAndEdges() {
+  function selectedNodesAndEdges(): [AgentFlowNode[], AgentFlowEdge[]] {
     const selectedNodes = nodes.filter((node) => node.selected);
     const selectedEdges = edges.filter((edge) => edge.selected);
+    return [selectedNodes, selectedEdges];
+  }
+
+  function cutNodesAndEdges() {
+    const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
     if (!selectedNodes && !selectedEdges) {
       return;
     }
@@ -157,8 +162,7 @@
   }
 
   function copyNodesAndEdges() {
-    const selectedNodes = nodes.filter((node) => node.selected);
-    const selectedEdges = edges.filter((edge) => edge.selected);
+    const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
     if (!selectedNodes) {
       return;
     }
@@ -377,6 +381,19 @@
   }
 
   async function onPlay() {
+    const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
+    if (selectedNodes || selectedEdges) {
+      // start only selected agents
+      for (const node of selectedNodes) {
+        if (!node.data.enabled) {
+          updateNodeData(node.id, { enabled: true });
+          await startAgent(node.id);
+        }
+      }
+      return;
+    }
+
+    // start all agents
     for (const node of nodes) {
       if (!node.data.enabled) {
         updateNodeData(node.id, { enabled: true });
@@ -386,6 +403,19 @@
   }
 
   async function onPause() {
+    const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
+    if (selectedNodes || selectedEdges) {
+      // stop only selected agents
+      for (const node of selectedNodes) {
+        if (node.data.enabled) {
+          updateNodeData(node.id, { enabled: false });
+          await stopAgent(node.id);
+        }
+      }
+      return;
+    }
+
+    // stop all agents
     for (const node of nodes) {
       if (node.data.enabled) {
         updateNodeData(node.id, { enabled: false });
