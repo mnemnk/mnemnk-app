@@ -14,7 +14,7 @@
 
 <br>
 
-Mnemnkは、あなたの活動を記録し、マルチエージェントによって強化するパーソナルなライフロギングプラットフォームです。
+Mnemnkは、あなたの活動を記録し、常時稼働するマルチエージェントシステムを通じてそれらを強化する、パーソナルなライフログプラットフォームです。
 
 <br>
 
@@ -26,47 +26,62 @@ Mnemnkは、あなたの活動を記録し、マルチエージェントによ�
 
 ### アクティビティの自動保存
 
-- アプリケーションの使用履歴やブラウザの履歴がスクリーンショットと共に自動保存されます。
-- 保存した情報は時系列で見返すことも、検索することもできます。
+- アプリケーションの使用履歴やブラウザ履歴がスクリーンショットと共に自動的に保存されます。
+- あなたの日々のデジタルフットプリントが時系列で整理され、そのときのスクリーンショットと共に振り返ることができます。
+- 保存された情報は日付で確認したり、テキスト検索で探すことができます。
 
 <br>
 <div align="center">
 <a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"><img alt="daily" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-daily.png?raw=true"></a>
 </div>
 
-### プライバシー
+### プライバシー重視
 
-- コアシステムmnemnk-appおよびコアエージェントによって記録される活動記録はローカルに保存され、外部に送られることはありません。
-- コアシステムおよびコアエージェントはOSSにて公開されています。
+- このコアシステム `mnemnk-app` とコアエージェントによって記録された活動記録はローカルに保存され、外部に送信されることはありません。
+- コアシステムとコアエージェントはオープンソースソフトウェアとして公開されており、透明性が確保されています。
 
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"><img alt="core agents" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"></a>
+</div>
 
-### 拡張性
+### エージェントベースの拡張性
 
-- 各種機能をエージェントとして分離することで、システムの拡張性を実現
-- エージェントは任意の言語で開発可能
-
+- システムの拡張性は、さまざまな機能をエージェントとして分離することで実現されています。
+- エージェントは任意のプログラミング言語で開発可能で、自由なシステム拡張が可能です。
+- フローを用いた視覚的なUIにより、多数のエージェントが協調動作するマルチエージェントシステムを直観的に構築できます。
+- 一度限りのバッチ処理システムとは異なり、Mnemnkのエージェントはリアルタイムでイベントを処理しながら並行して動作します。
 
 ## インストール
 
 [リリース](https://github.com/mnemnk/mnemnk-app/releases)からインストーラーをダウンロードし実行する。
 
+### 開発
 
-### コアエージェント
+あなたが開発者なら、リポジトリーからビルドすることも可能です。
 
-各エージェントのページからインストールしてください。
+### 事前に必要なもの
 
-- [mnemnk-application](https://github.com/mnemnk/mnemnk-application): アプリケーションの使用履歴を保存
-- [mnemnk-screen](https://github.com/mnemnk/mnemnk-screen): スクリーンショットを保存
-- [mnemnk-api](https://github.com/mnemnk/mnemnk-api): APIサーバーを提供
-- [mnemnk-browser-extension](https://github.com/mnemnk/mnemnk-browser-extension): `mnemnk-api`と通信し、ブラウザの履歴を保存
+[Tauri](https://v2.tauri.app/)の開発環境が必要です。
+- Git
+- [Rust](https://www.rust-lang.org/)
+- [npm](https://nodejs.org/ja/)
 
+### ビルド
 
+```shell
+$ git clone https://github.com/mnemnk/mnemnk-app.git
+$ cd mnemnk-app
+$ npm install
+$ npm run tauri:dev
+```
+(npm run tauri devでも動きますが、その場合はidentifierがrelease buildと同じになります)
 
-## 設定
+### 設定
 
-coreの設定はそのままでも使い始めることができます。
+はじめて起動するとMnemnk Directoryを指定するようにSettingsページが開きます。ディスク容量が十分にある場所を指定してください。Databaseのファイルも作成されますので、クラウド同機が行われる場所は避けた方がいいでしょう。
 
-ディスクを複数持っているマシンの場合、SettingsページからData Directoryを指定することで、DBとスクリーンショットの保存場所を変更できます。データは自動では移動しないので、Quitしてデータをコピーしてから再起動してください。
+設定したらSaveをクリックし、アプリを再起動してください。
 
 <br>
 <div align="center">
@@ -74,14 +89,25 @@ coreの設定はそのままでも使い始めることができます。
 </div>
 <br>
 
-エージェントはエージェントの設定からONにできます。
+## エージェント
 
+各エージェントをそれぞれのページからインストールしてください：
+
+- [mnemnk-core-agents](https://github.com/mnemnk/mnemnk-core-agents)
+  - 以下の基本的なエージェントが含まれます。
+  - [mnemnk-api](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-api)
+  - [mnemnk-application](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-application)
+  - [mnemnk-screen](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-screen)
+- [mnemnk-langchain](https://github.com/mnemnk/mnemnk-langchain)
+  - [LangChain](https://www.langchain.com/langchain) を用いたエージェント
+- [mnemnk-browser-extension](https://github.com/mnemnk/mnemnk-browser-extension)
+  - `mnemnk-api` と通信し、ブラウザ履歴を保存するためのブラウザ拡張
 
 ## コントリビューション
 
-- エージェントの開発
-- バグ報告
-- ドキュメントの改善
+- エージェント開発：新しいエージェントを作成して機能を拡張
+- バグ報告：問題の特定と修正を支援
+- 機能リクエスト：新しい機能のアイデアを提供
 
 <!----------------------------------------------------------------------------->
 
