@@ -107,16 +107,18 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
-                mnemnk::window::hide_main(app).unwrap_or_else(|e| {
-                    log::error!("Failed to hide main window: {}", e);
-                });
-                app.save_window_state(StateFlags::all())
-                    .unwrap_or_else(|e| {
-                        log::error!("Failed to save window state: {}", e);
+                tauri::async_runtime::block_on(async move {
+                    mnemnk::window::hide_main(app).unwrap_or_else(|e| {
+                        log::error!("Failed to hide main window: {}", e);
                     });
-                mnemnk::agent::quit(app);
-                mnemnk::store::quit(app);
-                mnemnk::settings::quit(app);
+                    app.save_window_state(StateFlags::all())
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to save window state: {}", e);
+                        });
+                    mnemnk::agent::quit(app);
+                    mnemnk::store::quit(app).await;
+                    mnemnk::settings::quit(app);
+                });
             }
         });
 }

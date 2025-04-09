@@ -15,6 +15,7 @@ use tauri::{
     http::{self, request::Request, response::Response, StatusCode},
     AppHandle, Manager, State,
 };
+use tokio_util::task::TaskTracker;
 
 use super::{agent::AgentData, tokenize::tokenize_text};
 use crate::mnemnk::settings::{data_dir, CoreSettings};
@@ -40,17 +41,27 @@ struct Record {
     id: RecordId,
 }
 
-static DB: LazyLock<Surreal<Db>> = LazyLock::new(Surreal::init);
+pub struct MnemnkDatabase {
+    db: Surreal<Db>,
+    tracker: TaskTracker,
+}
 
 pub async fn init(app: &AppHandle) -> Result<()> {
+    let store = MnemnkDatabase {
+        db: Surreal::init(),
+        tracker: TaskTracker::new(),
+    };
+
     let data_dir = data_dir(app).context("data_dir is not set")?;
     let db_path = PathBuf::from(data_dir).join("store.db");
 
-    DB.connect::<RocksDb>(db_path).await?;
-    DB.use_ns("mnemnk").use_db("mnemnk").await?;
+    let db = &store.db;
+
+    db.connect::<RocksDb>(db_path).await?;
+    db.use_ns("mnemnk").use_db("mnemnk").await?;
 
     log::info!("store::init: initializing tables");
-    let _result = DB
+    let _result = db
         .query("DEFINE TABLE IF NOT EXISTS event SCHEMAFULL")
         // fields
         .query("DEFINE FIELD IF NOT EXISTS kind ON TABLE event TYPE string")
@@ -77,103 +88,118 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .await?;
     log::info!("store::init: {:?}", _result);
 
+    app.manage(store);
+
     Ok(())
 }
 
-pub fn quit(_app: &AppHandle) {
-    // nothing
+pub async fn quit(app: &AppHandle) {
+    let state = app.state::<MnemnkDatabase>();
+    state.tracker.close();
+    state.tracker.wait().await;
 }
 
-pub async fn store(app: &AppHandle, data: AgentData) -> Result<()> {
-    let kind = data.kind;
-    let mut json_value = data.value;
+pub fn store(app: &AppHandle, data: AgentData) {
+    let state = app.state::<MnemnkDatabase>();
 
-    // extract timestamp from the value if it exists
-    let timestamp = if let Some(t) = json_value.get("t").cloned() {
-        // remove timestamp from the value
-        json_value.as_object_mut().unwrap().remove("t");
-        t.as_i64().unwrap()
-    } else {
-        Utc::now().timestamp_millis()
-    };
-
-    let utc_dt = Utc
-        .timestamp_millis_opt(timestamp)
-        .single()
-        .context("Failed to parse timestamp")?;
-    let local_dt: DateTime<Local> = DateTime::from(utc_dt);
-    let local_offset = local_dt.offset().local_minus_utc() as i64;
-
-    let day_start_hour: u32 = {
-        let settings = app.state::<Mutex<CoreSettings>>();
-        let settings = settings.lock().unwrap();
-        settings.day_start_hour.unwrap_or(0)
-    };
-    let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
-    // let adjusted_dt = if local_dt.hour() < day_start_hour {
-    //     local_dt - chrono::Duration::days(1)
-    // } else {
-    //     local_dt
-    // };
-
-    // let local_y = adjusted_dt.year() as i64;
-    // let local_ym = local_y * 100 + (adjusted_dt.month() as i64);
-    // let local_ymd = local_ym * 100 + (adjusted_dt.day() as i64);
-
-    // extract text from the value if it exists
-    let text = if let Some(t) = json_value.get("text").cloned() {
-        // remove the text from the value
-        json_value.as_object_mut().unwrap().remove("text");
-        t.as_str().map(|s| s.to_string())
-    } else {
-        None
-    };
-    let text_tokens = text.as_ref().map(|t| tokenize_text(t));
-
-    // extract image from the value if it exists
-    if let Some(image) = json_value.get("image").cloned() {
-        // remove image from the value. it's too big to store into the database.
-        json_value.as_object_mut().unwrap().remove("image");
-        let image = image.as_str().unwrap().to_string();
-
-        if let Some(image_id) = json_value.get("image_id").cloned() {
-            let image_id = image_id.as_str().unwrap().to_string();
-
-            let app = app.clone();
-            let kind = kind.clone();
-            tauri::async_runtime::spawn(async move {
-                save_image(&app, kind, image_id, image)
-                    .await
-                    .expect("Failed to save image");
-            });
-        }
-    };
-
-    let record: Option<Record> = DB
-        .create("event")
-        .content(Event {
-            kind,
-            time: surrealdb::Datetime::from(utc_dt),
-            agent: "".to_string(),
-            local_offset,
-            local_y,
-            local_ym,
-            local_ymd,
-            value: json_value,
-            text,
-            text_tokens,
-        })
-        .await?;
-
-    if record.is_none() {
-        return Err(anyhow::anyhow!("Failed to store event"));
+    if state.tracker.is_closed() {
+        log::warn!("store: database is closed");
+        return;
     }
 
-    Ok(())
+    let db = state.db.clone();
+    let app = app.clone();
+    state.tracker.spawn(async move {
+        let kind = data.kind;
+        let mut json_value = data.value;
+
+        // extract timestamp from the value if it exists
+        let timestamp = if let Some(t) = json_value.get("t").cloned() {
+            // remove timestamp from the value
+            json_value.as_object_mut().unwrap().remove("t");
+            t.as_i64().unwrap()
+        } else {
+            Utc::now().timestamp_millis()
+        };
+
+        let Some(utc_dt) = Utc.timestamp_millis_opt(timestamp).single() else {
+            log::error!("store: Failed to parse timestamp: {}", timestamp);
+            return;
+        };
+        let local_dt: DateTime<Local> = DateTime::from(utc_dt);
+        let local_offset = local_dt.offset().local_minus_utc() as i64;
+
+        let day_start_hour: u32 = {
+            let settings = app.state::<Mutex<CoreSettings>>();
+            let settings = settings.lock().unwrap();
+            settings.day_start_hour.unwrap_or(0)
+        };
+        let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
+        // let adjusted_dt = if local_dt.hour() < day_start_hour {
+        //     local_dt - chrono::Duration::days(1)
+        // } else {
+        //     local_dt
+        // };
+
+        // let local_y = adjusted_dt.year() as i64;
+        // let local_ym = local_y * 100 + (adjusted_dt.month() as i64);
+        // let local_ymd = local_ym * 100 + (adjusted_dt.day() as i64);
+
+        // extract text from the value if it exists
+        let text = if let Some(t) = json_value.get("text").cloned() {
+            // remove the text from the value
+            json_value.as_object_mut().unwrap().remove("text");
+            t.as_str().map(|s| s.to_string())
+        } else {
+            None
+        };
+        let text_tokens = text.as_ref().map(|t| tokenize_text(t));
+
+        // extract image from the value if it exists
+        if let Some(image) = json_value.get("image").cloned() {
+            // remove image from the value. it's too big to store into the database.
+            json_value.as_object_mut().unwrap().remove("image");
+            let image = image.as_str().unwrap().to_string();
+
+            if let Some(image_id) = json_value.get("image_id").cloned() {
+                let image_id = image_id.as_str().unwrap().to_string();
+
+                let app = app.clone();
+                let kind = kind.clone();
+                tauri::async_runtime::spawn(async move {
+                    save_image(&app, kind, image_id, image)
+                        .await
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to save image: {}", e);
+                        });
+                });
+            }
+        };
+
+        let record: Option<Record> = db
+            .create("event")
+            .content(Event {
+                kind,
+                time: surrealdb::Datetime::from(utc_dt),
+                agent: "".to_string(),
+                local_offset,
+                local_y,
+                local_ym,
+                local_ymd,
+                value: json_value,
+                text,
+                text_tokens,
+            })
+            .await
+            .unwrap_or_default();
+
+        if record.is_none() {
+            log::error!("Failed to store event");
+        }
+    });
 }
 
 // Image
-
 async fn save_image(
     app: &AppHandle,
     kind: String,
@@ -350,7 +376,7 @@ pub struct DailyStats {
     count: i32,
 }
 
-async fn daily_stats() -> Result<Vec<DailyStats>> {
+async fn daily_stats(app: &AppHandle) -> Result<Vec<DailyStats>> {
     let sql = r#"
         SELECT
             local_ymd AS date,
@@ -362,14 +388,16 @@ async fn daily_stats() -> Result<Vec<DailyStats>> {
         ;
     "#;
 
-    let mut result = DB.query(sql).await?;
+    let state = app.state::<MnemnkDatabase>();
+
+    let mut result = state.db.query(sql).await?;
     let daily_stats: Vec<DailyStats> = result.take(0)?;
     Ok(daily_stats)
 }
 
 #[tauri::command]
-pub async fn daily_stats_cmd() -> Result<Vec<DailyStats>, String> {
-    let result = daily_stats().await.map_err(|e| e.to_string())?;
+pub async fn daily_stats_cmd(app: AppHandle) -> Result<Vec<DailyStats>, String> {
+    let result = daily_stats(&app).await.map_err(|e| e.to_string())?;
     Ok(result)
 }
 
@@ -395,7 +423,12 @@ pub struct EventRecord {
     value: serde_json::Value,
 }
 
-async fn find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<EventRecordInternal>> {
+async fn find_events_by_ymd(
+    app: &AppHandle,
+    year: i32,
+    month: i32,
+    day: i32,
+) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
         SELECT 
             id,
@@ -413,18 +446,20 @@ async fn find_events_by_ymd(year: i32, month: i32, day: i32) -> Result<Vec<Event
         ;
         "#;
     let local_ymd = year * 10000 + month * 100 + day;
-    let mut result = DB.query(sql).bind(("local_ymd", local_ymd)).await?;
+    let state = app.state::<MnemnkDatabase>();
+    let mut result = state.db.query(sql).bind(("local_ymd", local_ymd)).await?;
     let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
 
 #[tauri::command]
 pub async fn find_events_by_ymd_cmd(
+    app: AppHandle,
     year: i32,
     month: i32,
     day: i32,
 ) -> Result<Vec<EventRecord>, String> {
-    let result = find_events_by_ymd(year, month, day)
+    let result = find_events_by_ymd(&app, year, month, day)
         .await
         .map_err(|e| e.to_string())?;
     let events = result
@@ -442,13 +477,16 @@ pub async fn find_events_by_ymd_cmd(
 }
 
 #[tauri::command]
-pub async fn reindex_ymd_cmd(settings: State<'_, Mutex<CoreSettings>>) -> Result<(), String> {
+pub async fn reindex_ymd_cmd(
+    app: AppHandle,
+    settings: State<'_, Mutex<CoreSettings>>,
+) -> Result<(), String> {
     let day_start_hour;
     {
         let settings = settings.lock().unwrap();
         day_start_hour = settings.day_start_hour.unwrap_or(0);
     }
-    reindex_ymd(day_start_hour)
+    reindex_ymd(&app, day_start_hour)
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -467,31 +505,47 @@ struct LocalYmd {
     local_ymd: i64,
 }
 
-async fn reindex_ymd(day_start_hour: u32) -> Result<()> {
+async fn reindex_ymd(app: &AppHandle, day_start_hour: u32) -> Result<()> {
     log::info!("store: reindexing local_ymd...");
-    let mut result = DB
-        .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
-        .await?;
-    let events: Vec<TimestampRecord> = result.take(0)?;
-    let num_events = events.len();
-    let mut i = 0;
-    for rec in events {
-        i += 1;
-        if i % 100 == 0 {
-            log::info!("store: indexed {} / {}", i, num_events);
+    let state = app.state::<MnemnkDatabase>();
+    let db = state.db.clone();
+    state.tracker.spawn(async move {
+        let Ok(mut result) = db
+            .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
+            .await
+        else {
+            log::error!("store::reindex_ymd: failed to query events");
+            return;
+        };
+
+        let Ok(events) = result.take::<Vec<TimestampRecord>>(0) else {
+            log::error!("store::reindex_ymd: no results");
+            return;
+        };
+        let num_events = events.len();
+        let mut i = 0;
+        for rec in events {
+            i += 1;
+            if i % 100 == 0 {
+                log::info!("store: indexed {} / {}", i, num_events);
+            }
+            let dt = DateTime::from_timestamp(rec.timestamp, 0).unwrap_or_default();
+            let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt, day_start_hour);
+            if let Err(e) = db
+                .update::<Option<Event>>(rec.id)
+                .merge(LocalYmd {
+                    local_y,
+                    local_ym,
+                    local_ymd,
+                })
+                .await
+            {
+                log::error!("store::reindex_ymd: failed to update local_ymd: {}", e);
+                return;
+            }
         }
-        let dt = DateTime::from_timestamp(rec.timestamp, 0).unwrap_or_default();
-        let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt, day_start_hour);
-        let _result: Option<Event> = DB
-            .update(rec.id)
-            .merge(LocalYmd {
-                local_y,
-                local_ym,
-                local_ymd,
-            })
-            .await?;
-    }
-    log::info!("store: reindexed local_ymd");
+        log::info!("store: reindexed local_ymd");
+    });
     Ok(())
 }
 
@@ -520,38 +574,51 @@ struct TextTokens {
     text_tokens: Option<String>,
 }
 
-async fn reindex_text() -> Result<()> {
-    log::info!("store::init: reindexing text");
-    let mut result = DB.query("SELECT id, text FROM event").await?;
-    let texts: Vec<TextRecord> = result.take(0)?;
-    let num_texts = texts.len();
-    let mut i = 0;
-    for rec in texts {
-        i += 1;
-        if i % 100 == 0 {
-            log::info!("store::init: indexed {} / {}", i, num_texts);
+async fn reindex_text(app: &AppHandle) {
+    let state = app.state::<MnemnkDatabase>();
+    let db = state.db.clone();
+    state.tracker.spawn(async move {
+        log::info!("store::init: reindexing text");
+        let Ok(mut result) = db.query("SELECT id, text FROM event").await else {
+            log::error!("store::reindex_text: failed to query events");
+            return;
+        };
+        let Ok(texts) = result.take::<Vec<TextRecord>>(0) else {
+            log::error!("store::reindex_text: no results");
+            return;
+        };
+        let num_texts = texts.len();
+        let mut i = 0;
+        for rec in texts {
+            i += 1;
+            if i % 100 == 0 {
+                log::info!("store::init: indexed {} / {}", i, num_texts);
+            }
+            if rec.text.is_none() {
+                continue;
+            }
+            let tokenized_text = tokenize_text(&rec.text.unwrap());
+            if let Err(e) = db
+                .update::<Option<Event>>(rec.id)
+                .merge(TextTokens {
+                    text_tokens: Some(tokenized_text),
+                })
+                .await
+            {
+                log::error!("store::reindex_text: failed to update text_tokens: {}", e);
+                return;
+            }
         }
-        if rec.text.is_none() {
-            continue;
-        }
-        let tokenized_text = tokenize_text(&rec.text.unwrap());
-        let _result: Option<Event> = DB
-            .update(rec.id)
-            .merge(TextTokens {
-                text_tokens: Some(tokenized_text),
-            })
-            .await?;
-    }
-    Ok(())
+    });
 }
 
 #[tauri::command]
-pub async fn reindex_text_cmd() -> Result<(), String> {
-    reindex_text().await.map_err(|e| e.to_string())?;
+pub async fn reindex_text_cmd(app: AppHandle) -> Result<(), String> {
+    reindex_text(&app).await;
     Ok(())
 }
 
-async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
+async fn search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
         SELECT 
             id,
@@ -572,14 +639,17 @@ async fn search_events(query: String) -> Result<Vec<EventRecordInternal>> {
     if tokenized_query.is_empty() {
         return Ok(Vec::new());
     }
-    let mut result = DB.query(sql).bind(("query", tokenized_query)).await?;
+    let state = app.state::<MnemnkDatabase>();
+    let mut result = state.db.query(sql).bind(("query", tokenized_query)).await?;
     let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
 
 #[tauri::command]
-pub async fn search_events_cmd(query: String) -> Result<Vec<EventRecord>, String> {
-    let result = search_events(query).await.map_err(|e| e.to_string())?;
+pub async fn search_events_cmd(app: AppHandle, query: String) -> Result<Vec<EventRecord>, String> {
+    let result = search_events(&app, query)
+        .await
+        .map_err(|e| e.to_string())?;
     let events = result
         .iter()
         .map(|e| EventRecord {
