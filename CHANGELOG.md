@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.14.1](https://github.com/mnemnk/mnemnk-app/compare/v0.14.0...v0.14.1) (2025-04-09)
+
+
+### Features
+
+* 🎸 copy and paste nodes and edges ([#216](https://github.com/mnemnk/mnemnk-app/issues/216)) ([ce5be32](https://github.com/mnemnk/mnemnk-app/commit/ce5be3278e843f0a879493da0e9390dc2e39e4e7))
+* 🎸 graceful shutdown database ([#221](https://github.com/mnemnk/mnemnk-app/issues/221)) ([bc6d0d4](https://github.com/mnemnk/mnemnk-app/commit/bc6d0d43d92456004dc6d424e0522bd3115f2c6e)), closes [#211](https://github.com/mnemnk/mnemnk-app/issues/211)
+* 🎸 remove Monitor page ([#218](https://github.com/mnemnk/mnemnk-app/issues/218)) ([0c81fab](https://github.com/mnemnk/mnemnk-app/commit/0c81fab22c64f508e95ffb69f0b4689c20a3cfd3))
+* 🎸 separate init and ready process ([#222](https://github.com/mnemnk/mnemnk-app/issues/222)) ([142c2c3](https://github.com/mnemnk/mnemnk-app/commit/142c2c39b7b06199d8467ecbad0f10b9afa07c76))
+* 🎸 start and stop only selected agents ([#219](https://github.com/mnemnk/mnemnk-app/issues/219)) ([f5bdffb](https://github.com/mnemnk/mnemnk-app/commit/f5bdffb84718f7e2222ff03b7ad7704d5b5093c0))
+
+
+### Bug Fixes
+
+* 🐛 agent can't be started after importing flow ([#214](https://github.com/mnemnk/mnemnk-app/issues/214)) ([a29951c](https://github.com/mnemnk/mnemnk-app/commit/a29951cd689ce81ab83a5f835f917946842c9802))
+* 🐛 path is remaining even after importing flow ([#215](https://github.com/mnemnk/mnemnk-app/issues/215)) ([5eb5d34](https://github.com/mnemnk/mnemnk-app/commit/5eb5d342dae96970e139c4022b4cfc9bc1f97713))
+* 🐛 play and pause don't work when no nodes are selected ([#223](https://github.com/mnemnk/mnemnk-app/issues/223)) ([5d1840a](https://github.com/mnemnk/mnemnk-app/commit/5d1840a276f7af515e75bd5faf22ce5f41cb3abe))
+
 ## [0.14.0](https://github.com/mnemnk/mnemnk-app/compare/v0.13.3...v0.14.0) (2025-04-08)
 
 
