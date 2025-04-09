@@ -4,7 +4,7 @@
 
 <br>
 
-![Mnemnk logo](docs/img/mnemnk_title.png)
+<img alt="home" width="40%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/mnemnk_title.png?raw=true">
 
 <br>
 
@@ -76,7 +76,7 @@ $ npm install
 $ npm run tauri:dev
 ```
 
-(You can also use npm run tauri dev, but in that case, the identifier will be the same as the release build.)
+(You can also use `npm run tauri dev`, but in that case, the identifier will be the same as the release build.)
 
 ### Configuration
 
@@ -113,6 +113,23 @@ There are many ways you can contribute to Mnemnk:
 - Bug reporting: Help identify and fix issues
 - Documentation improvement: Help make Mnemnk easier to use
 - Feature requests: Share your ideas for new capabilities
+
+## Contact
+
+Akira Ishino - [stn](https://github.com/stn) - akira@lumilab.jp
+
+## Acknowledgments
+
+* [Rust](https://www.rust-lang.org/)
+* [Tauri](https://tauri.app/)
+* [Tokio](https://tokio.rs/)
+* [SurrealDB](https://surrealdb.com/)
+* [Node.js](https://nodejs.org/)
+* [TypeScript](https://www.typescriptlang.org/)
+* [Svelte](https://svelte.dev/)
+* [Svelte Flow](https://svelteflow.dev/)
+* [Tailwind CSS](https://tailwindcss.com/)
+* [Flowbite Svelte](https://flowbite-svelte.com/)
 
 <!----------------------------------------------------------------------------->
 
