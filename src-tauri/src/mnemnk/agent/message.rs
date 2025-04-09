@@ -41,7 +41,7 @@ pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>)
                     board_out(&app_handle, name, data).await;
                 }
                 Store { data } => {
-                    store(&app_handle, data).await;
+                    store(&app_handle, data);
                 }
             }
         }
@@ -165,8 +165,6 @@ fn send_agent_in(env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
     }
 }
 
-async fn store(app_handle: &AppHandle, data: AgentData) {
-    store::store(app_handle, data).await.unwrap_or_else(|e| {
-        log::error!("Failed to store value: {}", e);
-    });
+fn store(app_handle: &AppHandle, data: AgentData) {
+    store::store(app_handle, data);
 }
