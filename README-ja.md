@@ -4,7 +4,7 @@
 
 <br>
 
-![Mnemnk logo](docs/img/mnemnk_title.png)
+<img alt="home" width="40%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/mnemnk_title.png?raw=true">
 
 <br>
 
@@ -75,7 +75,8 @@ $ cd mnemnk-app
 $ npm install
 $ npm run tauri:dev
 ```
-(npm run tauri devでも動きますが、その場合はidentifierがrelease buildと同じになります)
+
+(`npm run tauri dev` でも動きますが、その場合はidentifierがrelease buildと同じになります)
 
 ### 設定
 
@@ -89,7 +90,7 @@ $ npm run tauri:dev
 </div>
 <br>
 
-## エージェント
+## Agents
 
 各エージェントをそれぞれのページからインストールしてください：
 
@@ -103,11 +104,28 @@ $ npm run tauri:dev
 - [mnemnk-browser-extension](https://github.com/mnemnk/mnemnk-browser-extension)
   - `mnemnk-api` と通信し、ブラウザ履歴を保存するためのブラウザ拡張
 
-## コントリビューション
+## Contribution
 
 - エージェント開発：新しいエージェントを作成して機能を拡張
 - バグ報告：問題の特定と修正を支援
 - 機能リクエスト：新しい機能のアイデアを提供
+
+## Contact
+
+Akira Ishino - [stn](https://github.com/stn) - akira@lumilab.jp
+
+## Acknowledgments
+
+* [Rust](https://www.rust-lang.org/)
+* [Tauri](https://tauri.app/)
+* [Tokio](https://tokio.rs/)
+* [SurrealDB](https://surrealdb.com/)
+* [Node.js](https://nodejs.org/)
+* [TypeScript](https://www.typescriptlang.org/)
+* [Svelte](https://svelte.dev/)
+* [Svelte Flow](https://svelteflow.dev/)
+* [Tailwind CSS](https://tailwindcss.com/)
+* [Flowbite Svelte](https://flowbite-svelte.com/)
 
 <!----------------------------------------------------------------------------->
 
