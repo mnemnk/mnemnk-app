@@ -74,9 +74,8 @@ impl AgentEnv {
     pub fn spawn_message_loop(&self) -> Result<()> {
         // TODO: settings for the channel size
         let (tx, mut rx) = mpsc::channel(4096);
-        let env = self.app.state::<AgentEnv>();
         {
-            let mut tx_lock = env.tx.lock().unwrap();
+            let mut tx_lock = self.tx.lock().unwrap();
             *tx_lock = Some(tx);
         }
 
