@@ -150,7 +150,7 @@
 
   function cutNodesAndEdges() {
     const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
-    if (!selectedNodes && !selectedEdges) {
+    if (selectedNodes.length == 0 && selectedEdges.length == 0) {
       return;
     }
     copiedNodes = selectedNodes.map((node) => serializeAgentFlowNode(node, agentDefs));
@@ -163,7 +163,7 @@
 
   function copyNodesAndEdges() {
     const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
-    if (!selectedNodes) {
+    if (selectedNodes.length == 0) {
       return;
     }
     copiedNodes = selectedNodes.map((node) => serializeAgentFlowNode(node, agentDefs));
@@ -187,7 +187,7 @@
     }
 
     let [cnodes, cedges] = await copySubFlow(copiedNodes, copiedEdges);
-    if (!cnodes && !cedges) return;
+    if (cnodes.length == 0 && cedges.length == 0) return;
 
     let new_nodes = [];
     for (const node of cnodes) {
@@ -382,7 +382,7 @@
 
   async function onPlay() {
     const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
-    if (selectedNodes || selectedEdges) {
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
       // start only selected agents
       for (const node of selectedNodes) {
         if (!node.data.enabled) {
@@ -404,7 +404,7 @@
 
   async function onPause() {
     const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
-    if (selectedNodes || selectedEdges) {
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
       // stop only selected agents
       for (const node of selectedNodes) {
         if (node.data.enabled) {
