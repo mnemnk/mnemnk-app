@@ -1,6 +1,5 @@
 use anyhow::{Context as _, Result};
 use tauri::{AppHandle, Manager};
-use tokio::sync::mpsc;
 
 use crate::mnemnk::store;
 
@@ -25,36 +24,18 @@ pub enum AgentMessage {
     },
 }
 
-pub(super) fn spawn_main_loop(app: &AppHandle, rx: mpsc::Receiver<AgentMessage>) {
-    // TODO: each message should have an origin field to prevent infinite loop
-    let app_handle = app.clone();
-    let mut rx = rx;
-    tauri::async_runtime::spawn(async move {
-        while let Some(message) = rx.recv().await {
-            use AgentMessage::*;
-
-            match message {
-                AgentOut { agent, ch, data } => {
-                    agent_out(&app_handle, agent, ch, data).await;
-                }
-                BoardOut { name, data } => {
-                    board_out(&app_handle, name, data).await;
-                }
-                Store { data } => {
-                    store(&app_handle, data);
-                }
-            }
-        }
-    });
-}
-
 pub async fn send_agent_out(
     env: &AgentEnv,
     agent: String,
     ch: String,
     data: AgentData,
 ) -> Result<()> {
-    let main_tx = env.tx.clone();
+    let main_tx = env
+        .tx
+        .lock()
+        .unwrap()
+        .clone()
+        .context("tx is not initialized")?;
     main_tx
         .send(AgentMessage::AgentOut { agent, ch, data })
         .await
@@ -67,14 +48,24 @@ pub fn try_send_agent_out(
     ch: String,
     data: AgentData,
 ) -> Result<()> {
-    let main_tx = env.tx.clone();
+    let main_tx = env
+        .tx
+        .lock()
+        .unwrap()
+        .clone()
+        .context("tx is not initialized")?;
     main_tx
         .try_send(AgentMessage::AgentOut { agent, ch, data })
         .context("Failed to try_send AgentOut message")
 }
 
 pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Result<()> {
-    let main_tx = env.tx.clone();
+    let main_tx = env
+        .tx
+        .lock()
+        .unwrap()
+        .clone()
+        .context("tx is not initialized")?;
     main_tx
         .try_send(AgentMessage::BoardOut { name, data })
         .context("Failed to try_send BoardOut message")
@@ -82,13 +73,19 @@ pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Resu
 
 pub fn try_send_store(app: &AppHandle, data: AgentData) -> Result<()> {
     let env = app.state::<AgentEnv>();
-    env.tx
+    let main_tx = env
+        .tx
+        .lock()
+        .unwrap()
+        .clone()
+        .context("tx is not initialized")?;
+    main_tx
         .try_send(AgentMessage::Store { data })
         .context("Failed to send Store message")
 }
 
 // Processing AgentOut message
-async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: AgentData) {
+pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let targets;
@@ -123,7 +120,7 @@ async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: Agen
     }
 }
 
-async fn board_out(app: &AppHandle, name: String, data: AgentData) {
+pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let board_nodes;
@@ -165,6 +162,6 @@ fn send_agent_in(env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
     }
 }
 
-fn store(app_handle: &AppHandle, data: AgentData) {
+pub fn store(app_handle: &AppHandle, data: AgentData) {
     store::store(app_handle, data);
 }

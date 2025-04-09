@@ -1,7 +1,6 @@
 use anyhow::Result;
 use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
-use tokio::sync::mpsc;
 
 mod agent;
 mod builtins;
@@ -19,13 +18,17 @@ pub use env::AgentEnv;
 pub use flow::{AgentFlow, AgentFlowEdge, AgentFlowNode};
 pub use message::try_send_store;
 
-pub async fn init(app: &AppHandle) -> Result<()> {
-    let (tx, rx) = mpsc::channel(4096);
-    AgentEnv::init(app, tx.clone())?;
+pub fn init(app: &AppHandle) -> Result<()> {
+    AgentEnv::init(app)?;
+    flow::init(app)?;
+    Ok(())
+}
 
-    flow::init_agent_flows(app)?;
+pub fn ready(app: &AppHandle) -> Result<()> {
+    flow::ready(app)?;
 
-    message::spawn_main_loop(app, rx);
+    let env = app.state::<AgentEnv>();
+    env.spawn_message_loop()?;
 
     Ok(())
 }
