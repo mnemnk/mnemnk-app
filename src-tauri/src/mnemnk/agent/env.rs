@@ -195,6 +195,22 @@ impl AgentEnv {
     }
 
     pub fn add_edge(&self, edge: &AgentFlowEdge) -> Result<()> {
+        // check if the source agent exists
+        {
+            let agents = self.agents.lock().unwrap();
+            if !agents.contains_key(&edge.source) {
+                bail!("Source agent {} not found", edge.source);
+            }
+        }
+
+        // check if handles are valid
+        if edge.source_handle.is_empty() {
+            bail!("Source handle is empty");
+        }
+        if edge.target_handle.is_empty() {
+            bail!("Target handle is empty");
+        }
+
         let mut edges = self.edges.lock().unwrap();
         if let Some(targets) = edges.get_mut(&edge.source) {
             targets.push((

@@ -317,8 +317,9 @@ pub fn add_agent_flow_edge(env: &AgentEnv, flow_name: &str, edge: &AgentFlowEdge
     let Some(flow) = flows.get_mut(flow_name) else {
         bail!("Agent flow {} not found", flow_name);
     };
+    env.add_edge(edge)?;
     flow.edges.push(edge.clone());
-    env.add_edge(edge)
+    Ok(())
 }
 
 pub fn remove_agent_flow_edge(env: &AgentEnv, flow_name: &str, edge_id: &str) -> Result<()> {
