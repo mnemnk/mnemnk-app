@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.14.2](https://github.com/mnemnk/mnemnk-app/compare/v0.14.1...v0.14.2) (2025-04-10)
+
+
+### Bug Fixes
+
+* 🐛 agents globa_config in settings page ([#228](https://github.com/mnemnk/mnemnk-app/issues/228)) ([53de30e](https://github.com/mnemnk/mnemnk-app/commit/53de30e3d42c84a0805a3a05651cfa48ee4874a8))
+* 🐛 tx locks ([#226](https://github.com/mnemnk/mnemnk-app/issues/226)) ([4110d31](https://github.com/mnemnk/mnemnk-app/commit/4110d31e607dbffb21fcfb3772e609bfae579830))
+* 🐛 wildcard target handle ([#227](https://github.com/mnemnk/mnemnk-app/issues/227)) ([1bab15d](https://github.com/mnemnk/mnemnk-app/commit/1bab15ddb4cf964902afc1d2f2b9e8ec8f72bfa5))
+
 ## [0.14.1](https://github.com/mnemnk/mnemnk-app/compare/v0.14.0...v0.14.1) (2025-04-09)
 
 
