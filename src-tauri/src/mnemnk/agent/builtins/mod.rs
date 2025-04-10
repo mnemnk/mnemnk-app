@@ -7,6 +7,7 @@ mod database;
 mod display;
 mod input;
 mod string;
+mod utils;
 
 pub(super) use command::CommandAgent;
 
@@ -17,4 +18,5 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     display::init_agent_defs(defs);
     input::init_agent_defs(defs);
     string::init_agent_defs(defs);
+    utils::init_agent_defs(defs);
 }
