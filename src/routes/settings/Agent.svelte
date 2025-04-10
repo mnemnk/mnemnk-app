@@ -25,30 +25,32 @@
 </script>
 
 <Card title={agentDef.title ?? agentName} subtitle={agentDef.description}>
-  <form>
-    {#each Object.keys(config) as key}
-      {@const globalConfig = agentDef.global_config?.[key]}
-      <label class="block mb-3 text-sm font-medium text-gray-900 dark:text-white">
-        {globalConfig?.title || key}
-        <p class="text-xs text-gray-500">{globalConfig?.description}</p>
-        {#if globalConfig?.type === "boolean"}
-          <Toggle bind:checked={config[key]} />
-        {:else if globalConfig?.type === "integer"}
-          <NumberInput bind:value={config[key]} />
-        {:else if globalConfig?.type === "number"}
-          <Input type="number" bind:value={config[key]} />
-        {:else if globalConfig?.type === "string" || globalConfig?.type === "string?"}
-          <Input type="text" bind:value={config[key]} />
-        {:else if globalConfig?.type === "string[]"}
-          <Textarea bind:value={config[key]} />
-        {:else if globalConfig?.type === "object"}
-          <Textarea bind:value={config[key]} />
-        {:else}
-          <Input type="text" value={JSON.stringify(config[key], null, 2)} disabled />
-        {/if}
-      </label>
-    {/each}
+  {#if agentDef.global_config}
+    <form>
+      {#each agentDef.global_config as [key, globalConfig]}
+        {@const ty = globalConfig.type}
+        <label class="block mb-3 text-sm font-medium text-gray-900 dark:text-white">
+          {globalConfig?.title || key}
+          <p class="text-xs text-gray-500">{globalConfig?.description}</p>
+          {#if ty === "boolean"}
+            <Toggle bind:checked={config[key]} />
+          {:else if ty === "integer"}
+            <NumberInput bind:value={config[key]} />
+          {:else if ty === "number"}
+            <Input type="number" bind:value={config[key]} />
+          {:else if ty === "string"}
+            <Input type="text" bind:value={config[key]} />
+          {:else if ty === "text"}
+            <Textarea bind:value={config[key]} />
+          {:else if ty === "object"}
+            <Textarea bind:value={config[key]} />
+          {:else}
+            <Input type="text" value={JSON.stringify(config[key], null, 2)} disabled />
+          {/if}
+        </label>
+      {/each}
 
-    <Button onclick={saveConfig} class="mt-3 w-fit" outline>Save</Button>
-  </form>
+      <Button onclick={saveConfig} class="mt-3 w-fit" outline>Save</Button>
+    </form>
+  {/if}
 </Card>
