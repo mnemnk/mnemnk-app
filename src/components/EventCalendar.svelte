@@ -3,11 +3,11 @@
 
   interface Props {
     year: number;
-    daily_stats: DailyStats[];
+    dailyStats: DailyStats[];
     onDateChange?: (date: string) => void;
   }
 
-  let { year, daily_stats, onDateChange }: Props = $props();
+  let { year, dailyStats, onDateChange }: Props = $props();
 
   // TODO: use style?
   const colors = {
@@ -78,8 +78,8 @@
     let grid = Array(53)
       .fill(null)
       .map(() => Array(7).fill(null));
-    if (daily_stats) {
-      daily_stats.forEach((stats) => {
+    if (dailyStats) {
+      dailyStats.forEach((stats) => {
         const { weekIndex, dayIndex, date } = getPosition(stats.date);
         if (weekIndex < 53) {
           grid[weekIndex][dayIndex] = { date, count: stats.count };

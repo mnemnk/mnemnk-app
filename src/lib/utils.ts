@@ -43,7 +43,7 @@ export async function find_events_by_ymd(
   return await invoke("find_events_by_ymd_cmd", { year, month, day });
 }
 
-export async function daily_stats(): Promise<DailyStats[]> {
+export async function getDailyStats(): Promise<DailyStats[]> {
   return await invoke("daily_stats_cmd");
 }
 
