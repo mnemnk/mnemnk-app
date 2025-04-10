@@ -91,7 +91,6 @@
   );
 
   function defaultFlowName() {
-    console.log("defaultFlowName");
     return flows()["main"] ? "main" : (Object.keys(flows())[0] ?? "");
   }
 
