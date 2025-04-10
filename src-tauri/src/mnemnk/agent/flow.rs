@@ -299,8 +299,9 @@ pub fn add_agent_flow_node(env: &AgentEnv, flow_name: &str, node: &AgentFlowNode
     let Some(flow) = flows.get_mut(flow_name) else {
         bail!("Agent flow {} not found", flow_name);
     };
+    env.add_agent(&node)?;
     flow.nodes.push(node.clone());
-    env.add_agent(&node)
+    Ok(())
 }
 
 pub fn remove_agent_flow_node(env: &AgentEnv, flow_name: &str, node_id: &str) -> Result<()> {

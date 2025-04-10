@@ -213,6 +213,14 @@ impl AgentEnv {
 
         let mut edges = self.edges.lock().unwrap();
         if let Some(targets) = edges.get_mut(&edge.source) {
+            for (target, source_handle, target_handle) in targets.iter() {
+                if *target == edge.target
+                    && *source_handle == edge.source_handle
+                    && *target_handle == edge.target_handle
+                {
+                    bail!("Edge already exists");
+                }
+            }
             targets.push((
                 edge.target.clone(),
                 edge.source_handle.clone(),
