@@ -52,9 +52,12 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 - Using a visual flow-based UI, you can intuitively build a multi-agent system where multiple agents work together.
 - Unlike one-time batch processing systems, Mnemnk's agents operate in parallel, processing events in real-time.
 
-## Installation
+## Getting Started
 
 Download and run the installer from the [releases](https://github.com/mnemnk/mnemnk-app/releases) page.
+
+<details>
+  <summary><strong>Build from the repo</strong></summary>
 
 ### Development
 
@@ -70,13 +73,15 @@ You need a development environment for [Tauri](https://v2.tauri.app/):
 ### Build
 
 ```shell
-$ git clone https://github.com/mnemnk/mnemnk-app.git
-$ cd mnemnk-app
-$ npm install
-$ npm run tauri:dev
+git clone https://github.com/mnemnk/mnemnk-app.git
+cd mnemnk-app
+npm install
+npm run tauri:dev
 ```
 
 (You can also use `npm run tauri dev`, but in that case, the identifier will be the same as the release build.)
+
+</details>
 
 ### Configuration
 

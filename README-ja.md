@@ -56,6 +56,9 @@ Mnemnkは、あなたの活動を記録し、常時稼働するマルチエー�
 
 [リリース](https://github.com/mnemnk/mnemnk-app/releases)からインストーラーをダウンロードし実行する。
 
+<details>
+  <summary><strong>リポジトリーからのビルド</strong></summary>
+
 ### 開発
 
 あなたが開発者なら、リポジトリーからビルドすることも可能です。
@@ -70,13 +73,15 @@ Mnemnkは、あなたの活動を記録し、常時稼働するマルチエー�
 ### ビルド
 
 ```shell
-$ git clone https://github.com/mnemnk/mnemnk-app.git
-$ cd mnemnk-app
-$ npm install
-$ npm run tauri:dev
+git clone https://github.com/mnemnk/mnemnk-app.git
+cd mnemnk-app
+npm install
+npm run tauri:dev
 ```
 
 (`npm run tauri dev` でも動きますが、その場合はidentifierがrelease buildと同じになります)
+
+</details>
 
 ### 設定
 
