@@ -3,7 +3,7 @@
 
   interface Props {
     events: MnemnkEvent[];
-    day_start_hour: number;
+    day_start_hour?: number | null;
   }
 
   const { events, day_start_hour }: Props = $props();
@@ -13,7 +13,7 @@
     events.forEach((ev) => {
       const d = new Date(ev.time);
       const h = d.getHours();
-      let i = h - day_start_hour;
+      let i = h - (day_start_hour ?? 0);
       if (i < 0) {
         i += 24;
       }

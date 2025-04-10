@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { message } from "@tauri-apps/plugin-dialog";
+
   import { Button, Input, NumberInput, Textarea, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
   import { deserializeAgentConfig, serializeAgentFlowNodeConfig } from "@/lib/agent";
   import type { SAgentConfig, SAgentDefinition } from "@/lib/types";
-  import { setAgentGlobalConfig } from "@/lib/utils";
+  import { exitApp, setAgentGlobalConfig } from "@/lib/utils";
 
   interface Props {
     agentName: string;
@@ -16,11 +18,15 @@
 
   const config = $state(deserializeAgentConfig(agentConfig, agentDef.global_config));
 
-  function saveConfig() {
+  async function saveConfig() {
     let sconfig = serializeAgentFlowNodeConfig(config, agentDef.global_config);
     if (sconfig) {
       setAgentGlobalConfig(agentName, sconfig);
     }
+
+    // confirm restart
+    await message("Mnemnk will quit to apply changes.\n\nPlease restart.");
+    await exitApp();
   }
 </script>
 

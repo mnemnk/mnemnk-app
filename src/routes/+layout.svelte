@@ -1,6 +1,8 @@
 <script lang="ts">
   import { getCurrentWindow } from "@tauri-apps/api/window";
 
+  import { setContext } from "svelte";
+
   import hotkeys from "hotkeys-js";
 
   import { goto } from "$app/navigation";
@@ -9,12 +11,16 @@
   import NavBar from "@/components/NavBar.svelte";
 
   import "../app.css";
+  import type { LayoutProps } from "./$types";
 
-  const { children, data } = $props();
+  const { children, data }: LayoutProps = $props();
+
+  setContext("coreSettings", data.coreSettings);
+  setContext("agentFlows", () => data.agentFlows);
 
   const key_close = "Escape";
-  const key_fullscreen = $derived(data.settings.shortcut_keys["fullscreen"]);
-  const key_search = $derived(data.settings.shortcut_keys["search"]);
+  const key_fullscreen = $derived(data.coreSettings.shortcut_keys["fullscreen"]);
+  const key_search = $derived(data.coreSettings.shortcut_keys["search"]);
 
   $effect(() => {
     hotkeys(key_close, () => {
@@ -42,7 +48,7 @@
   });
 </script>
 
-{#if data.settings.mnemnk_dir}
+{#if data.coreSettings.mnemnk_dir}
   <NavBar />
 {/if}
 {@render children?.()}

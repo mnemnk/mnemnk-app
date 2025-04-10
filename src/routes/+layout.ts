@@ -1,5 +1,7 @@
-import { daily_stats } from "@/lib/utils";
-import { getCoreSettings } from "@/lib/utils";
+import type { SAgentDefinitions } from "$lib/types";
+
+import { deserializeAgentFlow, getAgentFlows, getAgentDefs } from "@/lib/agent";
+import { getAgentGlobalConfigs, getDailyStats, getCoreSettings } from "@/lib/utils";
 
 // Tauri doesn't have a Node.js server to do proper SSR
 // so we will use adapter-static to prerender the app (SSG)
@@ -8,10 +10,22 @@ export const prerender = true;
 export const ssr = false;
 
 export async function load() {
-  const stats = await daily_stats();
-  const settings = await getCoreSettings();
+  const dailyStats = await getDailyStats();
+  const coreSettings = await getCoreSettings();
+
+  const agentDefs: SAgentDefinitions = await getAgentDefs();
+  const agentGlobalConfigs = await getAgentGlobalConfigs();
+
+  const sAgentFlows = await getAgentFlows();
+  const agentFlows = Object.fromEntries(
+    Object.entries(sAgentFlows).map(([key, flow]) => [key, deserializeAgentFlow(flow, agentDefs)]),
+  );
+
   return {
-    daily_stats: stats,
-    settings,
+    dailyStats,
+    coreSettings,
+    agentDefs,
+    agentGlobalConfigs,
+    agentFlows,
   };
 }

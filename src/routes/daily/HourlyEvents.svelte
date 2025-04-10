@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { getContext } from "svelte";
+
   import { Popover } from "flowbite-svelte";
 
-  import type { MnemnkEvent, ScreenshotEvent } from "@/lib/types";
+  import type { CoreSettings, MnemnkEvent, ScreenshotEvent } from "@/lib/types";
   import { mimgUrl } from "@/lib/utils";
 
   import EventsScrollbar from "./EventsScrollbar.svelte";
@@ -9,11 +11,11 @@
   interface Props {
     date: Date;
     events: MnemnkEvent[]; // assume events are sorted by time
-    shortcut_keys: Record<string, string>;
-    day_start_hour: number;
   }
 
-  const { date, events, shortcut_keys, day_start_hour }: Props = $props();
+  const { date, events }: Props = $props();
+
+  const coreSettings = getContext<CoreSettings>("coreSettings");
 
   const date_str = $derived(
     `${date.getFullYear()} / ${(date.getMonth() + 1).toString().padStart(2, "0")} / ${date.getDate().toString().padStart(2, "0")}`,
@@ -105,7 +107,7 @@
     if (event.repeat) {
       return;
     }
-    const key_screenshot_only = shortcut_keys["screenshot_only"];
+    const key_screenshot_only = coreSettings.shortcut_keys["screenshot_only"];
     if (event.key === key_screenshot_only) {
       event.preventDefault();
       toggleScreenshotOnly();
@@ -254,7 +256,7 @@
       {/each}
     </div>
     <div class="fixed top-0 right-0 z-10">
-      <EventsScrollbar {events} {day_start_hour} />
+      <EventsScrollbar {events} day_start_hour={coreSettings.day_start_hour} />
     </div>
   </div>
 </div>

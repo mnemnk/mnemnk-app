@@ -4,8 +4,7 @@
   import EventCalendar from "@/components/EventCalendar.svelte";
   import { dateString } from "@/lib/utils";
 
-  let { data } = $props();
-  let daily_stats = $derived(data.daily_stats);
+  const { data } = $props();
 
   let year = new Date().getFullYear();
 
@@ -15,7 +14,7 @@
   }
 
   $effect(() => {
-    if (!data.settings.mnemnk_dir) {
+    if (!data.coreSettings.mnemnk_dir) {
       goto("/settings");
     }
   });
@@ -23,6 +22,6 @@
 
 <main class="container mx-auto p-8 space-y-8 mt-20">
   <div class="mx-auto">
-    <EventCalendar {year} {daily_stats} {onDateChange} />
+    <EventCalendar {year} dailyStats={data.dailyStats} {onDateChange} />
   </div>
 </main>
