@@ -111,13 +111,11 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
     }
 
     for target in targets.unwrap() {
-        // In reality, targets are normalized to id/source_handle/target_handle in sync_agent_flows,
-        // so unwrap should not fail.
-
         let (target_agent, source_handle, target_handle) = target;
 
         if source_handle != ch && source_handle != "*" {
-            // Skip if source_handle does not match with the given ch
+            // Skip if source_handle does not match with the given ch.
+            // "*" is a wildcard, and outputs messages of all channels.
             continue;
         }
 
@@ -128,7 +126,14 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
             }
         }
 
-        send_agent_in(&env, &target_agent, target_handle.clone(), data.clone())
+        let target_ch = if target_handle == "*" {
+            // If target_handle is "*", use the ch specified by the source agent
+            ch.clone()
+        } else {
+            target_handle.clone()
+        };
+
+        send_agent_in(&env, &target_agent, target_ch, data.clone())
     }
 }
 
