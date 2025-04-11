@@ -171,6 +171,18 @@ pub fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn insert_agent_flow(env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<()> {
+    let name = agent_flow
+        .name
+        .clone()
+        .context("Agent flow name not found")?;
+
+    let mut flows = env.flows.lock().unwrap();
+    flows.insert(name, agent_flow);
+
+    Ok(())
+}
+
 pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<()> {
     let name = agent_flow
         .name

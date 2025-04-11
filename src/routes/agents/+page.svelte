@@ -46,6 +46,7 @@
     renameAgentFlow,
     deleteAgentFlow,
     copySubFlow,
+    insertAgentFlow,
   } from "@/lib/agent";
   import type {
     AgentFlowNode,
@@ -80,8 +81,8 @@
 
   onMount(() => {
     updateFlowNames();
-    return () => {
-      syncFlow();
+    return async () => {
+      await syncFlow();
     };
   });
 
@@ -94,8 +95,8 @@
     return flows()["main"] ? "main" : (Object.keys(flows())[0] ?? "");
   }
 
-  function changeFlowName(name: string) {
-    syncFlow();
+  async function changeFlowName(name: string) {
+    await syncFlow();
     flowName = name;
   }
 
@@ -145,9 +146,10 @@
     checkEdgeChange(edges);
   });
 
-  function syncFlow() {
+  async function syncFlow() {
     const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
     flows()[flowName] = deserializeAgentFlow(flow, agentDefs);
+    await insertAgentFlow(flow);
   }
 
   // cut, copy and paste
@@ -300,7 +302,7 @@
     if (!flow) return;
     flows()[flow.name] = deserializeAgentFlow(flow, agentDefs);
     updateFlowNames();
-    changeFlowName(flow.name);
+    await changeFlowName(flow.name);
   }
 
   // Rename Flow
@@ -324,7 +326,7 @@
     flows()[newName] = flow;
     delete flows()[oldName];
     updateFlowNames();
-    changeFlowName(newName);
+    await changeFlowName(newName);
   }
 
   // Delete Flow
@@ -376,7 +378,7 @@
     const flow = deserializeAgentFlow(sflow, agentDefs);
     flows()[flow.name] = flow;
     updateFlowNames();
-    changeFlowName(flow.name);
+    await changeFlowName(flow.name);
   }
 
   async function onAddAgent(agent_name: string) {
