@@ -9,7 +9,9 @@ mod env;
 mod flow;
 mod message;
 
-pub use agent::{Agent, AgentConfig, AgentConfigs, AgentData, AgentStatus, AsAgent, AsAgentData};
+pub use agent::{
+    emit_error, Agent, AgentConfig, AgentConfigs, AgentData, AgentStatus, AsAgent, AsAgentData,
+};
 pub use definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitionError, AgentDefinitions,
     AgentDisplayConfigEntry,

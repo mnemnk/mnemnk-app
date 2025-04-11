@@ -7,8 +7,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AsAgent,
-    AsAgentData,
+    emit_error, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv,
+    AsAgent, AsAgentData,
 };
 
 pub struct CommandAgent {
@@ -146,6 +146,8 @@ impl AsAgent for CommandAgent {
                     CommandEvent::Stderr(line_bytes) => {
                         let line = String::from_utf8_lossy(&line_bytes);
                         log::debug!("stderr from {} {}: {:}", def_name, agent_id, line);
+                        emit_error(&app_handle, agent_id.clone(), line.to_string())
+                            .unwrap_or_else(|e| log::error!("Failed to emit error: {}", e));
                     }
 
                     CommandEvent::Terminated(status) => {

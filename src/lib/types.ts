@@ -153,3 +153,8 @@ export type DisplayMessage = {
   key: string;
   value: any;
 };
+
+export type ErrorMessage = {
+  agent_id: string;
+  message: string;
+};

@@ -98,15 +98,40 @@ pub trait Agent {
             .context("Failed to emit display message")?;
         Ok(())
     }
+
+    fn emit_error(&self, message: String) -> Result<()> {
+        let error_message = ErrorMessage {
+            agent_id: self.id().to_string(),
+            message,
+        };
+        self.app()
+            .emit(EMIT_ERROR, error_message)
+            .context("Failed to emit error message")?;
+        Ok(())
+    }
 }
 
 const EMIT_DISPLAY: &str = "mnemnk:display";
+const EMIT_ERROR: &str = "mnemnk:error";
 
 #[derive(Clone, Serialize)]
 struct DisplayMessage {
     agent_id: String,
     key: String,
     value: Value,
+}
+
+#[derive(Clone, Serialize)]
+struct ErrorMessage {
+    agent_id: String,
+    message: String,
+}
+
+pub fn emit_error(app: &AppHandle, agent_id: String, message: String) -> Result<()> {
+    let error_message = ErrorMessage { agent_id, message };
+    app.emit(EMIT_ERROR, error_message)
+        .context("Failed to emit error message")?;
+    Ok(())
 }
 
 pub struct AsAgentData {
