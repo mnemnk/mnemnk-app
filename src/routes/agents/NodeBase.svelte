@@ -1,5 +1,8 @@
 <script lang="ts" module>
   const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
+
+  const DEFAULT_HANDLE_STYLE =
+    "width: 11px; height: 11px; border-width: 2px; background: black; border-color: white;";
 </script>
 
 <script lang="ts">
@@ -11,8 +14,6 @@
 
   import { startAgent, stopAgent } from "@/lib/agent";
   import type { SAgentDefinition } from "@/lib/types";
-
-  const DEFAULT_HANDLE_STYLE = "width: 10px; height: 10px;";
 
   type Props = NodeProps & {
     data: {
@@ -52,14 +53,8 @@
     id={input}
     type="target"
     position={Position.Left}
-    style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
+    style={`top: ${idx * 28 + 59}px; ${DEFAULT_HANDLE_STYLE}`}
   />
-  <div
-    class="absolute text-white opacity-20 hover:opacity-100"
-    style={`top: ${idx * 30 + 30}px; left: -20px;`}
-  >
-    {input}
-  </div>
 {/each}
 <div
   class={`${bgColors[data.enabled ? 1 : 0]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
@@ -78,20 +73,26 @@
     ></Toggle>
   </div>
   <div class="w-full grow flex flex-col">
+    <div class="w-full flex-none mb-2">
+      {#each inputs as input}
+        <div class="w-full text-left pl-2 mb-1">
+          {input}
+        </div>
+      {/each}
+      {#each outputs as output}
+        <div class="w-full text-right pr-2 mb-1">
+          {output}
+        </div>
+      {/each}
+    </div>
     {@render contents()}
   </div>
 </div>
 {#each outputs as output, idx}
-  <div
-    class="absolute text-white opacity-20 hover:opacity-100"
-    style={`top: ${idx * 30 + 30}px; left: 105%;`}
-  >
-    {output}
-  </div>
   <Handle
     id={output}
     type="source"
     position={Position.Right}
-    style={`top: ${idx * 30 + 50}px; ${DEFAULT_HANDLE_STYLE}`}
+    style={`top: ${(inputs.length + idx) * 28 + 59}px; ${DEFAULT_HANDLE_STYLE}`}
   />
 {/each}
