@@ -247,6 +247,10 @@
   const key_open_flow = "f";
 
   $effect(() => {
+    hotkeys("ctrl+r", (event) => {
+      event.preventDefault();
+    });
+
     hotkeys("ctrl+s", (event) => {
       event.preventDefault();
       onSaveFlow();
@@ -275,6 +279,7 @@
     });
 
     return () => {
+      hotkeys.unbind("ctrl+r");
       hotkeys.unbind("ctrl+s");
       hotkeys.unbind(key_open_agent);
       hotkeys.unbind(key_open_flow);
