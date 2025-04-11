@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.14.3](https://github.com/mnemnk/mnemnk-app/compare/v0.14.2...v0.14.3) (2025-04-11)
+
+
+### Features
+
+* 🎸 Counter agent ([#230](https://github.com/mnemnk/mnemnk-app/issues/230)) ([e706d1c](https://github.com/mnemnk/mnemnk-app/commit/e706d1cac7924f11bd97b3bfab37e010cf4f6489))
+* 🎸 display errors from agent ([#240](https://github.com/mnemnk/mnemnk-app/issues/240)) ([2dd9b35](https://github.com/mnemnk/mnemnk-app/commit/2dd9b35926c79ef41b621edf0c3334b68668d90d)), closes [#238](https://github.com/mnemnk/mnemnk-app/issues/238)
+
+
+### Bug Fixes
+
+* 🐛 flow name state ([#236](https://github.com/mnemnk/mnemnk-app/issues/236)) ([03abfd1](https://github.com/mnemnk/mnemnk-app/commit/03abfd11c103d25ce792ef562fc4f59ac93ab9c6))
+* 🐛 insert agent flow on sync ([#234](https://github.com/mnemnk/mnemnk-app/issues/234)) ([a6bf5e8](https://github.com/mnemnk/mnemnk-app/commit/a6bf5e894d808614d5bc32b30ac6d87384691670))
+* 🐛 preserve agent flows ([#231](https://github.com/mnemnk/mnemnk-app/issues/231)) ([4e847b9](https://github.com/mnemnk/mnemnk-app/commit/4e847b9cc4699b0371702df00ee04526727cabe3))
+* 🐛 prevent reload in agent page ([#235](https://github.com/mnemnk/mnemnk-app/issues/235)) ([93a9fba](https://github.com/mnemnk/mnemnk-app/commit/93a9fba93d280e664805baadf30d96f38cb539a0))
+* 🐛 prevent to add duplicated edges ([#232](https://github.com/mnemnk/mnemnk-app/issues/232)) ([7ee048c](https://github.com/mnemnk/mnemnk-app/commit/7ee048ce6ecf3afd4d18736abf38a44d38edb742))
+* 🐛 remove console.log ([#233](https://github.com/mnemnk/mnemnk-app/issues/233)) ([0da8019](https://github.com/mnemnk/mnemnk-app/commit/0da8019dd358309f792df34c44fa0ae7ae6a89b8))
+* 🐛 remove unused modal ([#241](https://github.com/mnemnk/mnemnk-app/issues/241)) ([27f7696](https://github.com/mnemnk/mnemnk-app/commit/27f7696324042062d38afa1f04f7ba4707cf184a))
+
 ## [0.14.2](https://github.com/mnemnk/mnemnk-app/compare/v0.14.1...v0.14.2) (2025-04-10)
 
 
