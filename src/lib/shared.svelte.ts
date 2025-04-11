@@ -6,7 +6,10 @@ import type { DisplayMessage, ErrorMessage } from "@/lib/types";
 
 // Display Message
 
-let displayMessageStore: Map<string, Map<string, Writable<any>>>;
+let displayMessageStore: Map<string, Map<string, Writable<any>>> = new Map<
+  string,
+  Map<string, Writable<any>>
+>();
 
 export function subscribeDisplayMessage(
   agentId: string,
@@ -29,7 +32,7 @@ export function subscribeDisplayMessage(
 let unlistenDisplay: UnlistenFn | null = null;
 
 // Error Message
-let errorMessageStore: Map<string, Writable<string>>;
+let errorMessageStore: Map<string, Writable<string>> = new Map<string, Writable<string>>();
 
 export function subscribeErrorMessage(
   agentId: string,
@@ -48,9 +51,6 @@ let unlistenError: UnlistenFn | null = null;
 //
 
 $effect.root(() => {
-  displayMessageStore = new Map<string, Map<string, Writable<any>>>();
-  errorMessageStore = new Map<string, Writable<string>>();
-
   listen<DisplayMessage>("mnemnk:display", (event) => {
     const { agent_id, key, value } = event.payload;
     let store = displayMessageStore.get(agent_id);
