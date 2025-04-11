@@ -65,7 +65,7 @@
   class={`${bgColors[data.enabled ? 1 : 0]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
   style:height={ht ? `${ht}px` : "auto"}
 >
-  <div class="w-full flex-none flex flex-row items-center justify-between pl-4">
+  <div class="w-full flex-none flex flex-row items-center justify-between pl-4 pb-2">
     {@render title()}
     <div class="grow w-8"></div>
     <Toggle

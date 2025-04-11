@@ -82,6 +82,8 @@
   }
 
   let editTitle = $state(false);
+
+  const uid = $props.id();
 </script>
 
 {#snippet title()}
@@ -106,18 +108,31 @@
       />
     </div>
   {:else}
-    <button type="button" onclick={() => (editTitle = true)} class="flex-none mt-2" tabindex={-1}>
+    <button
+      id="t-{uid}"
+      type="button"
+      onclick={() => (editTitle = true)}
+      class="flex-none mt-2"
+      tabindex={-1}
+    >
       <h3 class="text-xl">
         {data.title ?? agentDef?.title ?? data.name}
       </h3>
     </button>
-    {#if data.title}
-      <Tooltip placement="left">{agentDef?.title ?? data.name}</Tooltip>
+    {#if description || data.title}
+      <Popover triggeredBy="#t-{uid}" placement="top" arrow={false} class="z-40">
+        {#if data.title}
+          <p class="text-sm font-semibold pb-1">{agentDef?.title ?? data.name}</p>
+        {/if}
+        {#if description}
+          <p class="text-sm text-gray-500">{description}</p>
+        {/if}
+      </Popover>
     {/if}
     {#if errorMessages.length > 0}
-      <ExclamationCircleOutline id="e-{id}" class="ml-1 mt-2 w-5 h-5 text-red-500" />
+      <ExclamationCircleOutline id="e-{uid}" class="ml-1 mt-2 w-5 h-5 text-red-500" />
       <Popover
-        triggeredBy="#e-{id}"
+        triggeredBy="#e-{uid}"
         placement="bottom"
         arrow={false}
         class="w-96 min-h-60 z-40 text-xs font-light text-gray-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 flex flex-col"
@@ -139,8 +154,6 @@
 {/snippet}
 
 {#snippet contents()}
-  <h4 class="flex-none text-xs text-gray-500 pl-4 pb-4">{description}</h4>
-
   {#if agentDefaultConfig}
     <form class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDefaultConfig as [key, default_config]}
