@@ -60,6 +60,10 @@ export async function saveAgentFlow(agentFlow: SAgentFlow): Promise<void> {
   await invoke("save_agent_flow_cmd", { agentFlow });
 }
 
+export async function insertAgentFlow(agentFlow: SAgentFlow): Promise<void> {
+  await invoke("insert_agent_flow_cmd", { agentFlow });
+}
+
 const agentDefinitionsKey = Symbol("agentDefinitions");
 
 export function setAgentDefinitionsContext(defs: SAgentDefinitions): void {

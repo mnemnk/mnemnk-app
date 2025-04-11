@@ -103,6 +103,11 @@ pub fn delete_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<(), S
 }
 
 #[tauri::command]
+pub fn insert_agent_flow_cmd(env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<(), String> {
+    flow::insert_agent_flow(env, agent_flow).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn save_agent_flow_cmd(
     app: AppHandle,
     env: State<AgentEnv>,

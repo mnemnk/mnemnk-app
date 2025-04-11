@@ -78,6 +78,7 @@ pub fn run() {
             mnemnk::agent::remove_agent_flow_node_cmd,
             mnemnk::agent::import_agent_flow_cmd,
             mnemnk::agent::save_agent_flow_cmd,
+            mnemnk::agent::insert_agent_flow_cmd,
             mnemnk::agent::copy_sub_flow_cmd,
             mnemnk::settings::get_core_settings_cmd,
             mnemnk::settings::set_core_settings_cmd,
