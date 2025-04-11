@@ -35,7 +35,6 @@
   const description = agentDef?.description;
 
   let errorMessages = $state<string[]>([]);
-  let errorMessagesModal = $state(false);
 
   onMount(() => {
     let unsubscribers: Unsubscriber[] = [];
@@ -116,12 +115,11 @@
       <Tooltip placement="left">{agentDef?.title ?? data.name}</Tooltip>
     {/if}
     {#if errorMessages.length > 0}
-      <Button id="e-{id}" onclick={() => (errorMessagesModal = true)} class="flex-none mt-2">
-        <ExclamationCircleOutline class="ml-2 w-5 h-5 text-red-500" />
-      </Button>
+      <ExclamationCircleOutline id="e-{id}" class="ml-1 mt-2 w-5 h-5 text-red-500" />
       <Popover
         triggeredBy="#e-{id}"
         placement="bottom"
+        arrow={false}
         class="w-96 min-h-60 z-40 text-xs font-light text-gray-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 flex flex-col"
       >
         <div class="grow flex flex-col gap-2">
