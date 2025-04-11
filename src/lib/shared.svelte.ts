@@ -49,3 +49,7 @@ $effect.root(() => {
     unlistenDisplay?.();
   };
 });
+
+// Agent Flow
+
+export const flowNameState = $state({ name: "main" });

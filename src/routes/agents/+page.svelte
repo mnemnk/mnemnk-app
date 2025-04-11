@@ -48,6 +48,7 @@
     copySubFlow,
     insertAgentFlow,
   } from "@/lib/agent";
+  import { flowNameState } from "@/lib/shared.svelte";
   import type {
     AgentFlowNode,
     AgentFlowEdge,
@@ -86,55 +87,50 @@
     };
   });
 
-  let flowName = $state(
-    // TODO: homepage in core setting
-    defaultFlowName(),
-  );
-
-  function defaultFlowName() {
-    return flows()["main"] ? "main" : (Object.keys(flows())[0] ?? "");
-  }
-
   async function changeFlowName(name: string) {
     await syncFlow();
-    flowName = name;
+    flowNameState.name = name;
   }
 
   let nodes = $state.raw<AgentFlowNode[]>([]);
   let edges = $state.raw<AgentFlowEdge[]>([]);
 
   $effect(() => {
-    if (flowName in flows()) {
-      nodes = [...flows()[flowName].nodes];
-      edges = [...flows()[flowName].edges];
+    if (flowNameState.name in flows()) {
+      nodes = [...flows()[flowNameState.name].nodes];
+      edges = [...flows()[flowNameState.name].edges];
     }
   });
 
   async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
 
-    const deletedNodes = flows()[flowName].nodes.filter((node) => !nodeIds.has(node.id));
+    const deletedNodes = flows()[flowNameState.name].nodes.filter((node) => !nodeIds.has(node.id));
     for (const node of deletedNodes) {
-      await removeAgentFlowNode(flowName, node.id);
-      flows()[flowName].nodes = flows()[flowName].nodes.filter((n) => n.id !== node.id);
+      await removeAgentFlowNode(flowNameState.name, node.id);
+      flows()[flowNameState.name].nodes = flows()[flowNameState.name].nodes.filter(
+        (n) => n.id !== node.id,
+      );
     }
   }
 
   async function checkEdgeChange(edges: AgentFlowEdge[]) {
     const edgeIds = new Set(edges.map((edge) => edge.id));
 
-    const deletedEdges = flows()[flowName].edges.filter((edge) => !edgeIds.has(edge.id));
+    const deletedEdges = flows()[flowNameState.name].edges.filter((edge) => !edgeIds.has(edge.id));
     for (const edge of deletedEdges) {
-      await removeAgentFlowEdge(flowName, edge.id);
-      flows()[flowName].edges = flows()[flowName].edges.filter((e) => e.id !== edge.id);
+      await removeAgentFlowEdge(flowNameState.name, edge.id);
+      flows()[flowNameState.name].edges = flows()[flowNameState.name].edges.filter(
+        (e) => e.id !== edge.id,
+      );
     }
 
     const addedEdges = edges.filter(
-      (edge) => !flows()[flowName].edges.some((e) => e.id === edge.id),
+      (edge) => !flows()[flowNameState.name].edges.some((e) => e.id === edge.id),
     );
     for (const edge of addedEdges) {
-      await addAgentFlowEdge(flowName, serializeAgentFlowEdge(edge));
-      flows()[flowName].edges.push(edge);
+      await addAgentFlowEdge(flowNameState.name, serializeAgentFlowEdge(edge));
+      flows()[flowNameState.name].edges.push(edge);
     }
   }
 
@@ -147,8 +143,8 @@
   });
 
   async function syncFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
-    flows()[flowName] = deserializeAgentFlow(flow, agentDefs);
+    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
+    flows()[flowNameState.name] = deserializeAgentFlow(flow, agentDefs);
     await insertAgentFlow(flow);
   }
 
@@ -209,20 +205,20 @@
       node.x += 80;
       node.y += 80;
       node.enabled = false;
-      await addAgentFlowNode(flowName, node);
+      await addAgentFlowNode(flowNameState.name, node);
       const new_node = deserializeAgentFlowNode(node, agentDefs);
       new_node.selected = true;
       new_nodes.push(new_node);
-      flows()[flowName].nodes.push(new_node);
+      flows()[flowNameState.name].nodes.push(new_node);
     }
 
     let new_edges = [];
     for (const edge of cedges) {
-      await addAgentFlowEdge(flowName, edge);
+      await addAgentFlowEdge(flowNameState.name, edge);
       const new_edge = deserializeAgentFlowEdge(edge);
       new_edge.selected = true;
       new_edges.push(new_edge);
-      flows()[flowName].edges.push(new_edge);
+      flows()[flowNameState.name].edges.push(new_edge);
     }
 
     nodes = [...nodes, ...new_nodes];
@@ -316,15 +312,15 @@
   let renameFlowName = $state("");
 
   function onRenameFlow() {
-    renameFlowName = flowName;
+    renameFlowName = flowNameState.name;
     renameFlowModal = true;
   }
 
   async function renameFlow() {
     renameFlowModal = false;
-    if (!renameFlowName || renameFlowName === flowName) return;
-    const oldName = flowName;
-    const newName = await renameAgentFlow(flowName, renameFlowName);
+    if (!renameFlowName || renameFlowName === flowNameState.name) return;
+    const oldName = flowNameState.name;
+    const newName = await renameAgentFlow(flowNameState.name, renameFlowName);
     if (!newName) return;
     const flow = flows()[oldName];
     flow.name = newName;
@@ -344,31 +340,31 @@
 
   async function deleteFlow() {
     deleteFlowModal = false;
-    const flow = flows()[flowName];
+    const flow = flows()[flowNameState.name];
     if (!flow) return;
-    await deleteAgentFlow(flowName);
-    delete flows()[flowName];
+    await deleteAgentFlow(flowNameState.name);
+    delete flows()[flowNameState.name];
     updateFlowNames();
-    // TODO: create a new flow when deleting the last flow
-    flowName = defaultFlowName();
+    // TODO: create a new flow when deleting the main flow
+    flowNameState.name = "main";
   }
 
   async function onSaveFlow() {
-    if (flowName in flows()) {
-      const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
+    if (flowNameState.name in flows()) {
+      const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
       await saveAgentFlow(flow);
-      flows()[flowName] = deserializeAgentFlow(flow, agentDefs);
+      flows()[flowNameState.name] = deserializeAgentFlow(flow, agentDefs);
     }
   }
 
   function onExportFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowName, agentDefs);
+    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = flowName + ".json";
+    a.download = flowNameState.name + ".json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -394,9 +390,9 @@
     });
     snode.x = xy.x;
     snode.y = xy.y;
-    await addAgentFlowNode(flowName, snode);
+    await addAgentFlowNode(flowNameState.name, snode);
     const new_node = deserializeAgentFlowNode(snode, agentDefs);
-    flows()[flowName].nodes.push(new_node);
+    flows()[flowNameState.name].nodes.push(new_node);
     nodes = [...nodes, new_node];
   }
 
@@ -501,7 +497,7 @@
         <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
       </Dropdown>
       <NavLi>
-        {flowName}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
+        {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
       </NavLi>
       <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
     </NavUl>
