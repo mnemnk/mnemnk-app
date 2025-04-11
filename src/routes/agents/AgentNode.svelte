@@ -3,7 +3,8 @@
   import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
-  import { Button, Input, NumberInput, Textarea, Toggle, Tooltip } from "flowbite-svelte";
+  import { Button, Input, NumberInput, Popover, Textarea, Toggle, Tooltip } from "flowbite-svelte";
+  import { ExclamationCircleOutline } from "flowbite-svelte-icons";
 
   import Messages from "@/components/Messages.svelte";
   import {
@@ -11,7 +12,7 @@
     serializeAgentFlowNodeConfig,
     setAgentConfig,
   } from "@/lib/agent";
-  import { subscribeDisplayMessage } from "@/lib/shared.svelte";
+  import { subscribeDisplayMessage, subscribeErrorMessage } from "@/lib/shared.svelte";
   import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
@@ -33,18 +34,31 @@
   const agentDisplayConfig = agentDef?.display_config;
   const description = agentDef?.description;
 
-  onMount(() => {
-    if (!agentDisplayConfig) return;
+  let errorMessages = $state<string[]>([]);
+  let errorMessagesModal = $state(false);
 
+  onMount(() => {
     let unsubscribers: Unsubscriber[] = [];
-    agentDisplayConfig.forEach(([key, _]) => {
-      unsubscribers.push(
-        subscribeDisplayMessage(id, key, (value) => {
-          const newDisplay = { ...data.display, [key]: value };
-          updateNodeData(id, { display: newDisplay });
-        }),
-      );
-    });
+
+    if (agentDisplayConfig) {
+      // Subscribe to display messages for each display config key
+      agentDisplayConfig.forEach(([key, _]) => {
+        unsubscribers.push(
+          subscribeDisplayMessage(id, key, (value) => {
+            const newDisplay = { ...data.display, [key]: value };
+            updateNodeData(id, { display: newDisplay });
+          }),
+        );
+      });
+    }
+
+    // Add subscription for error messages
+    unsubscribers.push(
+      subscribeErrorMessage(id, (message) => {
+        if (!message) return;
+        errorMessages.push(message);
+      }),
+    );
 
     return () => {
       for (const unsub of unsubscribers) {
@@ -62,6 +76,10 @@
     if (sConfig) {
       await setAgentConfig(id, sConfig);
     }
+  }
+
+  function clearError() {
+    errorMessages = [];
   }
 
   let editTitle = $state(false);
@@ -96,6 +114,28 @@
     </button>
     {#if data.title}
       <Tooltip placement="left">{agentDef?.title ?? data.name}</Tooltip>
+    {/if}
+    {#if errorMessages.length > 0}
+      <Button id="e-{id}" onclick={() => (errorMessagesModal = true)} class="flex-none mt-2">
+        <ExclamationCircleOutline class="ml-2 w-5 h-5 text-red-500" />
+      </Button>
+      <Popover
+        triggeredBy="#e-{id}"
+        placement="bottom"
+        class="w-96 min-h-60 z-40 text-xs font-light text-gray-500 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 flex flex-col"
+      >
+        <div class="grow flex flex-col gap-2">
+          <Textarea
+            class="grow nodrag nowheel text-wrap"
+            value={errorMessages.join("\n")}
+            onkeydown={(evt) => {
+              evt.preventDefault();
+            }}
+            rows={8}
+          />
+          <Button size="xs" color="red" class="w-10 flex-none" onclick={clearError}>Clear</Button>
+        </div>
+      </Popover>
     {/if}
   {/if}
 {/snippet}
