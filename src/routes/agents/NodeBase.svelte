@@ -53,38 +53,44 @@
     id={input}
     type="target"
     position={Position.Left}
-    style={`top: ${idx * 28 + 59}px; ${DEFAULT_HANDLE_STYLE}`}
+    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
   />
 {/each}
 <div
-  class={`${bgColors[data.enabled ? 1 : 0]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl`}
+  class="{bgColors[
+    data.enabled ? 1 : 0
+  ]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
   style:height={ht ? `${ht}px` : "auto"}
 >
-  <div class="w-full flex-none flex flex-row items-center justify-between pl-4 pb-2">
+  <div class="w-full flex-none ml-4 mr-8 mb-2 flex flex-row">
     {@render title()}
     <div class="grow w-8"></div>
     <Toggle
+      class="flex-none pt-1 mr-4"
       checked={data.enabled}
       onchange={() => updateEnabled(!data.enabled)}
       size="custom"
       customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
-      class="flex-none pt-1"
       tabindex={-1}
     ></Toggle>
   </div>
-  <div class="w-full grow flex flex-col">
-    <div class="w-full flex-none mb-2">
+  <div class="w-full flex-none grid grid-cols-2 gap-1 mb-4">
+    <div>
       {#each inputs as input}
-        <div class="w-full text-left pl-2 mb-1">
+        <div class="text-left ml-2">
           {input}
         </div>
       {/each}
+    </div>
+    <div>
       {#each outputs as output}
-        <div class="w-full text-right pr-2 mb-1">
+        <div class="text-right mr-2">
           {output}
         </div>
       {/each}
     </div>
+  </div>
+  <div class="w-full grow flex flex-col gap-2">
     {@render contents()}
   </div>
 </div>
@@ -93,6 +99,6 @@
     id={output}
     type="source"
     position={Position.Right}
-    style={`top: ${(inputs.length + idx) * 28 + 59}px; ${DEFAULT_HANDLE_STYLE}`}
+    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
   />
 {/each}
