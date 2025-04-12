@@ -20,7 +20,7 @@
   bind:open
   items={flowMenuItems}
   let:item
-  class="!bg-gray-100 dark:!bg-gray-900 border-none"
+  class="bg-gray-100! dark:bg-gray-900! border-none"
 >
   <button type="button" onclick={() => onChangeFlow?.(item.name)} class="m-1">
     {item.name}

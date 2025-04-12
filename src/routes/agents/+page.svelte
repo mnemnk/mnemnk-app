@@ -13,9 +13,6 @@
     DropdownItem,
     GradientButton,
     Modal,
-    Navbar,
-    NavLi,
-    NavUl,
   } from "flowbite-svelte";
   import {
     ChevronDownOutline,
@@ -453,17 +450,17 @@
     maxZoom={2}
     minZoom={0.2}
     attributionPosition="bottom-left"
-    class="relative w-full min-h-screen !text-black !dark:text-white !bg-gray-100 dark:!bg-black"
+    class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
   >
     <Controls />
     <MiniMap />
     <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
-      <Button onclick={onPause} pill class="!bg-gray-800">
+      <Button onclick={onPause} pill class="bg-gray-800!">
         <PauseOutline
           class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
         />
       </Button>
-      <Button onclick={onPlay} pill class="!bg-gray-800">
+      <Button onclick={onPlay} pill class="bg-gray-800!">
         <PlayOutline
           class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
         />
@@ -475,7 +472,7 @@
     onclick={() => {
       hiddenAgents = false;
     }}
-    class="absolute top-4 right-4 z-20"
+    class="absolute top-12 right-4 z-20"
     color="alternative"
     size="xs"
   >
@@ -483,25 +480,20 @@
   </Button>
   <AgentList {agentDefs} {onAddAgent} bind:hidden={hiddenAgents} />
 
-  <Navbar class="fixed top-4 left-0 z-10 !bg-transparent">
-    <NavUl>
-      <NavLi>
-        File<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
-      </NavLi>
-      <Dropdown class="!bg-gray-100 dark:!bg-gray-900">
-        <DropdownItem onclick={onNewFlow}>New</DropdownItem>
-        <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
-        <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
-        <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
-        <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
-        <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
-      </Dropdown>
-      <NavLi>
-        {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
-      </NavLi>
-      <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
-    </NavUl>
-  </Navbar>
+  <Button class="absolute top-12 left-20 z-20" color="alternative" size="xs">File</Button>
+  <Dropdown class="bg-gray-100! dark:bg-gray-900!">
+    <DropdownItem onclick={onNewFlow}>New</DropdownItem>
+    <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
+    <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
+    <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
+    <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
+    <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
+  </Dropdown>
+
+  <Button class="absolute top-12 left-40 z-20" color="alternative" size="xs">
+    {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
+  </Button>
+  <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
 
   {#if newFlowModal}
     <Modal title="New Flow" bind:open={newFlowModal}>

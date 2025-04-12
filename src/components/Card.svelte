@@ -15,7 +15,7 @@
   const uid = $props.id();
 </script>
 
-<Card size="xl" class="shadow-sm {clazz}">
+<Card size="xl" class="shadow-xs {clazz}">
   <div class="mb-6 mt-px">
     <div class="-ml-0.25 mb-2">
       <Heading id="{uid}-title" tag="h3" class="text-xl font-semibold dark:text-white w-fit">
