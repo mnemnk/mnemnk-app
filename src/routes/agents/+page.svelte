@@ -57,6 +57,7 @@
   import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
   import FlowMegaMenu from "./FlowMegaMenu.svelte";
+  import NodeContextMenu from "./NodeContextMenu.svelte";
 
   let { data } = $props();
 
@@ -102,24 +103,28 @@
   async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
 
-    const deletedNodes = flows()[flowNameState.name].nodes.filter((node) => !nodeIds.has(node.id));
-    for (const node of deletedNodes) {
-      await removeAgentFlowNode(flowNameState.name, node.id);
-      flows()[flowNameState.name].nodes = flows()[flowNameState.name].nodes.filter(
-        (n) => n.id !== node.id,
-      );
+    const deletedNodes = flows()[flowNameState.name]?.nodes.filter((node) => !nodeIds.has(node.id));
+    if (deletedNodes) {
+      for (const node of deletedNodes) {
+        await removeAgentFlowNode(flowNameState.name, node.id);
+        flows()[flowNameState.name].nodes = flows()[flowNameState.name].nodes.filter(
+          (n) => n.id !== node.id,
+        );
+      }
     }
   }
 
   async function checkEdgeChange(edges: AgentFlowEdge[]) {
     const edgeIds = new Set(edges.map((edge) => edge.id));
 
-    const deletedEdges = flows()[flowNameState.name].edges.filter((edge) => !edgeIds.has(edge.id));
-    for (const edge of deletedEdges) {
-      await removeAgentFlowEdge(flowNameState.name, edge.id);
-      flows()[flowNameState.name].edges = flows()[flowNameState.name].edges.filter(
-        (e) => e.id !== edge.id,
-      );
+    const deletedEdges = flows()[flowNameState.name]?.edges.filter((edge) => !edgeIds.has(edge.id));
+    if (deletedEdges) {
+      for (const edge of deletedEdges) {
+        await removeAgentFlowEdge(flowNameState.name, edge.id);
+        flows()[flowNameState.name].edges = flows()[flowNameState.name].edges.filter(
+          (e) => e.id !== edge.id,
+        );
+      }
     }
 
     const addedEdges = edges.filter(
@@ -436,6 +441,55 @@
       }
     }
   }
+
+  let nodeContextMenu: {
+    x: number;
+    y: number;
+  } | null = $state(null);
+
+  function showNodeContextMenu(x: number, y: number) {
+    nodeContextMenu = {
+      x,
+      y,
+    };
+  }
+
+  function hideNodeContextMenu() {
+    nodeContextMenu = null;
+  }
+
+  function handleNodeContextMenu({ event, node }: { event: MouseEvent; node: Node }) {
+    event.preventDefault();
+
+    const agentNode = node as unknown as AgentFlowNode;
+
+    const [selectedNodes, _] = selectedNodesAndEdges();
+    if (!selectedNodes.some((n) => n.id === agentNode.id)) {
+      nodes.forEach((n) => {
+        updateNode(n.id, { selected: false });
+      });
+      updateNode(agentNode.id, { selected: true });
+    }
+
+    showNodeContextMenu(event.clientX, event.clientY);
+  }
+
+  function handleSelectionContextMenu({ event }: { event: MouseEvent }) {
+    event.preventDefault();
+    showNodeContextMenu(event.clientX, event.clientY);
+  }
+
+  function handleNodeClick() {
+    hideNodeContextMenu();
+  }
+
+  function handleSelectionClick() {
+    hideNodeContextMenu();
+  }
+
+  function handlePaneClick() {
+    hideNodeContextMenu();
+  }
 </script>
 
 <main class="container static min-w-[100vw]">
@@ -443,12 +497,17 @@
     bind:nodes
     bind:edges
     {nodeTypes}
-    deleteKey={["Delete", "Backspace"]}
+    onnodecontextmenu={handleNodeContextMenu}
+    onselectioncontextmenu={handleSelectionContextMenu}
+    onnodeclick={handleNodeClick}
+    onselectionclick={handleSelectionClick}
+    onpaneclick={handlePaneClick}
+    deleteKey={["Delete"]}
     connectionRadius={38}
     colorMode="dark"
     fitView
     maxZoom={2}
-    minZoom={0.2}
+    minZoom={0.1}
     attributionPosition="bottom-left"
     class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
   >
@@ -489,6 +548,18 @@
     <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
     <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
   </Dropdown>
+
+  {#if nodeContextMenu}
+    <NodeContextMenu
+      x={nodeContextMenu.x}
+      y={nodeContextMenu.y}
+      {hideNodeContextMenu}
+      onstart={onPlay}
+      onstop={onPause}
+      oncut={cutNodesAndEdges}
+      oncopy={copyNodesAndEdges}
+    />
+  {/if}
 
   <Button class="absolute top-12 left-40 z-20" color="alternative" size="xs">
     {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
