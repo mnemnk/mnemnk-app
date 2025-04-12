@@ -10,7 +10,6 @@
 
   import { Handle, NodeResizer, Position, useSvelteFlow } from "@xyflow/svelte";
   import type { NodeProps, ResizeDragEvent, ResizeParams } from "@xyflow/svelte";
-  import { Toggle } from "flowbite-svelte";
 
   import { startAgent, stopAgent } from "@/lib/agent";
   import type { SAgentDefinition } from "@/lib/types";
@@ -62,17 +61,8 @@
   ]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
   style:height={ht ? `${ht}px` : "auto"}
 >
-  <div class="w-full flex-none ml-4 mr-8 mb-2 flex flex-row">
+  <div class="w-full flex-none ml-4 mr-8 mb-2">
     {@render title()}
-    <div class="grow w-8"></div>
-    <Toggle
-      class="flex-none pt-1 mr-4"
-      checked={data.enabled}
-      onchange={() => updateEnabled(!data.enabled)}
-      size="custom"
-      customSize="w-8 h-4 after:top-0 after:left-[2px]  after:h-4 after:w-4"
-      tabindex={-1}
-    ></Toggle>
   </div>
   <div class="w-full flex-none grid grid-cols-2 gap-1 mb-4">
     <div>
