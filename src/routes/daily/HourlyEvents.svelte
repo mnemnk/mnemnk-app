@@ -179,7 +179,7 @@
               {#each row[2] as app (app.id)}
                 <div
                   id="e-{app.id}"
-                  class="text-nowrap drop-shadow"
+                  class="text-nowrap drop-shadow-sm"
                   style:background-color={app_colors[app.value.name]}
                 >
                   {app.value.title}
@@ -190,7 +190,7 @@
                   placement="bottom-start"
                   trigger="click"
                   triggeredBy="#e-{app.id}"
-                  class="!text-primary-50 !bg-gray-700 !bg-transparent/90 z-10 ml-4"
+                  class="text-primary-50! bg-gray-700! bg-transparent/90! z-10 ml-4"
                 >
                   <div class="p-3">
                     <div>{app.time.toLocaleString()}</div>
@@ -222,7 +222,7 @@
                       loading="lazy"
                       src={`http://www.google.com/s2/favicons?domain=${event.value.hostname}`}
                       alt=""
-                      class="inline-block drop-shadow"
+                      class="inline-block drop-shadow-sm"
                       width="16"
                       height="16"
                     />
@@ -236,14 +236,14 @@
                     placement="bottom-start"
                     trigger="hover"
                     triggeredBy="#e-{event.id}"
-                    class="!text-primary-50 !bg-gray-700 !bg-transparent/90 z-10 ml-4"
+                    class="text-primary-50! bg-gray-700! bg-transparent/90! z-10 ml-4"
                   >
                     <div>
                       {event.value.url}
                     </div>
                   </Popover>
                 {:else}
-                  <div id="e-{event.id}" class="drop-shadow">
+                  <div id="e-{event.id}" class="drop-shadow-sm">
                     <div>{event.kind}</div>
                     <div>{event.time.toLocaleString()}</div>
                     <pre>{JSON.stringify(event.value, null, 2)}</pre>
@@ -264,7 +264,7 @@
 <svelte:window on:keydown={on_keydown} />
 
 <style>
-  .drop-shadow {
+  .drop-shadow-sm {
     filter: drop-shadow(0 0 1.2px rgba(0, 0, 0, 0.8));
   }
 </style>
