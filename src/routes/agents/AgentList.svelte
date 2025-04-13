@@ -1,15 +1,14 @@
 <script lang="ts">
-  import { Accordion, AccordionItem, Drawer } from "flowbite-svelte";
+  import { Accordion, AccordionItem } from "flowbite-svelte";
 
   import type { SAgentDefinitions } from "@/lib/types";
 
   interface Props {
     agentDefs: SAgentDefinitions;
     onAddAgent: (agentName: string) => Promise<void>;
-    hidden: boolean;
   }
 
-  let { agentDefs, onAddAgent, hidden = $bindable(true) }: Props = $props();
+  let { agentDefs, onAddAgent }: Props = $props();
 
   const categories = Object.keys(agentDefs).reduce(
     (acc, key) => {
@@ -35,23 +34,23 @@
   const categoryNames = Object.keys(categories).sort();
 </script>
 
-<Drawer bind:hidden backdrop={false} class="w-64" placement="right">
-  <Accordion flush>
-    {#each categoryNames as categoryName}
-      <AccordionItem>
-        <span slot="header">
-          {categoryName}
-        </span>
-        {#each categories[categoryName] as agentName}
-          <button
-            type="button"
-            class="w-full text-left p-1 hover:bg-gray-200 dark:hover:bg-gray-800"
-            onclick={() => onAddAgent(agentName)}
-          >
-            {agentDefs[agentName].title ?? agentName}
-          </button>
-        {/each}
-      </AccordionItem>
-    {/each}
-  </Accordion>
-</Drawer>
+<Accordion flush class="w-full bg-white dark:bg-black">
+  <div>Agents</div>
+  <hr />
+  {#each categoryNames as categoryName}
+    <AccordionItem class="px-2">
+      <span slot="header">
+        {categoryName}
+      </span>
+      {#each categories[categoryName] as agentName}
+        <button
+          type="button"
+          class="w-full text-left p-1 hover:bg-gray-200 dark:hover:bg-gray-800 pl-3"
+          onclick={() => onAddAgent(agentName)}
+        >
+          {agentDefs[agentName].title ?? agentName}
+        </button>
+      {/each}
+    </AccordionItem>
+  {/each}
+</Accordion>

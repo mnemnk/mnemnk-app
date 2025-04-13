@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  const MENU_CLASS = "w-full text-left pl-2 hover:bg-gray-700";
+  const MENU_CLASS = "w-full text-left pl-2 text-white hover:bg-gray-700";
 </script>
 
 <script lang="ts">

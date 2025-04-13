@@ -21,6 +21,7 @@
     PlayOutline,
   } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
+  import { Pane, Splitpanes } from "svelte-splitpanes";
 
   import {
     addAgentFlowEdge,
@@ -492,52 +493,59 @@
   }
 </script>
 
-<main class="container static min-w-[100vw]">
-  <SvelteFlow
-    bind:nodes
-    bind:edges
-    {nodeTypes}
-    onnodecontextmenu={handleNodeContextMenu}
-    onselectioncontextmenu={handleSelectionContextMenu}
-    onnodeclick={handleNodeClick}
-    onselectionclick={handleSelectionClick}
-    onpaneclick={handlePaneClick}
-    deleteKey={["Delete"]}
-    connectionRadius={38}
-    colorMode="dark"
-    fitView
-    maxZoom={2}
-    minZoom={0.1}
-    attributionPosition="bottom-left"
-    class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
-  >
-    <Controls />
-    <MiniMap />
-    <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
-      <Button onclick={onPause} pill class="bg-gray-800!">
-        <PauseOutline
-          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
-        />
-      </Button>
-      <Button onclick={onPlay} pill class="bg-gray-800!">
-        <PlayOutline
-          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
-        />
-      </Button>
-    </ButtonGroup>
-  </SvelteFlow>
+<main class="container">
+  <Splitpanes class="min-w-[100vw] w-full h-full bg-white! dark:bg-black!">
+    <Pane minSize={20}>
+      <SvelteFlow
+        bind:nodes
+        bind:edges
+        {nodeTypes}
+        onnodecontextmenu={handleNodeContextMenu}
+        onselectioncontextmenu={handleSelectionContextMenu}
+        onnodeclick={handleNodeClick}
+        onselectionclick={handleSelectionClick}
+        onpaneclick={handlePaneClick}
+        deleteKey={["Delete"]}
+        connectionRadius={38}
+        colorMode="dark"
+        fitView
+        maxZoom={2}
+        minZoom={0.1}
+        attributionPosition="bottom-left"
+        class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
+      >
+        <Controls />
+        <MiniMap />
+        <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
+          <Button onclick={onPause} pill class="bg-gray-800!">
+            <PauseOutline
+              class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+            />
+          </Button>
+          <Button onclick={onPlay} pill class="bg-gray-800!">
+            <PlayOutline
+              class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+            />
+          </Button>
+        </ButtonGroup>
 
-  <Button
-    onclick={() => {
-      hiddenAgents = false;
-    }}
-    class="absolute top-12 right-4 z-20"
-    color="alternative"
-    size="xs"
-  >
-    Agents
-  </Button>
-  <AgentList {agentDefs} {onAddAgent} bind:hidden={hiddenAgents} />
+        {#if nodeContextMenu}
+          <NodeContextMenu
+            x={nodeContextMenu.x}
+            y={nodeContextMenu.y}
+            {hideNodeContextMenu}
+            onstart={onPlay}
+            onstop={onPause}
+            oncut={cutNodesAndEdges}
+            oncopy={copyNodesAndEdges}
+          />
+        {/if}
+      </SvelteFlow>
+    </Pane>
+    <Pane size={15} class="bg-gray-100! dark:bg-gray-900!">
+      <AgentList {agentDefs} {onAddAgent} />
+    </Pane>
+  </Splitpanes>
 
   <Button class="absolute top-12 left-20 z-20" color="alternative" size="xs">File</Button>
   <Dropdown class="bg-gray-100! dark:bg-gray-900!">
@@ -548,18 +556,6 @@
     <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
     <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
   </Dropdown>
-
-  {#if nodeContextMenu}
-    <NodeContextMenu
-      x={nodeContextMenu.x}
-      y={nodeContextMenu.y}
-      {hideNodeContextMenu}
-      onstart={onPlay}
-      onstop={onPause}
-      oncut={cutNodesAndEdges}
-      oncopy={copyNodesAndEdges}
-    />
-  {/if}
 
   <Button class="absolute top-12 left-40 z-20" color="alternative" size="xs">
     {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
@@ -624,5 +620,10 @@
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
     stroke-width: 3;
     stroke-opacity: 0.75;
+  }
+
+  :global(.splitpanes__splitter) {
+    background-color: #000 !important;
+    border-left: 1px solid #222 !important;
   }
 </style>
