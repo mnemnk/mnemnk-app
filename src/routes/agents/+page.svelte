@@ -57,7 +57,7 @@
 
   import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
-  import FlowMegaMenu from "./FlowMegaMenu.svelte";
+  import FlowList from "./FlowList.svelte";
   import NodeContextMenu from "./NodeContextMenu.svelte";
 
   let { data } = $props();
@@ -495,6 +495,9 @@
 
 <main class="container">
   <Splitpanes class="min-w-[100vw] w-full h-full bg-white! dark:bg-black!">
+    <Pane size={10} class="bg-gray-100! dark:bg-gray-900!">
+      <FlowList {flowNames} currentFlowName={flowNameState.name} {changeFlowName} />
+    </Pane>
     <Pane minSize={20}>
       <SvelteFlow
         bind:nodes
@@ -540,27 +543,22 @@
             oncopy={copyNodesAndEdges}
           />
         {/if}
+
+        <Button class="absolute top-12 left-10 z-20" color="alternative" size="xs">File</Button>
+        <Dropdown class="bg-gray-100! dark:bg-gray-900!">
+          <DropdownItem onclick={onNewFlow}>New</DropdownItem>
+          <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
+          <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
+          <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
+          <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
+          <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
+        </Dropdown>
       </SvelteFlow>
     </Pane>
-    <Pane size={15} class="bg-gray-100! dark:bg-gray-900!">
+    <Pane size={10} class="bg-gray-100! dark:bg-gray-900!">
       <AgentList {agentDefs} {onAddAgent} />
     </Pane>
   </Splitpanes>
-
-  <Button class="absolute top-12 left-20 z-20" color="alternative" size="xs">File</Button>
-  <Dropdown class="bg-gray-100! dark:bg-gray-900!">
-    <DropdownItem onclick={onNewFlow}>New</DropdownItem>
-    <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
-    <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
-    <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
-    <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
-    <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
-  </Dropdown>
-
-  <Button class="absolute top-12 left-40 z-20" color="alternative" size="xs">
-    {flowNameState.name}<ChevronDownOutline class="w-6 h-6 ms-2 inline" />
-  </Button>
-  <FlowMegaMenu {flowNames} onChangeFlow={changeFlowName} bind:open={openFlow} />
 
   {#if newFlowModal}
     <Modal title="New Flow" bind:open={newFlowModal}>
