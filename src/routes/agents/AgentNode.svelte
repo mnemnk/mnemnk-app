@@ -3,7 +3,7 @@
   import type { Unsubscriber } from "svelte/store";
 
   import { useSvelteFlow, type NodeProps } from "@xyflow/svelte";
-  import { Button, Input, NumberInput, Popover, Textarea, Toggle, Tooltip } from "flowbite-svelte";
+  import { Button, Input, NumberInput, Popover, Textarea, Toggle } from "flowbite-svelte";
   import { ExclamationCircleOutline } from "flowbite-svelte-icons";
 
   import Messages from "@/components/Messages.svelte";
