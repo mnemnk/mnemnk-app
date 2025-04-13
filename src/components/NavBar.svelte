@@ -11,8 +11,8 @@
   {activeUrl}
   position="fixed"
   navType="application"
-  classActive="bg-surgace-200 dark:bg-surface-800"
-  classOuter="top-3 h-6 opacity-70"
+  classActive="bg-gray-100 dark:bg-gray-900 opacity-70"
+  classOuter="top-3 h-6 bg-gray-100 dark:bg-gray-900 opacity-70"
   classInner="grid-cols-4"
 >
   <BottomNavItem btnName="Home" href="/" appBtnPosition="left">

@@ -35,8 +35,10 @@
   );
 </script>
 
-<h4>Agents</h4>
-<hr />
-<Accordion flush class="w-full pr-2 bg-white dark:bg-black">
-  <AgentListItems {categories} {agentDefs} {onAddAgent} />
-</Accordion>
+<div class="backdrop-blur-xs">
+  <h4>Agents</h4>
+  <hr />
+  <Accordion flush class="">
+    <AgentListItems {categories} {agentDefs} {onAddAgent} />
+  </Accordion>
+</div>

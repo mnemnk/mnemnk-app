@@ -14,14 +14,8 @@
     GradientButton,
     Modal,
   } from "flowbite-svelte";
-  import {
-    ChevronDownOutline,
-    ExclamationCircleOutline,
-    PauseOutline,
-    PlayOutline,
-  } from "flowbite-svelte-icons";
+  import { ExclamationCircleOutline, PauseOutline, PlayOutline } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
-  import { Pane, Splitpanes } from "svelte-splitpanes";
 
   import {
     addAgentFlowEdge,
@@ -57,6 +51,7 @@
 
   import AgentList from "./AgentList.svelte";
   import AgentNode from "./AgentNode.svelte";
+  import FileMenu from "./FileMenu.svelte";
   import FlowList from "./FlowList.svelte";
   import NodeContextMenu from "./NodeContextMenu.svelte";
 
@@ -493,128 +488,137 @@
   }
 </script>
 
-<main class="container">
-  <Splitpanes class="min-w-[100vw] w-full h-full bg-white! dark:bg-black!">
-    <Pane size={10} class="bg-gray-100! dark:bg-gray-900!">
-      <FlowList {flowNames} currentFlowName={flowNameState.name} {changeFlowName} />
-    </Pane>
-    <Pane minSize={20}>
-      <SvelteFlow
-        bind:nodes
-        bind:edges
-        {nodeTypes}
-        onnodecontextmenu={handleNodeContextMenu}
-        onselectioncontextmenu={handleSelectionContextMenu}
-        onnodeclick={handleNodeClick}
-        onselectionclick={handleSelectionClick}
-        onpaneclick={handlePaneClick}
-        deleteKey={["Delete"]}
-        connectionRadius={38}
-        colorMode="dark"
-        fitView
-        maxZoom={2}
-        minZoom={0.1}
-        attributionPosition="bottom-left"
-        class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
+<div class="bg-white! dark:bg-black! static">
+  <SvelteFlow
+    bind:nodes
+    bind:edges
+    {nodeTypes}
+    onnodecontextmenu={handleNodeContextMenu}
+    onselectioncontextmenu={handleSelectionContextMenu}
+    onnodeclick={handleNodeClick}
+    onselectionclick={handleSelectionClick}
+    onpaneclick={handlePaneClick}
+    deleteKey={["Delete"]}
+    connectionRadius={38}
+    colorMode="dark"
+    fitView
+    maxZoom={2}
+    minZoom={0.1}
+    attributionPosition="bottom-left"
+    class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
+  >
+    <Controls />
+    <MiniMap />
+    <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
+      <Button onclick={onPause} pill class="bg-gray-100! dark:bg-gray-900! opacity-70">
+        <PauseOutline
+          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+        />
+      </Button>
+      <Button onclick={onPlay} pill class="bg-gray-100! dark:bg-gray-900! opacity-70">
+        <PlayOutline
+          class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
+        />
+      </Button>
+    </ButtonGroup>
+
+    {#if nodeContextMenu}
+      <NodeContextMenu
+        x={nodeContextMenu.x}
+        y={nodeContextMenu.y}
+        {hideNodeContextMenu}
+        onstart={onPlay}
+        onstop={onPause}
+        oncut={cutNodesAndEdges}
+        oncopy={copyNodesAndEdges}
+      />
+    {/if}
+
+    <FileMenu
+      {onNewFlow}
+      {onRenameFlow}
+      {onDeleteFlow}
+      {onSaveFlow}
+      {onExportFlow}
+      {onImportFlow}
+    />
+  </SvelteFlow>
+  <div class="absolute top-1 left-0 w-40">
+    <FlowList {flowNames} currentFlowName={flowNameState.name} {changeFlowName} />
+  </div>
+  <div class="absolute right-0 top-1 w-60">
+    <AgentList {agentDefs} {onAddAgent} />
+  </div>
+</div>
+
+{#if newFlowModal}
+  <Modal title="New Flow" bind:open={newFlowModal} classBackdrop="bg-transparent backdrop-blur-xs">
+    <div class="flex flex-col">
+      <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        >Flow Name</label
       >
-        <Controls />
-        <MiniMap />
-        <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
-          <Button onclick={onPause} pill class="bg-gray-800!">
-            <PauseOutline
-              class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
-            />
-          </Button>
-          <Button onclick={onPlay} pill class="bg-gray-800!">
-            <PlayOutline
-              class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
-            />
-          </Button>
-        </ButtonGroup>
+      <input
+        type="text"
+        id="flow_name"
+        bind:value={newFlowName}
+        class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Flow Name"
+      />
+    </div>
+    <div class="flex justify-end mt-4">
+      <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
+    </div>
+  </Modal>
+{/if}
 
-        {#if nodeContextMenu}
-          <NodeContextMenu
-            x={nodeContextMenu.x}
-            y={nodeContextMenu.y}
-            {hideNodeContextMenu}
-            onstart={onPlay}
-            onstop={onPause}
-            oncut={cutNodesAndEdges}
-            oncopy={copyNodesAndEdges}
-          />
-        {/if}
+{#if renameFlowModal}
+  <Modal
+    title="Rename Flow"
+    bind:open={renameFlowModal}
+    classBackdrop="bg-transparent backdrop-blur-xs"
+  >
+    <div class="flex flex-col">
+      <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        >Flow Name</label
+      >
+      <input
+        type="text"
+        id="flow_name"
+        bind:value={renameFlowName}
+        class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        placeholder="Flow Name"
+      />
+    </div>
+    <div class="flex justify-end mt-4">
+      <GradientButton color="pinkToOrange" onclick={renameFlow}>Rename</GradientButton>
+    </div>
+  </Modal>
+{/if}
 
-        <Button class="absolute top-12 left-10 z-20" color="alternative" size="xs">File</Button>
-        <Dropdown class="bg-gray-100! dark:bg-gray-900!">
-          <DropdownItem onclick={onNewFlow}>New</DropdownItem>
-          <DropdownItem onclick={onRenameFlow}>Rename</DropdownItem>
-          <DropdownItem onclick={onDeleteFlow}>Delete</DropdownItem>
-          <DropdownItem onclick={onSaveFlow}>Save</DropdownItem>
-          <DropdownItem onclick={onExportFlow}>Export</DropdownItem>
-          <DropdownItem onclick={onImportFlow}>Import</DropdownItem>
-        </Dropdown>
-      </SvelteFlow>
-    </Pane>
-    <Pane size={10} class="bg-gray-100! dark:bg-gray-900!">
-      <AgentList {agentDefs} {onAddAgent} />
-    </Pane>
-  </Splitpanes>
-
-  {#if newFlowModal}
-    <Modal title="New Flow" bind:open={newFlowModal}>
-      <div class="flex flex-col">
-        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-          >Flow Name</label
-        >
-        <input
-          type="text"
-          id="flow_name"
-          bind:value={newFlowName}
-          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="Flow Name"
-        />
-      </div>
-      <div class="flex justify-end mt-4">
-        <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
-      </div>
-    </Modal>
-  {/if}
-
-  {#if renameFlowModal}
-    <Modal title="Rename Flow" bind:open={renameFlowModal}>
-      <div class="flex flex-col">
-        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-          >Flow Name</label
-        >
-        <input
-          type="text"
-          id="flow_name"
-          bind:value={renameFlowName}
-          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          placeholder="Flow Name"
-        />
-      </div>
-      <div class="flex justify-end mt-4">
-        <GradientButton color="pinkToOrange" onclick={renameFlow}>Rename</GradientButton>
-      </div>
-    </Modal>
-  {/if}
-
-  {#if deleteFlowModal}
-    <Modal title="Delete Flow" bind:open={deleteFlowModal} size="xs" autoclose>
-      <div class="text-center">
-        <ExclamationCircleOutline class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" />
-        <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
-          Are you sure you want to delete this flow?
-        </h3>
-        <Button onclick={deleteFlow} color="red" class="me-2">Delete</Button>
-        <Button color="alternative">Cancel</Button>
-      </div>
-    </Modal>
-  {/if}
-</main>
+{#if deleteFlowModal}
+  <Modal
+    title="Delete Flow"
+    bind:open={deleteFlowModal}
+    size="xs"
+    autoclose
+    classBackdrop="bg-transparent backdrop-blur-xs"
+  >
+    <div class="text-center">
+      <ExclamationCircleOutline class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" />
+      <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
+        Are you sure you want to delete this flow?
+      </h3>
+      <Button onclick={deleteFlow} color="red" class="me-2">Delete</Button>
+      <Button color="alternative">Cancel</Button>
+    </div>
+  </Modal>
+{/if}
 
 <style>
+  :global(body) {
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
     stroke-width: 3;
     stroke-opacity: 0.75;
