@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { Accordion, AccordionItem } from "flowbite-svelte";
+  import { Accordion } from "flowbite-svelte";
 
   import type { SAgentDefinitions } from "@/lib/types";
+
+  import AgentListItems from "./AgentListItems.svelte";
 
   interface Props {
     agentDefs: SAgentDefinitions;
@@ -12,45 +14,29 @@
 
   const categories = Object.keys(agentDefs).reduce(
     (acc, key) => {
-      const category = agentDefs[key].category ?? "_unknown_";
-      if (!acc[category]) {
-        acc[category] = [];
+      const categoryPath = (agentDefs[key].category ?? "_unknown_").split("/");
+      let currentLevel = acc;
+
+      for (const part of categoryPath) {
+        if (!currentLevel[part]) {
+          currentLevel[part] = {};
+        }
+        currentLevel = currentLevel[part];
       }
-      acc[category].push(key);
+
+      if (!currentLevel["00agents"]) {
+        currentLevel["00agents"] = [];
+      }
+      currentLevel["00agents"].push(key);
+
       return acc;
     },
-    {} as Record<string, string[]>,
+    {} as Record<string, any>,
   );
-
-  // sort agents in each category
-  for (const category in categories) {
-    categories[category].sort((a, b) => {
-      const aTitle = agentDefs[a].title ?? a;
-      const bTitle = agentDefs[b].title ?? b;
-      return aTitle.localeCompare(bTitle);
-    });
-  }
-
-  const categoryNames = Object.keys(categories).sort();
 </script>
 
-<Accordion flush class="w-full bg-white dark:bg-black">
-  <div>Agents</div>
-  <hr />
-  {#each categoryNames as categoryName}
-    <AccordionItem class="px-2">
-      <span slot="header">
-        {categoryName}
-      </span>
-      {#each categories[categoryName] as agentName}
-        <button
-          type="button"
-          class="w-full text-left p-1 hover:bg-gray-200 dark:hover:bg-gray-800 pl-3"
-          onclick={() => onAddAgent(agentName)}
-        >
-          {agentDefs[agentName].title ?? agentName}
-        </button>
-      {/each}
-    </AccordionItem>
-  {/each}
+<h4>Agents</h4>
+<hr />
+<Accordion flush class="w-full pr-2 bg-white dark:bg-black">
+  <AgentListItems {categories} {agentDefs} {onAddAgent} />
 </Accordion>
