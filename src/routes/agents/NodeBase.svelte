@@ -1,17 +1,18 @@
 <script lang="ts" module>
-  const bgColors = ["bg-zinc-100 dark:bg-zinc-900", "bg-slate-100 dark:bg-slate-900"];
+  const bgColors = [
+    "bg-zinc-100 dark:bg-zinc-900 opacity-70",
+    "bg-slate-200 dark:bg-slate-800 opacity-90",
+  ];
 
-  const DEFAULT_HANDLE_STYLE =
-    "width: 11px; height: 11px; border-width: 2px; background: black; border-color: white;";
+  const DEFAULT_HANDLE_STYLE = "width: 11px; height: 11px; background: white;";
 </script>
 
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  import { Handle, NodeResizer, Position, useSvelteFlow } from "@xyflow/svelte";
+  import { Handle, NodeResizer, Position } from "@xyflow/svelte";
   import type { NodeProps, ResizeDragEvent, ResizeParams } from "@xyflow/svelte";
 
-  import { startAgent, stopAgent } from "@/lib/agent";
   import type { SAgentDefinition } from "@/lib/types";
 
   type Props = NodeProps & {
@@ -23,21 +24,10 @@
     contents: Snippet;
   };
 
-  let { id, data, agentDef, selected, height, title, contents }: Props = $props();
+  let { data, agentDef, selected, height, title, contents }: Props = $props();
 
   const inputs = agentDef?.inputs ?? [];
   const outputs = agentDef?.outputs ?? [];
-
-  const { updateNodeData } = useSvelteFlow();
-
-  async function updateEnabled(value: boolean) {
-    updateNodeData(id, { enabled: value });
-    if (value) {
-      await startAgent(id);
-    } else {
-      await stopAgent(id);
-    }
-  }
 
   let ht = $state(height);
 
@@ -47,14 +37,6 @@
 </script>
 
 <NodeResizer isVisible={selected} {onResize} />
-{#each inputs as input, idx}
-  <Handle
-    id={input}
-    type="target"
-    position={Position.Left}
-    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
-  />
-{/each}
 <div
   class="{bgColors[
     data.enabled ? 1 : 0
@@ -84,6 +66,14 @@
     {@render contents()}
   </div>
 </div>
+{#each inputs as input, idx}
+  <Handle
+    id={input}
+    type="target"
+    position={Position.Left}
+    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
+  />
+{/each}
 {#each outputs as output, idx}
   <Handle
     id={output}

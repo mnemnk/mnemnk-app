@@ -3,17 +3,18 @@
 
   import { getContext, onMount } from "svelte";
 
-  import { SvelteFlow, Controls, type NodeTypes, useSvelteFlow, MiniMap } from "@xyflow/svelte";
+  import {
+    SvelteFlow,
+    Controls,
+    type NodeTypes,
+    useSvelteFlow,
+    MiniMap,
+    Background,
+    BackgroundVariant,
+  } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
-  import {
-    Button,
-    ButtonGroup,
-    Dropdown,
-    DropdownItem,
-    GradientButton,
-    Modal,
-  } from "flowbite-svelte";
+  import { Button, ButtonGroup, GradientButton, Modal } from "flowbite-svelte";
   import { ExclamationCircleOutline, PauseOutline, PlayOutline } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
 
@@ -507,15 +508,22 @@
     attributionPosition="bottom-left"
     class="relative w-full min-h-screen text-black! !dark:text-white bg-gray-100! dark:bg-black!"
   >
+    <Background
+      variant={BackgroundVariant.Lines}
+      bgColor="#000"
+      patternColor="#1a1a1a"
+      gap={28}
+      lineWidth={1}
+    />
     <Controls />
     <MiniMap />
     <ButtonGroup class="absolute bottom-4 z-10 w-full flex justify-center">
-      <Button onclick={onPause} pill class="bg-gray-100! dark:bg-gray-900! opacity-70">
+      <Button onclick={onPause} pill class="bg-gray-100! dark:bg-gray-900! opacity-80">
         <PauseOutline
           class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
         />
       </Button>
-      <Button onclick={onPlay} pill class="bg-gray-100! dark:bg-gray-900! opacity-70">
+      <Button onclick={onPlay} pill class="bg-gray-100! dark:bg-gray-900! opacity-80">
         <PlayOutline
           class="w-5 h-5 mb-1/2 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500"
         />
@@ -620,7 +628,7 @@
     overflow-y: hidden;
   }
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
-    stroke-width: 3;
-    stroke-opacity: 0.75;
+    stroke-width: 6px;
+    stroke-opacity: 0.8;
   }
 </style>
