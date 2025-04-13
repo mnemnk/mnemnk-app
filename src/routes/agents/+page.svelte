@@ -623,9 +623,4 @@
     stroke-width: 3;
     stroke-opacity: 0.75;
   }
-
-  :global(.splitpanes__splitter) {
-    background-color: #000 !important;
-    border-left: 1px solid #222 !important;
-  }
 </style>
