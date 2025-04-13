@@ -3568,7 +3568,7 @@ dependencies = [
 
 [[package]]
 name = "mnemnk-app"
-version = "0.14.3"
+version = "0.14.4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

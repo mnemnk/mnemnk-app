@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.14.4](https://github.com/mnemnk/mnemnk-app/compare/v0.14.3...v0.14.4) (2025-04-13)
+
+
+### Features
+
+* 🎸 agents list in splitpanes ([#248](https://github.com/mnemnk/mnemnk-app/issues/248)) ([660ad7c](https://github.com/mnemnk/mnemnk-app/commit/660ad7c30b6b8de6c2e5360b4ce9270bd24beadb))
+* 🎸 flow list ([#250](https://github.com/mnemnk/mnemnk-app/issues/250)) ([206e45a](https://github.com/mnemnk/mnemnk-app/commit/206e45a58b6048d62ad826c795d0043ee51d12b2))
+* 🎸 node context menu ([#247](https://github.com/mnemnk/mnemnk-app/issues/247)) ([62782be](https://github.com/mnemnk/mnemnk-app/commit/62782bedb4a8311c976698d9cfc1a0323cd84000))
+
+
+### Bug Fixes
+
+* 🐛 downgrade Svelte for ownership_invalid_binding warning ([#246](https://github.com/mnemnk/mnemnk-app/issues/246)) ([0e3eca1](https://github.com/mnemnk/mnemnk-app/commit/0e3eca17bbee4481cdf869d9b0cc853aee815f90))
+
 ## [0.14.3](https://github.com/mnemnk/mnemnk-app/compare/v0.14.2...v0.14.3) (2025-04-11)
 
 
