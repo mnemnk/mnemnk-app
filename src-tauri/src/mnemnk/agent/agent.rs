@@ -99,6 +99,7 @@ pub trait Agent {
         Ok(())
     }
 
+    #[allow(unused)]
     fn emit_error(&self, message: String) -> Result<()> {
         let error_message = ErrorMessage {
             agent_id: self.id().to_string(),
