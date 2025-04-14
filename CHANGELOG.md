@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.15.0](https://github.com/mnemnk/mnemnk-app/compare/v0.14.5...v0.15.0) (2025-04-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 Pack whole args of command agent  into a single JSON
+
+### Features
+
+* 🎸 pack whole command args into a single JSON ([#257](https://github.com/mnemnk/mnemnk-app/issues/257)) ([d8768aa](https://github.com/mnemnk/mnemnk-app/commit/d8768aa4a4749b0e938e4bd56a6238a28c9252ed))
+
+
+### Bug Fixes
+
+* 🐛 agent error message ([#258](https://github.com/mnemnk/mnemnk-app/issues/258)) ([91f0047](https://github.com/mnemnk/mnemnk-app/commit/91f0047c7be55f6698058ffb567f03f2f9093c2b))
+
 ## [0.14.5](https://github.com/mnemnk/mnemnk-app/compare/v0.14.4...v0.14.5) (2025-04-13)
 
 ## [0.14.4](https://github.com/mnemnk/mnemnk-app/compare/v0.14.3...v0.14.4) (2025-04-13)
