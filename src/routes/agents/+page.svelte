@@ -623,10 +623,6 @@
 {/if}
 
 <style>
-  :global(body) {
-    overflow-x: hidden;
-    overflow-y: hidden;
-  }
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
     stroke-width: 6px;
     stroke-opacity: 0.8;
