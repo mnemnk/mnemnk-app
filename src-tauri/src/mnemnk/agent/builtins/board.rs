@@ -208,7 +208,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // BoardInAgent
     defs.insert(
         "$board_in".into(),
-        AgentDefinition::new("BoardIn", "$board_in", Some(new_boxed::<BoardInAgent>))
+        AgentDefinition::new("Board", "$board_in", Some(new_boxed::<BoardInAgent>))
             .with_title("Board In")
             .with_category("Core")
             .with_inputs(vec!["*"])
@@ -223,7 +223,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // BoardOutAgent
     defs.insert(
         "$board_out".into(),
-        AgentDefinition::new("BoardOut", "$board_out", Some(new_boxed::<BoardOutAgent>))
+        AgentDefinition::new("Board", "$board_out", Some(new_boxed::<BoardOutAgent>))
             .with_title("Board Out")
             .with_category("Core")
             .with_outputs(vec!["*"])
