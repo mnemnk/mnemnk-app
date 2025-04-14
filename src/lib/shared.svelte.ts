@@ -2,7 +2,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import { writable, type Writable } from "svelte/store";
 
-import type { DisplayMessage, ErrorMessage } from "@/lib/types";
+import type { DisplayMessage, ErrorMessage, InputMessage } from "@/lib/types";
 
 // Display Message
 
@@ -48,6 +48,26 @@ export function subscribeErrorMessage(
 
 let unlistenError: UnlistenFn | null = null;
 
+// Input Message
+let inputMessageStore: Map<string, Writable<{ ch: string; t: number }>> = new Map<
+  string,
+  Writable<{ ch: string; t: number }>
+>();
+
+export function subscribeInputMessage(
+  agentId: string,
+  callback: (message: { ch: string; t: number }) => void,
+): () => void {
+  let inputStore = inputMessageStore.get(agentId);
+  if (!inputStore) {
+    inputStore = writable({ ch: "", t: 0 });
+    inputMessageStore.set(agentId, inputStore);
+  }
+  return inputStore.subscribe(callback);
+}
+
+let unlistenInput: UnlistenFn | null = null;
+
 //
 
 $effect.root(() => {
@@ -78,9 +98,22 @@ $effect.root(() => {
     unlistenError = unlistenFn;
   });
 
+  // Listen for input messages
+  listen<InputMessage>("mnemnk:input", (event) => {
+    const { agent_id, ch } = event.payload;
+    let inputStore = inputMessageStore.get(agent_id);
+    if (!inputStore) {
+      return;
+    }
+    inputStore.set({ ch, t: Date.now() });
+  }).then((unlistenFn) => {
+    unlistenInput = unlistenFn;
+  });
+
   return () => {
     unlistenDisplay?.();
     unlistenError?.();
+    unlistenInput?.();
   };
 });
 

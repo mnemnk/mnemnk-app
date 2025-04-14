@@ -158,3 +158,8 @@ export type ErrorMessage = {
   agent_id: string;
   message: string;
 };
+
+export type InputMessage = {
+  agent_id: string;
+  ch: string;
+};

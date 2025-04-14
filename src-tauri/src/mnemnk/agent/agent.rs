@@ -114,6 +114,7 @@ pub trait Agent {
 
 const EMIT_DISPLAY: &str = "mnemnk:display";
 const EMIT_ERROR: &str = "mnemnk:error";
+const EMIT_INPUT: &str = "mnemnk:input";
 
 #[derive(Clone, Serialize)]
 struct DisplayMessage {
@@ -133,6 +134,20 @@ pub fn emit_error(app: &AppHandle, agent_id: String, message: String) -> Result<
     app.emit(EMIT_ERROR, error_message)
         .context("Failed to emit error message")?;
     Ok(())
+}
+
+#[derive(Clone, Serialize)]
+struct InputMessage {
+    agent_id: String,
+    ch: String,
+}
+
+pub fn emit_input(app: &AppHandle, agent_id: String, ch: String) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let input_message = InputMessage { agent_id, ch };
+        app.emit(EMIT_INPUT, input_message).ok();
+    });
 }
 
 pub struct AsAgentData {
