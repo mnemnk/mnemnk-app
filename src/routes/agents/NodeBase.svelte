@@ -1,8 +1,11 @@
 <script lang="ts" module>
   const bgColors = [
-    "bg-zinc-100 dark:bg-zinc-900 opacity-50 border-[#555]",
-    "bg-slate-200 dark:bg-[#353535] opacity-90 border-[#777]",
+    "bg-zinc-100 dark:bg-zinc-900 opacity-50",
+    "bg-slate-200 dark:bg-[#353535] opacity-90",
   ];
+
+  const highlightBorderOklch = [0.96, 0.13, 105];
+  const borderOklch = [0.57, 0, 0];
 
   const DEFAULT_HANDLE_STYLE = "width: 11px; height: 11px;";
 
@@ -12,6 +15,7 @@
 
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { Spring } from "svelte/motion";
 
   import { Handle, NodeResizer, Position } from "@xyflow/svelte";
   import type { NodeProps, ResizeDragEvent, ResizeParams } from "@xyflow/svelte";
@@ -24,11 +28,13 @@
     };
     agentDef: SAgentDefinition;
     titleColor: string;
+    inputCount: number;
     title: Snippet;
     contents: Snippet;
   };
 
-  let { data, agentDef, selected, height, titleColor, title, contents }: Props = $props();
+  let { data, agentDef, selected, height, titleColor, inputCount, title, contents }: Props =
+    $props();
 
   const inputs = agentDef?.inputs ?? [];
   const outputs = agentDef?.outputs ?? [];
@@ -38,6 +44,29 @@
   function onResize(_ev: ResizeDragEvent, params: ResizeParams) {
     ht = params.height;
   }
+
+  let highlightCount = $derived(inputCount);
+  let lastHighlightCount = $state(inputCount);
+
+  let highlight = new Spring(0, {
+    stiffness: 0.03,
+    damping: 1.0,
+  });
+
+  function calculateHighlightColor(t: number, startOklch: number[], endOklch: number[]) {
+    const l = Math.round((endOklch[0] + t * (startOklch[0] - endOklch[0])) * 100) / 100;
+    const c = Math.round((endOklch[1] + t * (startOklch[1] - endOklch[1])) * 100) / 100;
+    const h = Math.round((endOklch[2] + t * (startOklch[2] - endOklch[2])) * 100) / 100;
+    return `oklch(${l} ${c} ${h})`;
+  }
+
+  $effect(() => {
+    if (highlightCount > lastHighlightCount) {
+      highlight.set(1, { instant: true });
+      highlight.target = 0;
+      lastHighlightCount = highlightCount;
+    }
+  });
 </script>
 
 <NodeResizer isVisible={selected} variant="line" {onResize} />
@@ -45,7 +74,11 @@
   class="{bgColors[
     data.enabled ? 1 : 0
   ]} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
-  style:height={ht ? `${ht}px` : "auto"}
+  style="height: {ht ? `${ht}px` : 'auto'}; border-color: {calculateHighlightColor(
+    highlight.current,
+    highlightBorderOklch,
+    borderOklch,
+  )};"
 >
   <div class="w-full min-w-40 flex-none pl-4 pr-4 pb-2 {titleColor} rounded-t-lg">
     {@render title()}

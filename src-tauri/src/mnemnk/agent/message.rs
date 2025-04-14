@@ -4,7 +4,7 @@ use tauri::{AppHandle, Manager};
 use crate::mnemnk::store;
 
 use super::{
-    agent::{AgentData, AgentStatus},
+    agent::{emit_input, AgentData, AgentStatus},
     env::AgentEnv,
 };
 
@@ -133,7 +133,7 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
             target_handle.clone()
         };
 
-        send_agent_in(&env, &target_agent, target_ch, data.clone())
+        send_agent_in(app, &env, &target_agent, target_ch, data.clone())
     }
 }
 
@@ -163,16 +163,17 @@ pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
             continue;
         };
         for (target_agent, _source_handle, target_handle) in edges {
-            send_agent_in(&env, &target_agent, target_handle, data.clone())
+            send_agent_in(app, &env, &target_agent, target_handle, data.clone())
         }
     }
 }
 
-fn send_agent_in(env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
+fn send_agent_in(app: &AppHandle, env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
     if let Some(agent) = env.agents.lock().unwrap().get_mut(agent_id) {
         if *agent.status() != AgentStatus::Run {
             return;
         }
+        emit_input(app, agent_id.to_string(), ch.clone());
         agent.input(ch, data).unwrap_or_else(|e| {
             log::error!("Failed to send message to {}: {}", agent_id, e);
         });

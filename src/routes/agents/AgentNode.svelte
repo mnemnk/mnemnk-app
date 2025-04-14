@@ -22,7 +22,11 @@
     serializeAgentFlowNodeConfig,
     setAgentConfig,
   } from "@/lib/agent";
-  import { subscribeDisplayMessage, subscribeErrorMessage } from "@/lib/shared.svelte";
+  import {
+    subscribeDisplayMessage,
+    subscribeErrorMessage,
+    subscribeInputMessage,
+  } from "@/lib/shared.svelte";
   import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
@@ -45,6 +49,8 @@
   const description = agentDef?.description;
 
   let errorMessages = $state<string[]>([]);
+  let inputMessage = $state<string>("");
+  let inputCount = $state(0);
 
   onMount(() => {
     let unsubscribers: Unsubscriber[] = [];
@@ -66,6 +72,14 @@
       subscribeErrorMessage(id, (message) => {
         if (!message) return;
         errorMessages.push(message);
+      }),
+    );
+
+    unsubscribers.push(
+      subscribeInputMessage(id, ({ ch, t }) => {
+        if (!ch || ch === "") return;
+        inputMessage = ch;
+        inputCount += 1;
       }),
     );
 
@@ -304,7 +318,7 @@
   {/if}
 {/snippet}
 
-<NodeBase {id} {data} {agentDef} {titleColor} {title} {contents} {...props} />
+<NodeBase {id} {data} {agentDef} {titleColor} {inputCount} {title} {contents} {...props} />
 
 {#if description || data.title}
   <Popover triggeredBy="#t-{uid}" placement="top-start" arrow={false} class="z-40">
