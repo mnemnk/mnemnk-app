@@ -1,10 +1,13 @@
 <script lang="ts" module>
   const bgColors = [
-    "bg-zinc-100 dark:bg-zinc-900 opacity-70",
-    "bg-slate-200 dark:bg-slate-800 opacity-90",
+    "bg-zinc-100 dark:bg-zinc-900 opacity-50 border-[#555]",
+    "bg-slate-200 dark:bg-[#353535] opacity-90 border-[#777]",
   ];
 
-  const DEFAULT_HANDLE_STYLE = "width: 11px; height: 11px; background: white;";
+  const DEFAULT_HANDLE_STYLE = "width: 11px; height: 11px;";
+
+  const HANDLE_OFFSET = 71;
+  const HANDLE_GAP = 25.5;
 </script>
 
 <script lang="ts">
@@ -20,11 +23,12 @@
       enabled: boolean;
     };
     agentDef: SAgentDefinition;
+    titleColor: string;
     title: Snippet;
     contents: Snippet;
   };
 
-  let { data, agentDef, selected, height, title, contents }: Props = $props();
+  let { data, agentDef, selected, height, titleColor, title, contents }: Props = $props();
 
   const inputs = agentDef?.inputs ?? [];
   const outputs = agentDef?.outputs ?? [];
@@ -36,17 +40,17 @@
   }
 </script>
 
-<NodeResizer isVisible={selected} {onResize} />
+<NodeResizer isVisible={selected} variant="line" {onResize} />
 <div
   class="{bgColors[
     data.enabled ? 1 : 0
-  ]} flex flex-col p-0 text-black dark:text-white border-2 border-gray-700 rounded-xl shadow-xl"
+  ]} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
   style:height={ht ? `${ht}px` : "auto"}
 >
-  <div class="w-full flex-none ml-4 mr-8 mb-2">
+  <div class="w-full min-w-40 flex-none pl-4 pr-4 pb-2 {titleColor} rounded-t-lg">
     {@render title()}
   </div>
-  <div class="w-full flex-none grid grid-cols-2 gap-1 mb-4">
+  <div class="w-full flex-none grid grid-cols-2 gap-1 mt-4 mb-2">
     <div>
       {#each inputs as input}
         <div class="text-left ml-2">
@@ -71,7 +75,7 @@
     id={input}
     type="target"
     position={Position.Left}
-    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
+    style="top: {idx * HANDLE_GAP + HANDLE_OFFSET}px; {DEFAULT_HANDLE_STYLE}"
   />
 {/each}
 {#each outputs as output, idx}
@@ -79,6 +83,6 @@
     id={output}
     type="source"
     position={Position.Right}
-    style="top: {idx * 28 + 59}px; {DEFAULT_HANDLE_STYLE}"
+    style="top: {idx * HANDLE_GAP + HANDLE_OFFSET}px; {DEFAULT_HANDLE_STYLE}"
   />
 {/each}

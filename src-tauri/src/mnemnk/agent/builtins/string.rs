@@ -223,7 +223,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$regex_filter".into(),
         AgentDefinition::new(
-            "RegexFilter",
+            "Builtin",
             "$regex_filter",
             Some(new_boxed::<RegexFilterAgent>),
         )
@@ -247,7 +247,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$template_string".into(),
         AgentDefinition::new(
-            "TemplateString",
+            "Builtin",
             "$template_string",
             Some(new_boxed::<TemplateStringAgent>),
         )
@@ -267,7 +267,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         AgentDefinition::new(
             // We can use TemplateStringAgent for `$template_text` too,
             // since the only difference is the config type.
-            "TemplateString",
+            "Builtin",
             "$template_text",
             Some(new_boxed::<TemplateStringAgent>),
         )
@@ -285,7 +285,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$template_data".into(),
         AgentDefinition::new(
-            "TemplateData",
+            "Builtin",
             "$template_data",
             Some(new_boxed::<TemplateDataAgent>),
         )

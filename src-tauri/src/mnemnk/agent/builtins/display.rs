@@ -100,7 +100,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$display_data".into(),
         AgentDefinition::new(
-            "DisplayData",
+            "Builtin",
             "$display_data",
             Some(new_boxed::<DisplayDataAgent>),
         )
@@ -118,7 +118,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$display_messages".into(),
         AgentDefinition::new(
-            "DisplayMessages",
+            "Builtin",
             "$display_messages",
             Some(new_boxed::<DisplayMessagesAgent>),
         )

@@ -445,25 +445,21 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Unit Input
     defs.insert(
         "$unit_input".into(),
-        AgentDefinition::new(
-            "UnitInput",
-            "$unit_input",
-            Some(new_boxed::<UnitInputAgent>),
-        )
-        .with_title("Unit Input")
-        .with_category("Input")
-        .with_outputs(vec!["unit"])
-        .with_default_config(vec![(
-            "unit".into(),
-            AgentConfigEntry::new(json!(()), "unit"),
-        )]),
+        AgentDefinition::new("Builtin", "$unit_input", Some(new_boxed::<UnitInputAgent>))
+            .with_title("Unit Input")
+            .with_category("Input")
+            .with_outputs(vec!["unit"])
+            .with_default_config(vec![(
+                "unit".into(),
+                AgentConfigEntry::new(json!(()), "unit"),
+            )]),
     );
 
     // Boolean Input
     defs.insert(
         "$boolean_input".into(),
         AgentDefinition::new(
-            "BooleanInput",
+            "Builtin",
             "$boolean_input",
             Some(new_boxed::<BooleanInputAgent>),
         )
@@ -480,7 +476,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$integer_input".into(),
         AgentDefinition::new(
-            "IntegerInput",
+            "Builtin",
             "$integer_input",
             Some(new_boxed::<IntegerInputAgent>),
         )
@@ -497,7 +493,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$number_input".into(),
         AgentDefinition::new(
-            "NumberInput",
+            "Builtin",
             "$number_input",
             Some(new_boxed::<NumberInputAgent>),
         )
@@ -514,7 +510,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$string_input".into(),
         AgentDefinition::new(
-            "StringInput",
+            "Builtin",
             "$string_input",
             Some(new_boxed::<StringInputAgent>),
         )
@@ -530,25 +526,21 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Text Input
     defs.insert(
         "$text_input".into(),
-        AgentDefinition::new(
-            "TextInput",
-            "$text_input",
-            Some(new_boxed::<TextInputAgent>),
-        )
-        .with_title("Text Input")
-        .with_category("Input")
-        .with_outputs(vec!["text"])
-        .with_default_config(vec![(
-            "text".into(),
-            AgentConfigEntry::new(json!(vec![""]), "text"),
-        )]),
+        AgentDefinition::new("Builtin", "$text_input", Some(new_boxed::<TextInputAgent>))
+            .with_title("Text Input")
+            .with_category("Input")
+            .with_outputs(vec!["text"])
+            .with_default_config(vec![(
+                "text".into(),
+                AgentConfigEntry::new(json!(vec![""]), "text"),
+            )]),
     );
 
     // Object Input
     defs.insert(
         "$object_input".into(),
         AgentDefinition::new(
-            "ObjectInput",
+            "Builtin",
             "$object_input",
             Some(new_boxed::<ObjectInputAgent>),
         )

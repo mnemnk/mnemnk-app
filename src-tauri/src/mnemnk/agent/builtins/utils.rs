@@ -70,7 +70,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Display Data
     defs.insert(
         "$counter".into(),
-        AgentDefinition::new("Counter", "$counter", Some(new_boxed::<CounterAgent>))
+        AgentDefinition::new("Builtin", "$counter", Some(new_boxed::<CounterAgent>))
             .with_title("Counter")
             // .with_description("Display value on the node")
             .with_category("Core/Utils")

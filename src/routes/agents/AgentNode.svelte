@@ -1,3 +1,13 @@
+<script lang="ts" module>
+  const titleColorMap: Record<string, string> = {
+    Board: "bg-green-500",
+    Builtin: "bg-blue-500",
+    Command: "bg-amber-500",
+    Database: "bg-red-500",
+    default: "bg-purple-500",
+  };
+</script>
+
 <script lang="ts">
   import { onMount } from "svelte";
   import type { Unsubscriber } from "svelte/store";
@@ -82,15 +92,16 @@
   }
 
   let editTitle = $state(false);
+  let titleColor = $derived(titleColorMap[agentDef?.kind ?? "default"] ?? titleColorMap.default);
 
   const uid = $props.id();
 </script>
 
 {#snippet title()}
   {#if editTitle}
-    <div class="flex-none mt-2">
+    <div class="flex-none">
       <Input
-        class=""
+        class="mt-1"
         type="text"
         value={data.title ?? agentDef?.title ?? data.name}
         onblur={() => (editTitle = false)}
@@ -112,7 +123,7 @@
       id="t-{uid}"
       type="button"
       onclick={() => (editTitle = true)}
-      class="flex-none mt-2"
+      class="flex-none mt-1"
       tabindex={-1}
     >
       <h3 class="text-xl">
@@ -319,4 +330,4 @@
   {/if}
 {/snippet}
 
-<NodeBase {id} {data} {agentDef} {title} {contents} {...props} />
+<NodeBase {id} {data} {agentDef} {titleColor} {title} {contents} {...props} />

@@ -69,7 +69,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // AsKindAgent
     defs.insert(
         "$as_kind_filter".into(),
-        AgentDefinition::new("AsKind", "$as_kind", Some(new_boxed::<AsKindAgent>))
+        AgentDefinition::new("Builtin", "$as_kind", Some(new_boxed::<AsKindAgent>))
             .with_title("As Kind")
             .with_category("Core")
             .with_inputs(vec!["*"])
