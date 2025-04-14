@@ -1,4 +1,5 @@
 use anyhow::{Context as _, Result};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::vec;
@@ -121,12 +122,15 @@ impl AsAgent for CommandAgent {
                         let (cmd, args) = parse_stdout(&line);
                         match cmd {
                             ".OUT" => match parse_out_args(args) {
-                                Ok((ch, kind, value)) => {
+                                Ok(data) => {
                                     let env = app_handle.state::<AgentEnv>();
                                     env.send_agent_out(
                                         agent_id.clone(),
-                                        ch,
-                                        AgentData { kind, value },
+                                        data.ch,
+                                        AgentData {
+                                            kind: data.kind,
+                                            value: data.value,
+                                        },
                                     )
                                     .await
                                     .unwrap_or_else(|e| {
@@ -221,17 +225,21 @@ impl AsAgent for CommandAgent {
     }
 
     fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+        let data = InData {
+            ch: ch.clone(),
+            kind: data.kind,
+            value: data.value,
+        };
+        let data_json = serde_json::to_string(&data).context("Failed to serialize input data")?;
+
         let env = self.env();
         let mut env_commands = env.commands.lock().unwrap();
-
         let command = env_commands
             .get_mut(self.id())
             .context("command not found")?;
-
         command
-            .write(format!(".IN {} {} {}\n", ch, data.kind, data.value.to_string()).as_bytes())
-            .context("Failed to write to command")?;
-        Ok(())
+            .write(format!(".IN {}\n", data_json).as_bytes())
+            .context("Failed to write to command")
     }
 }
 
@@ -297,13 +305,21 @@ fn parse_stdout(line: &str) -> (&str, &str) {
     (cmd.trim(), args.trim())
 }
 
-fn parse_out_args(args: &str) -> Result<(String, String, Value)> {
-    let args = args.splitn(3, ' ').collect::<Vec<_>>();
-    if args.len() < 3 {
-        return Err(anyhow::anyhow!("Invalid OUT command"));
-    }
-    let ch = args[0].to_string();
-    let kind = args[1].to_string();
-    let value = serde_json::from_str(args[2]).context("Failed to parse OUT command")?;
-    Ok((ch, kind, value))
+#[derive(Debug, Deserialize)]
+struct OutData {
+    ch: String,
+    kind: String,
+    value: Value,
+}
+
+fn parse_out_args(args: &str) -> Result<OutData> {
+    let data: OutData = serde_json::from_str(args).context("Failed to parse OUT command")?;
+    return Ok(data);
+}
+
+#[derive(Debug, Serialize)]
+struct InData {
+    ch: String,
+    kind: String,
+    value: Value,
 }
