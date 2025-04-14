@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.15.1](https://github.com/mnemnk/mnemnk-app/compare/v0.15.0...v0.15.1) (2025-04-14)
+
+
+### Features
+
+* 🎸 highlight agent that received data ([#261](https://github.com/mnemnk/mnemnk-app/issues/261)) ([f8522ac](https://github.com/mnemnk/mnemnk-app/commit/f8522aca870bf6deadd88d3572e89454be96b6ab))
+
+
+### Bug Fixes
+
+* 🐛 scroll does not work ([#264](https://github.com/mnemnk/mnemnk-app/issues/264)) ([6609a79](https://github.com/mnemnk/mnemnk-app/commit/6609a7961cf2f73a08546e9443907465abb2df2f)), closes [#262](https://github.com/mnemnk/mnemnk-app/issues/262)
+
 ## [0.15.0](https://github.com/mnemnk/mnemnk-app/compare/v0.14.5...v0.15.0) (2025-04-14)
 
 
