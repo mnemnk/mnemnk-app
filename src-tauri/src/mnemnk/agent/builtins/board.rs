@@ -1,21 +1,15 @@
 use anyhow::{Context as _, Result};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 use tauri::{AppHandle, Emitter};
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
-    AgentStatus, AsAgent, AsAgentData,
+    AgentStatus, AgentValue, AsAgent, AsAgentData,
 };
 
 const EMIT_PUBLISH: &str = "mnemnk:write_board";
-
-#[derive(Clone, Debug, Serialize)]
-struct WriteBoardMessage {
-    kind: String,
-    value: Value,
-}
 
 struct BoardInAgent {
     data: AsAgentData,
@@ -23,15 +17,25 @@ struct BoardInAgent {
 }
 
 impl BoardInAgent {
-    fn emit_publish(&self, kind: String, value: Value) {
+    fn emit_publish(&self, kind: String, value: AgentValue) {
+        let mut json_value = serde_json::to_value(&value).unwrap_or_default();
+
         // remove image from the value. it's too big to send to frontend
-        let mut value = value;
-        if value.get("image").is_some() {
-            value.as_object_mut().unwrap().remove("image");
+        if json_value.get("image").is_some() {
+            json_value.as_object_mut().unwrap().remove("image");
+        }
+
+        #[derive(Clone, Debug, Serialize)]
+        struct WriteBoardMessage {
+            kind: String,
+            value: Value,
         }
 
         // emit the message to frontend
-        let message = WriteBoardMessage { kind, value };
+        let message = WriteBoardMessage {
+            kind,
+            value: json_value,
+        };
         self.app()
             .emit(EMIT_PUBLISH, Some(message))
             .unwrap_or_else(|e| {
@@ -214,7 +218,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_inputs(vec!["*"])
             .with_default_config(vec![(
                 "board_name".into(),
-                AgentConfigEntry::new(json!(""), "string")
+                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
                     .with_title("Board Name")
                     .with_description("* = source kind"),
             )]),
@@ -229,7 +233,8 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["*"])
             .with_default_config(vec![(
                 "board_name".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Board Name"),
+                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                    .with_title("Board Name"),
             )]),
     );
 }

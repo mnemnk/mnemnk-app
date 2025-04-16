@@ -103,15 +103,18 @@ pub fn store(app: &AppHandle, data: AgentData) {
     let state = app.state::<MnemnkDatabase>();
 
     if state.tracker.is_closed() {
+        // The system is shutting down
         log::warn!("store: database is closed");
-        return;
     }
 
     let db = state.db.clone();
     let app = app.clone();
     state.tracker.spawn(async move {
         let kind = data.kind;
-        let mut json_value = data.value;
+        let Some(mut json_value) = data.value.as_object().cloned() else {
+            log::error!("store: data is not an object");
+            return;
+        };
 
         // extract timestamp from the value if it exists
         let timestamp = if let Some(t) = json_value.get("t").cloned() {

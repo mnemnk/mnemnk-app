@@ -4,7 +4,8 @@ use tauri::{AppHandle, Manager};
 use crate::mnemnk::store;
 
 use super::{
-    agent::{emit_input, AgentData, AgentStatus},
+    agent::{emit_input, AgentStatus},
+    data::AgentData,
     env::AgentEnv,
 };
 

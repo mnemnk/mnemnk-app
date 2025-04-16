@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use anyhow::{Context as _, Result};
 use serde::Serialize;
-use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
 
+use super::data::{AgentData, AgentValue};
 use super::env::AgentEnv;
 
 #[derive(Debug, Error)]
@@ -26,12 +26,6 @@ pub enum AgentStatus {
     Start,
     Run,
     Stop,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AgentData {
-    pub kind: String,
-    pub value: Value,
 }
 
 pub trait Agent {
@@ -87,7 +81,7 @@ pub trait Agent {
         env.try_send_agent_out(self.id().to_string(), ch, data)
     }
 
-    fn emit_display(&self, key: String, value: Value) -> Result<()> {
+    fn emit_display(&self, key: String, value: AgentValue) -> Result<()> {
         let message = DisplayMessage {
             agent_id: self.id().to_string(),
             key,
@@ -120,7 +114,7 @@ const EMIT_INPUT: &str = "mnemnk:input";
 struct DisplayMessage {
     agent_id: String,
     key: String,
-    value: Value,
+    value: AgentValue,
 }
 
 #[derive(Clone, Serialize)]
@@ -160,7 +154,7 @@ pub struct AsAgentData {
 }
 
 pub type AgentConfigs = HashMap<String, AgentConfig>;
-pub type AgentConfig = HashMap<String, Value>;
+pub type AgentConfig = HashMap<String, AgentValue>;
 
 pub trait AsAgent {
     fn new(

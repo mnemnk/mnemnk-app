@@ -1,13 +1,12 @@
 use anyhow::{bail, Context as _, Result};
 use handlebars::Handlebars;
 use regex::Regex;
-use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
-    AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentValue,
+    AsAgent, AsAgentData,
 };
 
 // Regex Filter
@@ -65,18 +64,20 @@ impl AsAgent for RegexFilterAgent {
         }
         let regex = Regex::new(regex).context("Failed to compile regex")?;
 
-        let Some(key_value) = data.value.get(key) else {
-            // value does not have the key
-            return Ok(());
-        };
-        let key_value = key_value
-            .as_str()
-            .context("value is not a string")?
-            .to_string();
-        if regex.is_match(&key_value) {
-            // value matches the regex
-            self.try_output(ch, data)
-                .context("Failed to output regex result")?;
+        if let AgentValue::Object(value) = &data.value {
+            let Some(key_value) = value.get(key) else {
+                // value does not have the key
+                return Ok(());
+            };
+            let key_value = key_value
+                .as_str()
+                .context("value is not a string")?
+                .to_string();
+            if regex.is_match(&key_value) {
+                // value matches the regex
+                self.try_output(ch, data)
+                    .context("Failed to output regex result")?;
+            }
         }
 
         Ok(())
@@ -128,11 +129,11 @@ impl AsAgent for TemplateStringAgent {
         }
 
         let reg = Handlebars::new();
-        let out_value = reg.render_template(template, &data)?;
+        let rendered_string = reg.render_template(template, &data)?;
 
-        let kind = match self.def_name() {
-            "$template_string" => "string",
-            "$template_text" => "text",
+        let (kind, out_value) = match self.def_name() {
+            "$template_string" => ("string", AgentValue::new_string(rendered_string)),
+            "$template_text" => ("text", AgentValue::new_text(rendered_string)),
             _ => bail!("Invalid def_name"),
         };
 
@@ -140,7 +141,7 @@ impl AsAgent for TemplateStringAgent {
             kind.to_string(),
             AgentData {
                 kind: kind.to_string(),
-                value: json!(out_value),
+                value: out_value,
             },
         )
         .context("Failed to output template")
@@ -193,26 +194,30 @@ impl AsAgent for TemplateDataAgent {
 
         let reg = Handlebars::new();
         let out_json = reg.render_template(template, &data)?;
-        let out_data = serde_json::from_str::<serde_json::Value>(&out_json)
+        let out_data = serde_json::from_str::<AgentData>(&out_json)
             .context("Failed to parse rendered text")?;
 
-        let out_kind = out_data
-            .get("kind")
-            .context("Missing kind")?
-            .as_str()
-            .context("kind is not a string")?;
-        if out_kind.is_empty() {
-            bail!("kind is empty");
-        }
+        // let out_data = serde_json::from_str::<serde_json::Value>(&out_json)
+        //     .context("Failed to parse rendered text")?;
 
-        let out_value = out_data.get("value").context("Missing value")?;
+        // let out_kind = out_data
+        //     .get("kind")
+        //     .context("Missing kind")?
+        //     .as_str()
+        //     .context("kind is not a string")?;
+        // if out_kind.is_empty() {
+        //     bail!("kind is empty");
+        // }
+
+        // let out_value = out_data.get("value").context("Missing value")?;
 
         self.try_output(
             "data".to_string(),
-            AgentData {
-                kind: out_kind.to_string(),
-                value: out_value.clone(),
-            },
+            out_data,
+            // AgentData {
+            //     kind: out_kind.to_string(),
+            //     value: out_value.clone().into(),
+            // },
         )
         .context("Failed to output template")
     }
@@ -234,11 +239,13 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![
             (
                 "field".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Field"),
+                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                    .with_title("Field"),
             ),
             (
                 "regex".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Regex"),
+                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                    .with_title("Regex"),
             ),
         ]),
     );
@@ -257,7 +264,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(json!(""), "string"),
+            AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
         )]),
     );
 
@@ -277,7 +284,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["text"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(json!(""), "text"),
+            AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
         )]),
     );
 
@@ -295,7 +302,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["data"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(json!(""), "text"),
+            AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
         )]),
     );
 }

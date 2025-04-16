@@ -1,11 +1,10 @@
 use anyhow::{Context as _, Result};
-use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AsAgent,
-    AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentValue,
+    AsAgent, AsAgentData,
 };
 
 // As Kind Agent
@@ -76,7 +75,8 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["*"])
             .with_default_config(vec![(
                 "kind".into(),
-                AgentConfigEntry::new(json!(""), "string").with_title("Kind"),
+                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                    .with_title("Kind"),
             )]),
     );
 }

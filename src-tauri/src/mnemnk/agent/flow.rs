@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context as _, Result};
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tauri::{AppHandle, Manager, State};
 
+use super::data::AgentValue;
 use super::env::AgentEnv;
 use crate::mnemnk::settings;
 
@@ -50,7 +50,7 @@ pub struct AgentFlowNode {
     pub height: Option<f64>,
 }
 
-pub type AgentFlowNodeConfig = HashMap<String, Value>;
+pub type AgentFlowNodeConfig = HashMap<String, AgentValue>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlowEdge {

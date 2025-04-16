@@ -1,12 +1,10 @@
 use anyhow::Result;
-use serde::Serialize;
-use serde_json::{json, Value};
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
-    AsAgent, AsAgentData,
+    AgentValue, AsAgent, AsAgentData,
 };
 
 // Display Value
@@ -41,18 +39,9 @@ impl AsAgent for DisplayDataAgent {
     }
 
     fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let display_data = DisplayData {
-            kind: data.kind,
-            value: data.value,
-        };
-        self.emit_display("data".to_string(), json!(display_data))
+        let json_value = serde_json::to_value(&data)?;
+        self.emit_display("data".to_string(), AgentValue::new_object(json_value))
     }
-}
-
-#[derive(Debug, Clone, Serialize)]
-struct DisplayData {
-    kind: String,
-    value: Value,
 }
 
 // Display Messages
@@ -87,11 +76,9 @@ impl AsAgent for DisplayMessagesAgent {
     }
 
     fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let display_data = DisplayData {
-            kind: "messages".to_string(),
-            value: data.value,
-        };
-        self.emit_display("messages".to_string(), json!(display_data))
+        // TODO: check if data is messages
+        let json_value = serde_json::to_value(&data)?;
+        self.emit_display("messages".to_string(), AgentValue::new_object(json_value))
     }
 }
 
