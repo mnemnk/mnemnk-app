@@ -3,12 +3,12 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tauri::AppHandle;
 use thiserror::Error;
 
 use super::agent::{AgentConfig, AsyncAgent};
 use super::builtins;
+use super::data::AgentValue;
 use crate::mnemnk::settings;
 
 static AGENTS_DIR: &str = "agents";
@@ -56,7 +56,7 @@ pub type AgentGlobalConfig = Vec<(String, AgentConfigEntry)>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentConfigEntry {
-    pub value: Value,
+    pub value: AgentValue,
 
     #[serde(rename = "type")]
     pub type_: Option<String>,
@@ -145,7 +145,7 @@ impl AgentDefinition {
 }
 
 impl AgentConfigEntry {
-    pub fn new(value: Value, type_: &str) -> Self {
+    pub fn new(value: AgentValue, type_: &str) -> Self {
         Self {
             value,
             type_: Some(type_.into()),

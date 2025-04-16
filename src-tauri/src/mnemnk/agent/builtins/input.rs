@@ -1,11 +1,11 @@
 use anyhow::{Context as _, Result};
-use serde_json::{json, Value};
+use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
-    AgentStatus, AsAgent, AsAgentData,
+    AgentStatus, AgentValue, AsAgent, AsAgentData,
 };
 
 // Unit Input
@@ -45,14 +45,8 @@ impl AsAgent for UnitInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Run {
-            self.try_output(
-                "unit".to_string(),
-                AgentData {
-                    kind: "unit".to_string(),
-                    value: json!(()),
-                },
-            )
-            .context("Failed to output value")?;
+            self.try_output("unit".to_string(), AgentData::new_unit())
+                .context("Failed to output value")?;
         }
 
         Ok(())
@@ -107,15 +101,10 @@ impl AsAgent for BooleanInputAgent {
                 .context("Missing config")?
                 .get("boolean")
                 .context("Missing boolean")?
-                .clone();
-            self.try_output(
-                "boolean".to_string(),
-                AgentData {
-                    kind: "boolean".to_string(),
-                    value,
-                },
-            )
-            .context("Failed to output value")?;
+                .as_bool()
+                .context("boolean in config is not a boolean")?;
+            self.try_output("boolean".to_string(), AgentData::new_boolean(value))
+                .context("Failed to output value")?;
         }
 
         Ok(())
@@ -169,13 +158,12 @@ impl AsAgent for IntegerInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("integer")
-                .context("Missing integer")?
-                .clone();
+                .context("Missing integer")?;
             self.try_output(
                 "integer".to_string(),
                 AgentData {
                     kind: "integer".to_string(),
-                    value,
+                    value: value.clone(),
                 },
             )
             .context("Failed to output value")?;
@@ -232,13 +220,12 @@ impl AsAgent for NumberInputAgent {
                 .as_ref()
                 .context("Missing config")?
                 .get("number")
-                .context("Missing number")?
-                .clone();
+                .context("Missing number")?;
             self.try_output(
                 "number".to_string(),
                 AgentData {
                     kind: "number".to_string(),
-                    value,
+                    value: value.clone(),
                 },
             )
             .context("Failed to output value")?;
@@ -451,7 +438,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["unit"])
             .with_default_config(vec![(
                 "unit".into(),
-                AgentConfigEntry::new(json!(()), "unit"),
+                AgentConfigEntry::new(AgentValue::new_unit(), "unit"),
             )]),
     );
 
@@ -468,7 +455,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["boolean"])
         .with_default_config(vec![(
             "boolean".into(),
-            AgentConfigEntry::new(json!(false), "boolean"),
+            AgentConfigEntry::new(AgentValue::new_boolean(false), "boolean"),
         )]),
     );
 
@@ -485,7 +472,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["integer"])
         .with_default_config(vec![(
             "integer".into(),
-            AgentConfigEntry::new(json!(0), "integer"),
+            AgentConfigEntry::new(AgentValue::new_integer(0), "integer"),
         )]),
     );
 
@@ -502,7 +489,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["number"])
         .with_default_config(vec![(
             "number".into(),
-            AgentConfigEntry::new(json!(0.0), "number"),
+            AgentConfigEntry::new(AgentValue::new_number(0.0), "number"),
         )]),
     );
 
@@ -519,7 +506,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "string".into(),
-            AgentConfigEntry::new(json!(""), "string"),
+            AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
         )]),
     );
 
@@ -532,7 +519,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["text"])
             .with_default_config(vec![(
                 "text".into(),
-                AgentConfigEntry::new(json!(vec![""]), "text"),
+                AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
             )]),
     );
 
@@ -549,7 +536,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["object"])
         .with_default_config(vec![(
             "object".into(),
-            AgentConfigEntry::new(Value::Null, "object"),
+            AgentConfigEntry::new(AgentValue::new_object(Value::Null), "object"),
         )]),
     );
 }

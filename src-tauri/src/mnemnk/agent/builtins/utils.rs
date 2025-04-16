@@ -1,13 +1,12 @@
 use std::vec;
 
 use anyhow::Result;
-use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
-    AsAgent, AsAgentData,
+    AgentValue, AsAgent, AsAgentData,
 };
 
 // Counter
@@ -45,7 +44,7 @@ impl AsAgent for CounterAgent {
 
     fn start(&mut self) -> Result<()> {
         self.count = 0;
-        self.emit_display("count".to_string(), json!(0))?;
+        self.emit_display("count".to_string(), AgentValue::new_integer(0))?;
         Ok(())
     }
 
@@ -55,14 +54,8 @@ impl AsAgent for CounterAgent {
         } else if ch == "in" {
             self.count += 1;
         }
-        let value = json!(self.count);
-        let data = AgentData {
-            kind: "integer".to_string(),
-            value: value.clone(),
-        };
-        self.try_output("count".to_string(), data)?;
-        self.emit_display("count".to_string(), value)?;
-        Ok(())
+        self.try_output("count".to_string(), AgentData::new_integer(self.count))?;
+        self.emit_display("count".to_string(), AgentValue::new_integer(self.count))
     }
 }
 

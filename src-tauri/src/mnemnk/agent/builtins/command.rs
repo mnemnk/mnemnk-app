@@ -9,7 +9,7 @@ use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
     emit_error, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv,
-    AsAgent, AsAgentData,
+    AgentValue, AsAgent, AsAgentData,
 };
 
 pub struct CommandAgent {
@@ -127,10 +127,7 @@ impl AsAgent for CommandAgent {
                                     env.send_agent_out(
                                         agent_id.clone(),
                                         data.ch,
-                                        AgentData {
-                                            kind: data.kind,
-                                            value: data.value,
-                                        },
+                                        AgentData::from_kind_value(data.kind, data.value),
                                     )
                                     .await
                                     .unwrap_or_else(|e| {
@@ -225,6 +222,13 @@ impl AsAgent for CommandAgent {
     }
 
     fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+        #[derive(Debug, Serialize)]
+        struct InData {
+            ch: String,
+            kind: String,
+            value: AgentValue,
+        }
+
         let data = InData {
             ch: ch.clone(),
             kind: data.kind,
@@ -315,11 +319,4 @@ struct OutData {
 fn parse_out_args(args: &str) -> Result<OutData> {
     let data: OutData = serde_json::from_str(args).context("Failed to parse OUT command")?;
     return Ok(data);
-}
-
-#[derive(Debug, Serialize)]
-struct InData {
-    ch: String,
-    kind: String,
-    value: Value,
 }

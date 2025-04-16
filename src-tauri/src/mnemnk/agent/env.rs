@@ -8,7 +8,8 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, AgentConfig, AgentData, AsyncAgent};
+use super::agent::{self, AgentConfig, AsyncAgent};
+use super::data::AgentData;
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, AgentMessage};
@@ -213,11 +214,14 @@ impl AgentEnv {
 
         let mut edges = self.edges.lock().unwrap();
         if let Some(targets) = edges.get_mut(&edge.source) {
-            if targets.iter().any(|(target, source_handle, target_handle)| {
-                *target == edge.target
-                    && *source_handle == edge.source_handle
-                    && *target_handle == edge.target_handle
-            }) {
+            if targets
+                .iter()
+                .any(|(target, source_handle, target_handle)| {
+                    *target == edge.target
+                        && *source_handle == edge.source_handle
+                        && *target_handle == edge.target_handle
+                })
+            {
                 bail!("Edge already exists");
             }
             targets.push((
