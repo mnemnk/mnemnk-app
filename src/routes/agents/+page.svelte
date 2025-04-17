@@ -571,6 +571,11 @@
         bind:value={newFlowName}
         class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         placeholder="Flow Name"
+        onkeydown={(e) => {
+          if (e.key === "Enter") {
+            createNewFlow();
+          }
+        }}
       />
     </div>
     <div class="flex justify-end mt-4">
@@ -595,6 +600,11 @@
         bind:value={renameFlowName}
         class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         placeholder="Flow Name"
+        onkeydown={(e) => {
+          if (e.key === "Enter") {
+            renameFlow();
+          }
+        }}
       />
     </div>
     <div class="flex justify-end mt-4">
