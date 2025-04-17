@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::{value::Index, Value};
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentData {
@@ -80,6 +80,7 @@ pub enum AgentValue {
     // Larger data structures use reference counting
     String(Arc<String>),
     Text(Arc<String>),
+    Array(Arc<Vec<AgentValue>>),
     Object(Arc<Value>),
 }
 
@@ -115,6 +116,11 @@ impl AgentValue {
     }
 
     #[allow(unused)]
+    pub fn is_array(&self) -> bool {
+        matches!(self, AgentValue::Array(_))
+    }
+
+    #[allow(unused)]
     pub fn is_object(&self) -> bool {
         matches!(self, AgentValue::Object(_))
     }
@@ -143,36 +149,122 @@ impl AgentValue {
         AgentValue::Text(Arc::new(value))
     }
 
+    pub fn new_array(value: Vec<AgentValue>) -> Self {
+        AgentValue::Array(Arc::new(value))
+    }
+
     pub fn new_object(value: Value) -> Self {
         AgentValue::Object(Arc::new(value))
     }
 
     pub fn from_kind_value(kind: &str, value: Value) -> Self {
         match kind {
-            "unit" => AgentValue::Null,
-            "boolean" => AgentValue::Boolean(value.as_bool().unwrap_or(false)),
-            "integer" => AgentValue::Integer(value.as_i64().unwrap_or(0)),
-            "number" => AgentValue::Number(value.as_f64().unwrap_or(0.0)),
-            "string" => AgentValue::String(Arc::new(value.as_str().unwrap_or("").to_string())),
-            "text" => AgentValue::Text(Arc::new(value.as_str().unwrap_or("").to_string())),
-            _ => AgentValue::Object(Arc::new(value)),
+            "unit" => {
+                if let Value::Array(a) = value {
+                    AgentValue::Array(Arc::new(a.into_iter().map(|_| AgentValue::Null).collect()))
+                } else {
+                    AgentValue::Null
+                }
+            }
+            "boolean" => match value {
+                Value::Bool(b) => AgentValue::Boolean(b),
+                Value::Array(a) => AgentValue::Array(Arc::new(
+                    a.into_iter()
+                        .map(|v| {
+                            if let Some(b) = v.as_bool() {
+                                AgentValue::Boolean(b)
+                            } else {
+                                AgentValue::Null
+                            }
+                        })
+                        .collect(),
+                )),
+                _ => AgentValue::Null,
+            },
+            "integer" => match value {
+                Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        AgentValue::Integer(i)
+                    } else if let Some(f) = n.as_f64() {
+                        AgentValue::Number(f)
+                    } else {
+                        AgentValue::Null
+                    }
+                }
+                Value::Array(a) => AgentValue::Array(Arc::new(
+                    a.into_iter()
+                        .map(|n| {
+                            if let Some(i) = n.as_i64() {
+                                AgentValue::Integer(i)
+                            } else if let Some(f) = n.as_f64() {
+                                AgentValue::Number(f)
+                            } else {
+                                AgentValue::Null
+                            }
+                        })
+                        .collect(),
+                )),
+                _ => AgentValue::Null,
+            },
+            "number" => match value {
+                Value::Number(n) => {
+                    if let Some(f) = n.as_f64() {
+                        AgentValue::Number(f)
+                    } else if let Some(i) = n.as_i64() {
+                        AgentValue::Number(i as f64)
+                    } else {
+                        AgentValue::Null
+                    }
+                }
+                Value::Array(a) => AgentValue::Array(Arc::new(
+                    a.into_iter()
+                        .map(|n| {
+                            if let Some(f) = n.as_f64() {
+                                AgentValue::Number(f)
+                            } else if let Some(i) = n.as_i64() {
+                                AgentValue::Integer(i)
+                            } else {
+                                AgentValue::Null
+                            }
+                        })
+                        .collect(),
+                )),
+                _ => AgentValue::Null,
+            },
+            "string" => match value {
+                Value::String(s) => AgentValue::String(Arc::new(s)),
+                Value::Array(a) => AgentValue::Array(Arc::new(
+                    a.into_iter()
+                        .map(|v| {
+                            if let Value::String(s) = v {
+                                AgentValue::String(Arc::new(s))
+                            } else {
+                                AgentValue::Null
+                            }
+                        })
+                        .collect(),
+                )),
+                _ => AgentValue::Null,
+            },
+            "text" => match value {
+                Value::String(s) => AgentValue::Text(Arc::new(s)),
+                Value::Array(a) => AgentValue::Array(Arc::new(
+                    a.into_iter()
+                        .map(|v| {
+                            if let Value::String(s) = v {
+                                AgentValue::Text(Arc::new(s))
+                            } else {
+                                AgentValue::Null
+                            }
+                        })
+                        .collect(),
+                )),
+                _ => AgentValue::Null,
+            },
+            "array" => AgentValue::from_json_value(value),
+            _ => AgentValue::from_json_value(value),
         }
     }
-
-    // pub fn from_json_str(json_str: &str) -> Self {
-    //     match serde_json::from_str::<Value>(json_str) {
-    //         Ok(value) => {
-    //             // if value has "kind" and "value" fields, use them
-    //             if let Some(kind) = value.get("kind").and_then(Value::as_str) {
-    //                 if let Some(value) = value.get("value") {
-    //                     return AgentValue::from_kind_value(kind, value.clone());
-    //                 }
-    //             }
-    //             return AgentValue::from_json_value(value);
-    //         }
-    //         Err(_) => AgentValue::new_string(json_str.to_string()),
-    //     }
-    // }
 
     pub fn from_json_value(value: Value) -> Self {
         match value {
@@ -188,7 +280,11 @@ impl AgentValue {
                 }
             }
             Value::String(s) => AgentValue::new_string(s),
-            Value::Array(_) => AgentValue::Object(Arc::new(value)),
+            Value::Array(arr) => AgentValue::new_array(
+                arr.into_iter()
+                    .map(|v| AgentValue::from_json_value(v))
+                    .collect(),
+            ),
             _ => AgentValue::Object(Arc::new(value)),
         }
     }
@@ -224,17 +320,17 @@ impl AgentValue {
         }
     }
 
-    pub fn as_object(&self) -> Option<&Value> {
+    #[allow(unused)]
+    pub fn as_array(&self) -> Option<&Vec<AgentValue>> {
         match self {
-            AgentValue::Object(o) => Some(o),
+            AgentValue::Array(a) => Some(a),
             _ => None,
         }
     }
 
-    #[allow(unused)]
-    pub fn get<I: Index>(&self, index: I) -> Option<&Value> {
+    pub fn as_object(&self) -> Option<&Value> {
         match self {
-            AgentValue::Object(o) => o.get(index),
+            AgentValue::Object(o) => Some(o),
             _ => None,
         }
     }
@@ -258,6 +354,13 @@ impl Serialize for AgentValue {
             AgentValue::Number(n) => serializer.serialize_f64(*n),
             AgentValue::String(s) => serializer.serialize_str(s),
             AgentValue::Text(t) => serializer.serialize_str(t),
+            AgentValue::Array(a) => {
+                let mut seq = serializer.serialize_seq(Some(a.len()))?;
+                for e in a.iter() {
+                    seq.serialize_element(e)?;
+                }
+                seq.end()
+            }
             AgentValue::Object(o) => o.serialize(serializer),
         }
     }
