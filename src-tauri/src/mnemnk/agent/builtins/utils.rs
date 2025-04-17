@@ -44,7 +44,7 @@ impl AsAgent for CounterAgent {
 
     fn start(&mut self) -> Result<()> {
         self.count = 0;
-        self.emit_display("count".to_string(), AgentValue::new_integer(0))?;
+        self.emit_display("count".to_string(), AgentData::new_integer(0))?;
         Ok(())
     }
 
@@ -55,7 +55,7 @@ impl AsAgent for CounterAgent {
             self.count += 1;
         }
         self.try_output("count".to_string(), AgentData::new_integer(self.count))?;
-        self.emit_display("count".to_string(), AgentValue::new_integer(self.count))
+        self.emit_display("count".to_string(), AgentData::new_integer(self.count))
     }
 }
 

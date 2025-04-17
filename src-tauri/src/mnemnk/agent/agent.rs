@@ -81,11 +81,11 @@ pub trait Agent {
         env.try_send_agent_out(self.id().to_string(), ch, data)
     }
 
-    fn emit_display(&self, key: String, value: AgentValue) -> Result<()> {
+    fn emit_display(&self, key: String, data: AgentData) -> Result<()> {
         let message = DisplayMessage {
             agent_id: self.id().to_string(),
             key,
-            value,
+            data,
         };
         self.app()
             .emit(EMIT_DISPLAY, message)
@@ -114,7 +114,7 @@ const EMIT_INPUT: &str = "mnemnk:input";
 struct DisplayMessage {
     agent_id: String,
     key: String,
-    value: AgentValue,
+    data: AgentData,
 }
 
 #[derive(Clone, Serialize)]

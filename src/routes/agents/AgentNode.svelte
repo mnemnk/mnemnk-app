@@ -266,22 +266,23 @@
         <h3 class="flex-none">{display_config?.title || key}</h3>
         <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
         {@const display = data.display[key]}
-        {@const ty = display_config?.type}
+        {@const ty = display_config?.type === "*" ? display?.kind : display_config?.type}
+        {@const value = display_config?.type === "*" ? display?.value : display}
         {#if ty === "boolean"}
-          {#if display}
+          {#if value}
             <div class="flex-none">true</div>
           {:else}
             <div class="flex-none">false</div>
           {/if}
         {:else if ty === "integer"}
-          <div class="flex-none">{display}</div>
+          <div class="flex-none">{value}</div>
         {:else if ty === "number"}
-          <div class="flex-none">{display}</div>
+          <div class="flex-none">{value}</div>
         {:else if ty === "string"}
           <Input
             type="text"
             class="nodrag nowheel flex-none text-wrap"
-            value={display}
+            {value}
             onkeydown={(evt) => {
               evt.preventDefault();
             }}
@@ -289,7 +290,7 @@
         {:else if ty === "text"}
           <Textarea
             class="nodrag nowheel flex-1 text-wrap"
-            value={display}
+            {value}
             onkeydown={(evt) => {
               evt.preventDefault();
             }}
@@ -297,17 +298,17 @@
         {:else if ty === "object"}
           <Textarea
             class="nodrag nowheel flex-1 text-wrap"
-            value={JSON.stringify(display, null, 2)}
+            value={JSON.stringify(value, null, 2)}
             onkeydown={(evt) => {
               evt.preventDefault();
             }}
           />
         {:else if ty === "messages"}
-          <Messages messages={display?.value} />
+          <Messages messages={value} />
         {:else}
           <Textarea
             class="nodrag nowheel flex-1 text-wrap"
-            value={JSON.stringify(display, null, 2)}
+            value={JSON.stringify(value, null, 2)}
             onkeydown={(evt) => {
               evt.preventDefault();
             }}
