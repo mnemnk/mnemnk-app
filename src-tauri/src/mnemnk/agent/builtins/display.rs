@@ -87,42 +87,6 @@ impl AsAgent for DebugDataAgent {
     }
 }
 
-// Display Messages
-struct DisplayMessagesAgent {
-    data: AsAgentData,
-}
-
-impl AsAgent for DisplayMessagesAgent {
-    fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
-        })
-    }
-
-    fn data(&self) -> &AsAgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AsAgentData {
-        &mut self.data
-    }
-
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        self.emit_display("messages".to_string(), data)
-    }
-}
-
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Display Data
     defs.insert(
@@ -152,23 +116,5 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                 "data".into(),
                 AgentDisplayConfigEntry::new("object").with_hide_title(),
             )]),
-    );
-
-    // Display Messages
-    defs.insert(
-        "$display_messages".into(),
-        AgentDefinition::new(
-            "Builtin",
-            "$display_messages",
-            Some(new_boxed::<DisplayMessagesAgent>),
-        )
-        .with_title("Display Messages")
-        .with_description("Display messages on the node")
-        .with_category("LLM")
-        .with_inputs(vec!["messages"])
-        .with_display_config(vec![(
-            "messages".into(),
-            AgentDisplayConfigEntry::new("message").with_hide_title(),
-        )]),
     );
 }
