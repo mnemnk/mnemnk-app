@@ -136,8 +136,8 @@ impl AsAgent for MemoryAgent {
             self.try_output(
                 "memory".to_string(),
                 AgentData {
-                    kind: "null".to_string(),
-                    value: AgentValue::Null,
+                    kind: "array".to_string(),
+                    value: AgentValue::new_array(vec![]),
                 },
             )?;
         } else if ch == "in" {
