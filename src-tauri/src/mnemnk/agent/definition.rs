@@ -75,6 +75,7 @@ pub struct AgentDisplayConfigEntry {
 
     pub title: Option<String>,
     pub description: Option<String>,
+    pub hide_title: Option<bool>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
@@ -170,6 +171,11 @@ impl AgentDisplayConfigEntry {
             type_: Some(type_.into()),
             ..Default::default()
         }
+    }
+
+    pub fn with_hide_title(mut self) -> Self {
+        self.hide_title = Some(true);
+        self
     }
 
     #[allow(unused)]

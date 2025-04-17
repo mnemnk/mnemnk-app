@@ -126,8 +126,11 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         )
         .with_title("Display Data")
         .with_category("Display")
-        .with_inputs(vec!["*"])
-        .with_display_config(vec![("data".into(), AgentDisplayConfigEntry::new("*"))]),
+        .with_inputs(vec!["data"])
+        .with_display_config(vec![(
+            "data".into(),
+            AgentDisplayConfigEntry::new("*").with_hide_title(),
+        )]),
     );
 
     // Debug Data
@@ -139,7 +142,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_inputs(vec!["*"])
             .with_display_config(vec![(
                 "data".into(),
-                AgentDisplayConfigEntry::new("object"),
+                AgentDisplayConfigEntry::new("object").with_hide_title(),
             )]),
     );
 
@@ -157,7 +160,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_inputs(vec!["messages"])
         .with_display_config(vec![(
             "messages".into(),
-            AgentDisplayConfigEntry::new("messages"),
+            AgentDisplayConfigEntry::new("messages").with_hide_title(),
         )]),
     );
 }
