@@ -45,6 +45,7 @@ export type SAgentDisplayConfigEntry = {
 };
 
 export type SAgentDisplayConfigType =
+  | "*"
   | "boolean"
   | "integer"
   | "number"
@@ -151,7 +152,7 @@ export type Settings = {
 export type DisplayMessage = {
   agent_id: string;
   key: string;
-  value: any;
+  data: any;
 };
 
 export type ErrorMessage = {
