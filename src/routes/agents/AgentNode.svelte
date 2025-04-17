@@ -27,7 +27,11 @@
     subscribeErrorMessage,
     subscribeInputMessage,
   } from "@/lib/shared.svelte";
-  import type { AgentFlowNodeConfig, AgentFlowNodeDisplay } from "@/lib/types";
+  import type {
+    AgentFlowNodeConfig,
+    AgentFlowNodeDisplay,
+    SAgentDisplayConfigEntry,
+  } from "@/lib/types";
 
   import NodeBase from "./NodeBase.svelte";
 
@@ -152,6 +156,78 @@
   </div>
 {/snippet}
 
+{#snippet displayItem(ty: string | null, value: any)}
+  {#if ty === "boolean"}
+    {#if value}
+      <div class="flex-none border-1 p-2">true</div>
+    {:else}
+      <div class="flex-none border-1 p-2">false</div>
+    {/if}
+  {:else if ty === "integer"}
+    <div class="flex-none border-1 p-2">{value}</div>
+  {:else if ty === "number"}
+    <div class="flex-none border-1 p-2">{value}</div>
+  {:else if ty === "string"}
+    <Input
+      type="text"
+      class="nodrag nowheel flex-none text-wrap"
+      {value}
+      onkeydown={(evt) => {
+        evt.preventDefault();
+      }}
+    />
+  {:else if ty === "text"}
+    <Textarea
+      class="nodrag nowheel flex-1 text-wrap"
+      {value}
+      onkeydown={(evt) => {
+        evt.preventDefault();
+      }}
+    />
+  {:else if ty === "object"}
+    <Textarea
+      class="nodrag nowheel flex-1 text-wrap"
+      value={JSON.stringify(value, null, 2)}
+      onkeydown={(evt) => {
+        evt.preventDefault();
+      }}
+    />
+  {:else if ty === "message"}
+    <Messages messages={value} />
+  {:else}
+    <Textarea
+      class="nodrag nowheel flex-1 text-wrap"
+      value={JSON.stringify(value, null, 2)}
+      onkeydown={(evt) => {
+        evt.preventDefault();
+      }}
+    />
+  {/if}
+{/snippet}
+
+{#snippet display(
+  key: string,
+  data: { kind: string; value: any },
+  display_config: SAgentDisplayConfigEntry,
+)}
+  {#if display_config?.hideTitle === true}
+    <h3 class="flex-none">{display_config?.title || key}</h3>
+    <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
+  {/if}
+  {@const dct = display_config?.type}
+  {@const ty = dct === "*" ? data?.kind : dct}
+  {@const value = data?.value}
+  {#if value instanceof Array && ty !== "object" && ty !== "message"}
+    <div class="flex-none flex flex-col gap-2">
+      {#each value as v}
+        {@render displayItem(ty, v)}
+      {/each}
+    </div>
+  {:else}
+    {@render displayItem(ty, value)}
+  {/if}
+{/snippet}
+
 {#snippet contents()}
   {#if agentDefaultConfig}
     <form class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
@@ -263,59 +339,7 @@
   {#if agentDisplayConfig}
     <div class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDisplayConfig as [key, display_config]}
-        {#if display_config?.hideTitle === true}
-          <h3 class="flex-none">{display_config?.title || key}</h3>
-          <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
-        {/if}
-        {@const display = data.display[key]}
-        {@const ty = display_config?.type === "*" ? display?.kind : display_config?.type}
-        {@const value = display_config?.type === "*" ? display?.value : display}
-        {#if ty === "boolean"}
-          {#if value}
-            <div class="flex-none">true</div>
-          {:else}
-            <div class="flex-none">false</div>
-          {/if}
-        {:else if ty === "integer"}
-          <div class="flex-none">{value}</div>
-        {:else if ty === "number"}
-          <div class="flex-none">{value}</div>
-        {:else if ty === "string"}
-          <Input
-            type="text"
-            class="nodrag nowheel flex-none text-wrap"
-            {value}
-            onkeydown={(evt) => {
-              evt.preventDefault();
-            }}
-          />
-        {:else if ty === "text"}
-          <Textarea
-            class="nodrag nowheel flex-1 text-wrap"
-            {value}
-            onkeydown={(evt) => {
-              evt.preventDefault();
-            }}
-          />
-        {:else if ty === "object"}
-          <Textarea
-            class="nodrag nowheel flex-1 text-wrap"
-            value={JSON.stringify(value, null, 2)}
-            onkeydown={(evt) => {
-              evt.preventDefault();
-            }}
-          />
-        {:else if ty === "messages"}
-          <Messages messages={value} />
-        {:else}
-          <Textarea
-            class="nodrag nowheel flex-1 text-wrap"
-            value={JSON.stringify(value, null, 2)}
-            onkeydown={(evt) => {
-              evt.preventDefault();
-            }}
-          />
-        {/if}
+        {@render display(key, data.display[key], display_config)}
       {/each}
     </div>
   {/if}
