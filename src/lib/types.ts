@@ -42,6 +42,7 @@ export type SAgentDisplayConfigEntry = {
   type: SAgentDisplayConfigType | null;
   title?: string | null;
   description?: string | null;
+  hideTitle?: boolean | null;
 };
 
 export type SAgentDisplayConfigType =

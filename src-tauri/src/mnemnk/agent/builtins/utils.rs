@@ -182,7 +182,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["count"])
             .with_display_config(vec![(
                 "count".into(),
-                AgentDisplayConfigEntry::new("integer"),
+                AgentDisplayConfigEntry::new("integer").with_hide_title(),
             )]),
     );
 

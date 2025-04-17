@@ -263,8 +263,10 @@
   {#if agentDisplayConfig}
     <div class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDisplayConfig as [key, display_config]}
-        <h3 class="flex-none">{display_config?.title || key}</h3>
-        <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
+        {#if display_config?.hideTitle === true}
+          <h3 class="flex-none">{display_config?.title || key}</h3>
+          <p class="flex-none text-xs text-gray-500">{display_config?.description}</p>
+        {/if}
         {@const display = data.display[key]}
         {@const ty = display_config?.type === "*" ? display?.kind : display_config?.type}
         {@const value = display_config?.type === "*" ? display?.value : display}
