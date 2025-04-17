@@ -132,6 +132,14 @@ impl AsAgent for MemoryAgent {
         if ch == "reset" {
             // Reset command empties the memory
             self.memory.clear();
+
+            self.try_output(
+                "memory".to_string(),
+                AgentData {
+                    kind: "null".to_string(),
+                    value: AgentValue::Null,
+                },
+            )?;
         } else if ch == "in" {
             // Add new data to memory
             self.memory.push(data.clone());
@@ -145,18 +153,18 @@ impl AsAgent for MemoryAgent {
                     self.memory.remove(0); // Remove oldest item
                 }
             }
-        }
 
-        // Output the memory array
-        let memory_array =
-            AgentValue::new_array(self.memory.iter().map(|data| data.value.clone()).collect());
-        self.try_output(
-            "memory".to_string(),
-            AgentData {
-                kind: self.memory[0].kind.clone(),
-                value: memory_array,
-            },
-        )?;
+            // Output the memory array
+            let memory_array =
+                AgentValue::new_array(self.memory.iter().map(|data| data.value.clone()).collect());
+            self.try_output(
+                "memory".to_string(),
+                AgentData {
+                    kind: self.memory[0].kind.clone(),
+                    value: memory_array,
+                },
+            )?;
+        }
 
         Ok(())
     }
