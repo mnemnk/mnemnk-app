@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.15.2](https://github.com/mnemnk/mnemnk-app/compare/v0.15.1...v0.15.2) (2025-04-17)
+
+
+### Features
+
+* 🎸 array data ([#266](https://github.com/mnemnk/mnemnk-app/issues/266)) ([c642f3f](https://github.com/mnemnk/mnemnk-app/commit/c642f3fa4024223a3c21594bb74a64c6dc546282))
+* 🎸 display array data ([#271](https://github.com/mnemnk/mnemnk-app/issues/271)) ([369b6ed](https://github.com/mnemnk/mnemnk-app/commit/369b6ed5287b5a84a7ef5702b09ff09323b9716d))
+* 🎸 DisplayConfigType "*" ([#269](https://github.com/mnemnk/mnemnk-app/issues/269)) ([c11515c](https://github.com/mnemnk/mnemnk-app/commit/c11515c617a87b7eb827c5385652cb773537cadf))
+* 🎸 hide title option in display config ([#270](https://github.com/mnemnk/mnemnk-app/issues/270)) ([113d325](https://github.com/mnemnk/mnemnk-app/commit/113d32568a727dd90b22a2a143f803636139a300))
+* 🎸 Memory agent ([#267](https://github.com/mnemnk/mnemnk-app/issues/267)) ([50ef954](https://github.com/mnemnk/mnemnk-app/commit/50ef954032f3b1413ffc66236891553e9002648a))
+* 🎸 remove Display Messages agent ([#272](https://github.com/mnemnk/mnemnk-app/issues/272)) ([4e86cd1](https://github.com/mnemnk/mnemnk-app/commit/4e86cd1902ed1377274daa0de46dc2a6daf6eb28))
+* 🎸 use AgentValue for value field of AgentData ([#265](https://github.com/mnemnk/mnemnk-app/issues/265)) ([fe58b9f](https://github.com/mnemnk/mnemnk-app/commit/fe58b9fba508ec44ec8095c02a00bd9d89846949)), closes [#239](https://github.com/mnemnk/mnemnk-app/issues/239)
+
+
+### Bug Fixes
+
+* 🐛 panic when reset memory agent ([#268](https://github.com/mnemnk/mnemnk-app/issues/268)) ([8a7c1b2](https://github.com/mnemnk/mnemnk-app/commit/8a7c1b279721f06239285f590c65d0a2ff06f30d))
+
 ## [0.15.1](https://github.com/mnemnk/mnemnk-app/compare/v0.15.0...v0.15.1) (2025-04-14)
 
 
