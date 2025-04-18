@@ -118,36 +118,42 @@
 {#snippet title()}
   <div class="flex-none mt-1">
     <div class="flex flex-nowrap">
-      {#if editTitle}
-        <Input
-          class="mt-1"
-          type="text"
-          value={data.title ?? agentDef?.title ?? data.name}
-          onblur={() => (editTitle = false)}
-          onkeydown={(evt) => {
-            if (evt.key === "Enter") {
-              const newTitle = evt.currentTarget.value;
-              if (newTitle === "" || newTitle === (agentDef?.title ?? data.name)) {
-                updateNodeData(id, { title: null });
-              } else if (newTitle !== data.title) {
-                updateNodeData(id, { title: newTitle });
+      {#if agentDef}
+        {#if editTitle}
+          <Input
+            class="mt-1"
+            type="text"
+            value={data.title ?? agentDef?.title ?? data.name}
+            onblur={() => (editTitle = false)}
+            onkeydown={(evt) => {
+              if (evt.key === "Enter") {
+                const newTitle = evt.currentTarget.value;
+                if (newTitle === "" || newTitle === (agentDef?.title ?? data.name)) {
+                  updateNodeData(id, { title: null });
+                } else if (newTitle !== data.title) {
+                  updateNodeData(id, { title: newTitle });
+                }
+                editTitle = false;
               }
-              editTitle = false;
-            }
-          }}
-        />
+            }}
+          />
+        {:else}
+          <button
+            id="t-{uid}"
+            type="button"
+            onclick={() => (editTitle = true)}
+            class="flex-none"
+            tabindex={-1}
+          >
+            <h3 class="text-xl">
+              {data.title ?? agentDef?.title ?? data.name}
+            </h3>
+          </button>
+        {/if}
       {:else}
-        <button
-          id="t-{uid}"
-          type="button"
-          onclick={() => (editTitle = true)}
-          class="flex-none"
-          tabindex={-1}
-        >
-          <h3 class="text-xl">
-            {data.title ?? agentDef?.title ?? data.name}
-          </h3>
-        </button>
+        <h3 class="text-xl">
+          <s>{data.name}</s>
+        </h3>
       {/if}
       {#if errorMessages.length > 0}
         <ExclamationCircleOutline id="e-{uid}" class="ml-2 pt-1 w-6 h-6 text-red-500" />
