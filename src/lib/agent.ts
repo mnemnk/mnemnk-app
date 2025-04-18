@@ -154,7 +154,7 @@ export function deserializeAgentFlowNode(
     type: "agent",
     data: {
       name: node.name,
-      enabled: agentDef && node.enabled,
+      enabled: agentDef !== undefined && node.enabled,
       title: node.title,
       config: deserializeAgentConfig(node.config, default_config),
       display: deserializeAgentDisplayConfig(display_config),
