@@ -154,7 +154,7 @@ export function deserializeAgentFlowNode(
     type: "agent",
     data: {
       name: node.name,
-      enabled: node.enabled,
+      enabled: agentDef && node.enabled,
       title: node.title,
       config: deserializeAgentConfig(node.config, default_config),
       display: deserializeAgentDisplayConfig(display_config),
@@ -258,7 +258,7 @@ export function serializeAgentFlowNode(
     enabled: node.data.enabled,
     config: serializeAgentFlowNodeConfig(
       node.data.config,
-      agent_defs[node.data.name].default_config,
+      agent_defs[node.data.name]?.default_config,
     ),
     title: node.data.title,
     x: node.position.x,
@@ -278,7 +278,7 @@ export function serializeAgentFlowNodeConfig(
 
   let config: SAgentConfig = {};
 
-  if (default_config === null) {
+  if (default_config === null || default_config === undefined) {
     // if no default config, just return the node_config as is
     for (const [key, value] of Object.entries(node_config)) {
       config[key] = value;

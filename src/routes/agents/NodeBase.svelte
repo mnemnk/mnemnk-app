@@ -2,6 +2,7 @@
   const bgColors = [
     "bg-zinc-100 dark:bg-zinc-900 opacity-50",
     "bg-slate-200 dark:bg-[#353535] opacity-90",
+    "bg-rose-400 dark:bg-rose-400 opacity-50",
   ];
 
   const highlightBorderOklch = [0.96, 0.13, 105];
@@ -26,7 +27,7 @@
     data: {
       enabled: boolean;
     };
-    agentDef: SAgentDefinition;
+    agentDef: SAgentDefinition | null;
     titleColor: string;
     inputCount: number;
     title: Snippet;
@@ -38,6 +39,8 @@
 
   const inputs = agentDef?.inputs ?? [];
   const outputs = agentDef?.outputs ?? [];
+
+  let bgColor = $derived(bgColors[agentDef ? (data.enabled ? 1 : 0) : 2]);
 
   let ht = $state(height);
 
@@ -71,9 +74,7 @@
 
 <NodeResizer isVisible={selected} variant="line" {onResize} />
 <div
-  class="{bgColors[
-    data.enabled ? 1 : 0
-  ]} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
+  class="{bgColor} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
   style="height: {ht ? `${ht}px` : 'auto'}; border-color: {calculateHighlightColor(
     highlight.current,
     highlightBorderOklch,
