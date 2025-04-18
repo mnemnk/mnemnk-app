@@ -148,81 +148,6 @@ impl AsAgent for TemplateStringAgent {
     }
 }
 
-// Template Data Agent
-struct TemplateDataAgent {
-    data: AsAgentData,
-}
-
-impl AsAgent for TemplateDataAgent {
-    fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
-        })
-    }
-
-    fn data(&self) -> &AsAgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AsAgentData {
-        &mut self.data
-    }
-
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let config = self.data.config.as_ref().context("Missing config")?;
-
-        let template = config
-            .get("template")
-            .context("Missing template")?
-            .as_str()
-            .context("template is not a string")?;
-        if template.is_empty() {
-            // template is not set
-            return Ok(());
-        }
-
-        let reg = Handlebars::new();
-        let out_json = reg.render_template(template, &data)?;
-        let out_data = serde_json::from_str::<AgentData>(&out_json)
-            .context("Failed to parse rendered text")?;
-
-        // let out_data = serde_json::from_str::<serde_json::Value>(&out_json)
-        //     .context("Failed to parse rendered text")?;
-
-        // let out_kind = out_data
-        //     .get("kind")
-        //     .context("Missing kind")?
-        //     .as_str()
-        //     .context("kind is not a string")?;
-        // if out_kind.is_empty() {
-        //     bail!("kind is empty");
-        // }
-
-        // let out_value = out_data.get("value").context("Missing value")?;
-
-        self.try_output(
-            "data".to_string(),
-            out_data,
-            // AgentData {
-            //     kind: out_kind.to_string(),
-            //     value: out_value.clone().into(),
-            // },
-        )
-        .context("Failed to output template")
-    }
-}
-
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // RegexFilterAgent
     defs.insert(
@@ -282,24 +207,6 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_category("Core/String")
         .with_inputs(vec!["*"])
         .with_outputs(vec!["text"])
-        .with_default_config(vec![(
-            "template".into(),
-            AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
-        )]),
-    );
-
-    // Template Data Agent
-    defs.insert(
-        "$template_data".into(),
-        AgentDefinition::new(
-            "Builtin",
-            "$template_data",
-            Some(new_boxed::<TemplateDataAgent>),
-        )
-        .with_title("Template Data")
-        .with_category("Core/Data")
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["data"])
         .with_default_config(vec![(
             "template".into(),
             AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
