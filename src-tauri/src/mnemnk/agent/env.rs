@@ -39,6 +39,9 @@ pub struct AgentEnv {
     // board name -> data
     pub board_data: Mutex<HashMap<String, AgentData>>,
 
+    // Rhai engine
+    pub rhai_engine: rhai::Engine,
+
     // message sender
     pub tx: Mutex<Option<mpsc::Sender<AgentMessage>>>,
 }
@@ -54,6 +57,7 @@ impl AgentEnv {
             commands: Default::default(),
             board_out_agents: Default::default(),
             board_data: Default::default(),
+            rhai_engine: rhai::Engine::new(),
             tx: Default::default(),
         }
     }
