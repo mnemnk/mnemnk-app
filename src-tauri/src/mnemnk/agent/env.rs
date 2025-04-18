@@ -1,6 +1,6 @@
 use anyhow::{bail, Context as _, Result};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandChild;
@@ -8,11 +8,11 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, AgentConfig, AsyncAgent};
+use super::agent::{self, emit_input, AgentConfig, AgentMessage, AsyncAgent};
 use super::data::AgentData;
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
-use super::message::{self, AgentMessage};
+use super::message::{self, EnvAgentMessage};
 
 pub struct AgentEnv {
     // AppHandle
@@ -25,7 +25,10 @@ pub struct AgentEnv {
     pub defs: Mutex<AgentDefinitions>,
 
     // agent id -> agent
-    pub agents: Mutex<HashMap<String, Box<dyn AsyncAgent>>>,
+    pub agents: Mutex<HashMap<String, Arc<Mutex<Box<dyn AsyncAgent>>>>>,
+
+    // agent id -> sender
+    pub agent_txs: Mutex<HashMap<String, mpsc::Sender<AgentMessage>>>,
 
     // sourece agent id -> [target agent id / source handle / target handle]
     pub edges: Mutex<HashMap<String, Vec<(String, String, String)>>>,
@@ -43,7 +46,7 @@ pub struct AgentEnv {
     pub rhai_engine: rhai::Engine,
 
     // message sender
-    pub tx: Mutex<Option<mpsc::Sender<AgentMessage>>>,
+    pub tx: Mutex<Option<mpsc::Sender<EnvAgentMessage>>>,
 }
 
 impl AgentEnv {
@@ -53,6 +56,7 @@ impl AgentEnv {
             flows: Default::default(),
             defs: Default::default(),
             agents: Default::default(),
+            agent_txs: Default::default(),
             edges: Default::default(),
             commands: Default::default(),
             board_out_agents: Default::default(),
@@ -88,7 +92,7 @@ impl AgentEnv {
         let app_handle = self.app.clone();
         tauri::async_runtime::spawn(async move {
             while let Some(message) = rx.recv().await {
-                use AgentMessage::*;
+                use EnvAgentMessage::*;
 
                 match message {
                     AgentOut { agent, ch, data } => {
@@ -191,7 +195,7 @@ impl AgentEnv {
             &node.name,
             node.config.clone(),
         ) {
-            agents.insert(node.id.clone(), agent);
+            agents.insert(node.id.clone(), Arc::new(Mutex::new(agent)));
             log::info!("Agent {} created", node.id);
         } else {
             bail!("Failed to create agent {}", node.id);
@@ -305,37 +309,128 @@ impl AgentEnv {
     }
 
     pub fn start_agent(&self, agent_id: &str) -> Result<()> {
-        let mut agents = self.agents.lock().unwrap();
-        let Some(agent) = agents.get_mut(agent_id) else {
-            bail!("Agent {} not found", agent_id);
+        let agent = {
+            let agents = self.agents.lock().unwrap();
+            let Some(a) = agents.get(agent_id) else {
+                bail!("Agent {} not found", agent_id);
+            };
+            a.clone()
         };
-        if *agent.status() == agent::AgentStatus::Init {
+        let agent_status = {
+            let agent = agent.lock().unwrap();
+            agent.status().clone()
+        };
+        if agent_status == agent::AgentStatus::Init {
             log::info!("Starting agent {}", agent_id);
-            agent.start()?;
+
+            let (tx, mut rx) = mpsc::channel(32);
+
+            {
+                let mut agent_txs = self.agent_txs.lock().unwrap();
+                agent_txs.insert(agent_id.to_string(), tx.clone());
+            };
+
+            let agent_id = agent_id.to_string();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = agent.lock().unwrap().start() {
+                    log::error!("Failed to start agent {}: {}", agent_id, e);
+                }
+
+                while let Some(message) = rx.recv().await {
+                    match message {
+                        AgentMessage::Input { ch, data } => {
+                            agent.lock().unwrap().input(ch, data).unwrap_or_else(|e| {
+                                log::error!("Input Error {}: {}", agent_id, e);
+                            });
+                        }
+                        AgentMessage::Config { config } => {
+                            agent
+                                .lock()
+                                .unwrap()
+                                .set_config(config)
+                                .unwrap_or_else(|e| {
+                                    log::error!("Config Error {}: {}", agent_id, e);
+                                });
+                        }
+                    }
+                }
+            });
         }
+
         Ok(())
     }
 
     pub fn stop_agent(&self, agent_id: &str) -> Result<()> {
-        let mut agents = self.agents.lock().unwrap();
-        let Some(agent) = agents.get_mut(agent_id) else {
-            bail!("Agent {} not found", agent_id);
+        let agent = {
+            let agents = self.agents.lock().unwrap();
+            let Some(a) = agents.get(agent_id) else {
+                bail!("Agent {} not found", agent_id);
+            };
+            a.clone()
         };
-        if *agent.status() == agent::AgentStatus::Run
-            || *agent.status() == agent::AgentStatus::Start
-        {
+
+        let agent_status = {
+            let agent = agent.lock().unwrap();
+            agent.status().clone()
+        };
+        if agent_status == agent::AgentStatus::Start {
             log::info!("Stopping agent {}", agent_id);
-            agent.stop()?;
+            agent.lock().unwrap().stop()?;
         }
         Ok(())
     }
 
-    pub fn set_agent_config(&self, agent_id: &str, config: AgentConfig) -> Result<()> {
-        let mut agents = self.agents.lock().unwrap();
-        let Some(agent) = agents.get_mut(agent_id) else {
-            bail!("Agent {} not found", agent_id);
+    pub async fn set_agent_config(&self, agent_id: &str, config: AgentConfig) -> Result<()> {
+        let agent = {
+            let agents = self.agents.lock().unwrap();
+            let Some(a) = agents.get(agent_id) else {
+                bail!("Agent {} not found", agent_id);
+            };
+            a.clone()
         };
-        agent.set_config(config)
+
+        let agent_status = {
+            let agent = agent.lock().unwrap();
+            agent.status().clone()
+        };
+        if agent_status == agent::AgentStatus::Start {
+            let tx = {
+                let agent_txs = self.agent_txs.lock().unwrap();
+                let Some(tx) = agent_txs.get(agent_id) else {
+                    bail!("Agent tx for {} not found", agent_id);
+                };
+                tx.clone()
+            };
+            tx.send(AgentMessage::Config { config }).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn agent_input(&self, agent_id: &str, ch: String, data: AgentData) -> Result<()> {
+        let agent = {
+            let agents = self.agents.lock().unwrap();
+            let Some(a) = agents.get(agent_id) else {
+                bail!("Agent {} not found", agent_id);
+            };
+            a.clone()
+        };
+
+        let agent_status = {
+            let agent = agent.lock().unwrap();
+            agent.status().clone()
+        };
+        if agent_status == agent::AgentStatus::Start {
+            let tx = {
+                let agent_txs = self.agent_txs.lock().unwrap();
+                let Some(tx) = agent_txs.get(agent_id) else {
+                    bail!("Agent tx for {} not found", agent_id);
+                };
+                tx.clone()
+            };
+            emit_input(&self.app, agent_id.to_string(), ch.clone());
+            tx.send(AgentMessage::Input { ch, data }).await?;
+        }
+        Ok(())
     }
 
     pub async fn send_agent_out(

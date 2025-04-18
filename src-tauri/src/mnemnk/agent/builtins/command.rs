@@ -185,8 +185,7 @@ impl AsAgent for CommandAgent {
         Ok(())
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.data.config = Some(config);
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         let merged_config = self.merged_config();
         if merged_config.is_none() {
             return Ok(());

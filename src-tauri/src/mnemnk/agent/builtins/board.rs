@@ -74,7 +74,6 @@ impl AsAgent for BoardInAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         self.board_name = normalize_board_name(&config);
-        self.data.config = Some(config);
         Ok(())
     }
 
@@ -165,7 +164,7 @@ impl AsAgent for BoardOutAgent {
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
-            if *self.status() == AgentStatus::Run {
+            if *self.status() == AgentStatus::Start {
                 if let Some(board_name) = &self.board_name {
                     let env = self.env();
                     let mut board_out_agents = env.board_out_agents.lock().unwrap();
@@ -185,7 +184,6 @@ impl AsAgent for BoardOutAgent {
             }
             self.board_name = board_name;
         }
-        self.data.config = Some(config);
         Ok(())
     }
 

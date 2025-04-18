@@ -23,13 +23,7 @@ impl AsAgent for CounterAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
             count: 0,
         })
     }
@@ -107,9 +101,6 @@ impl AsAgent for MemoryAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        // TODO: Should we merge the config?
-        self.mut_data().config = Some(config.clone());
-
         // Update n if it has changed
         if let Some(n) = config.get("n") {
             let new_n = n.as_i64().unwrap_or(DEFAULT_N);

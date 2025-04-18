@@ -24,8 +24,12 @@ pub enum AgentStatus {
     #[default]
     Init,
     Start,
-    Run,
     Stop,
+}
+
+pub enum AgentMessage {
+    Input { ch: String, data: AgentData },
+    Config { config: AgentConfig },
 }
 
 pub trait Agent {
@@ -153,6 +157,18 @@ pub struct AsAgentData {
     pub config: Option<AgentConfig>,
 }
 
+impl AsAgentData {
+    pub fn new(app: AppHandle, id: String, def_name: String, config: Option<AgentConfig>) -> Self {
+        Self {
+            app,
+            id,
+            status: AgentStatus::Init,
+            def_name,
+            config,
+        }
+    }
+}
+
 pub type AgentConfigs = HashMap<String, AgentConfig>;
 pub type AgentConfig = HashMap<String, AgentValue>;
 
@@ -170,12 +186,7 @@ pub trait AsAgent {
 
     fn mut_data(&mut self) -> &mut AsAgentData;
 
-    fn config(&self) -> Option<&AgentConfig> {
-        self.data().config.as_ref()
-    }
-
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         Ok(())
     }
 
@@ -219,17 +230,22 @@ impl<T: AsAgent> Agent for T {
     }
 
     fn config(&self) -> Option<&AgentConfig> {
-        self.config()
+        self.data().config.as_ref()
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.mut_data().config = Some(config.clone());
         self.set_config(config)
     }
 
     fn start(&mut self) -> Result<()> {
         self.mut_data().status = AgentStatus::Start;
-        self.start()?;
-        self.mut_data().status = AgentStatus::Run;
+
+        if let Err(e) = self.start() {
+            emit_error(self.app(), self.id().to_string(), e.to_string())?;
+            return Err(e);
+        }
+
         Ok(())
     }
 
@@ -241,7 +257,11 @@ impl<T: AsAgent> Agent for T {
     }
 
     fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
-        self.input(ch, data)
+        if let Err(e) = self.input(ch, data) {
+            emit_error(self.app(), self.id().to_string(), e.to_string())?;
+            return Err(e);
+        }
+        Ok(())
     }
 }
 

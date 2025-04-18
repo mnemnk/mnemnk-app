@@ -3,14 +3,10 @@ use tauri::{AppHandle, Manager};
 
 use crate::mnemnk::store;
 
-use super::{
-    agent::{emit_input, AgentStatus},
-    data::AgentData,
-    env::AgentEnv,
-};
+use super::{data::AgentData, env::AgentEnv};
 
 #[derive(Clone, Debug)]
-pub enum AgentMessage {
+pub enum EnvAgentMessage {
     AgentOut {
         agent: String,
         ch: String,
@@ -41,7 +37,7 @@ pub async fn send_agent_out(
             .context("tx is not initialized")?;
     }
     env_tx
-        .send(AgentMessage::AgentOut { agent, ch, data })
+        .send(EnvAgentMessage::AgentOut { agent, ch, data })
         .await
         .context("Failed to send AgentOut message")
 }
@@ -62,7 +58,7 @@ pub fn try_send_agent_out(
             .context("tx is not initialized")?;
     }
     env_tx
-        .try_send(AgentMessage::AgentOut { agent, ch, data })
+        .try_send(EnvAgentMessage::AgentOut { agent, ch, data })
         .context("Failed to try_send AgentOut message")
 }
 
@@ -77,7 +73,7 @@ pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Resu
             .context("tx is not initialized")?;
     }
     env_tx
-        .try_send(AgentMessage::BoardOut { name, data })
+        .try_send(EnvAgentMessage::BoardOut { name, data })
         .context("Failed to try_send BoardOut message")
 }
 
@@ -93,7 +89,7 @@ pub fn try_send_store(app: &AppHandle, data: AgentData) -> Result<()> {
             .context("tx is not initialized")?;
     }
     env_tx
-        .try_send(AgentMessage::Store { data })
+        .try_send(EnvAgentMessage::Store { data })
         .context("Failed to send Store message")
 }
 
@@ -134,7 +130,11 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
             target_handle.clone()
         };
 
-        send_agent_in(app, &env, &target_agent, target_ch, data.clone())
+        env.agent_input(&target_agent, target_ch, data.clone())
+            .await
+            .unwrap_or_else(|e| {
+                log::error!("Failed to send message to {}: {}", target_agent, e);
+            });
     }
 }
 
@@ -164,20 +164,12 @@ pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
             continue;
         };
         for (target_agent, _source_handle, target_handle) in edges {
-            send_agent_in(app, &env, &target_agent, target_handle, data.clone())
+            env.agent_input(&target_agent, target_handle, data.clone())
+                .await
+                .unwrap_or_else(|e| {
+                    log::error!("Failed to send message to {}: {}", target_agent, e);
+                });
         }
-    }
-}
-
-fn send_agent_in(app: &AppHandle, env: &AgentEnv, agent_id: &str, ch: String, data: AgentData) {
-    if let Some(agent) = env.agents.lock().unwrap().get_mut(agent_id) {
-        if *agent.status() != AgentStatus::Run {
-            return;
-        }
-        emit_input(app, agent_id.to_string(), ch.clone());
-        agent.input(ch, data).unwrap_or_else(|e| {
-            log::error!("Failed to send message to {}: {}", agent_id, e);
-        });
     }
 }
 

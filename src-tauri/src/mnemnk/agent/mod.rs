@@ -53,12 +53,14 @@ pub fn get_agent_defs_cmd(env: State<AgentEnv>) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub fn set_agent_config_cmd(
-    env: State<AgentEnv>,
+pub async fn set_agent_config_cmd(
+    app: AppHandle,
     agent_id: String,
     config: AgentConfig,
 ) -> Result<(), String> {
+    let env = app.state::<AgentEnv>();
     env.set_agent_config(&agent_id, config)
+        .await
         .map_err(|e| e.to_string())
 }
 #[tauri::command]

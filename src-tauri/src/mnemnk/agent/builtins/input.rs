@@ -39,12 +39,10 @@ impl AsAgent for UnitInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             self.try_output("unit".to_string(), AgentData::new_unit())
                 .context("Failed to output value")?;
         }
@@ -88,12 +86,10 @@ impl AsAgent for BooleanInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
@@ -146,12 +142,10 @@ impl AsAgent for IntegerInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
@@ -208,12 +202,10 @@ impl AsAgent for NumberInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
@@ -270,12 +262,10 @@ impl AsAgent for StringInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
@@ -333,12 +323,10 @@ impl AsAgent for TextInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
@@ -396,12 +384,10 @@ impl AsAgent for ObjectInputAgent {
         &mut self.data
     }
 
-    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.mut_data().config = Some(config);
-
+    fn set_config(&mut self, _config: AgentConfig) -> Result<()> {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
-        if *self.status() == AgentStatus::Run {
+        if *self.status() == AgentStatus::Start {
             let value = self
                 .data
                 .config
