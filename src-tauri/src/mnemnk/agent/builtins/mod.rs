@@ -6,6 +6,7 @@ mod core;
 mod database;
 mod display;
 mod input;
+mod rhai_script;
 mod string;
 mod utils;
 
@@ -17,6 +18,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     database::init_agent_defs(defs);
     display::init_agent_defs(defs);
     input::init_agent_defs(defs);
+    rhai_script::init_agent_defs(defs);
     string::init_agent_defs(defs);
     utils::init_agent_defs(defs);
 }

@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AgentData {
     pub kind: String,
     pub value: AgentValue,
@@ -66,6 +67,45 @@ impl AgentData {
     pub fn from_kind_value(kind: String, value: Value) -> Self {
         let value = AgentValue::from_kind_value(&kind, value);
         Self { kind, value }
+    }
+
+    pub fn from_json_value(value: Value) -> Self {
+        match value {
+            Value::Null => AgentData {
+                kind: "unit".to_string(),
+                value: AgentValue::Null,
+            },
+            Value::Bool(b) => AgentData::new_boolean(b),
+            Value::Number(_) => {
+                if let Some(i) = value.as_i64() {
+                    AgentData::new_integer(i)
+                } else if let Some(f) = value.as_f64() {
+                    AgentData::new_number(f)
+                } else {
+                    AgentData::new_object(value)
+                }
+            }
+            Value::String(s) => AgentData::new_string(s),
+            Value::Array(arr) => AgentData {
+                kind: "object".to_string(),
+                value: AgentValue::new_array(
+                    arr.into_iter()
+                        .map(|v| AgentValue::from_json_value(v))
+                        .collect(),
+                ),
+            },
+            _ => AgentData::new_object(value),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AgentData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+        Ok(AgentData::from_json_value(value))
     }
 }
 
