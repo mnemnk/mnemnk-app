@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.15.3](https://github.com/mnemnk/mnemnk-app/compare/v0.15.2...v0.15.3) (2025-04-18)
+
+
+### Features
+
+* 🎸 enter key on create new flow and rename flow ([#273](https://github.com/mnemnk/mnemnk-app/issues/273)) ([54719c9](https://github.com/mnemnk/mnemnk-app/commit/54719c967d1c951527a4529198a6a544df191c57))
+* 🎸 remove Template Data agent ([#276](https://github.com/mnemnk/mnemnk-app/issues/276)) ([a2cabcf](https://github.com/mnemnk/mnemnk-app/commit/a2cabcf3311c7c00f02e450e2fdf521482046b4a))
+* 🎸 Rhai Expression agent ([#274](https://github.com/mnemnk/mnemnk-app/issues/274)) ([56f899f](https://github.com/mnemnk/mnemnk-app/commit/56f899fd5c0590327a3d60c8274047284255731a))
+
+
+### Bug Fixes
+
+* 🐛 load a flow even when it contains deprecated agents ([#277](https://github.com/mnemnk/mnemnk-app/issues/277)) ([9d319e6](https://github.com/mnemnk/mnemnk-app/commit/9d319e6c85307c4f3c710b81565294f53b1164d8)), closes [#275](https://github.com/mnemnk/mnemnk-app/issues/275)
+
 ## [0.15.2](https://github.com/mnemnk/mnemnk-app/compare/v0.15.1...v0.15.2) (2025-04-17)
 
 
