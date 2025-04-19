@@ -1,9 +1,5 @@
 <div align="center">
 
-[ English | [日本語](README-ja.md) ]
-
-<br>
-
 <img alt="home" width="40%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/mnemnk_title.png?raw=true">
 
 <br>
@@ -37,12 +33,12 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 ### Privacy-Focused
 
-- Activity logs recorded by the core system `mnemnk-app` and core agents are stored locally and are never sent externally.
-- The core system and core agents are open-source software, ensuring transparency.
+- Activity logs recorded by the core system `mnemnk-app` and lifelogging agents are stored locally and are never sent externally.
+- The core system and lifelogging agents are open-source software, ensuring transparency.
 
 <br>
 <div align="center">
-<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"><img alt="core agents" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"></a>
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"><img alt="lifelogging agents" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"></a>
 </div>
 
 ### Agent-Based Extensibility
@@ -54,7 +50,7 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 ## Getting Started
 
-Download and run the installer from the [releases](https://github.com/mnemnk/mnemnk-app/releases) page.
+Follow the instructions on the [Getting Started](https://mnemnk.com/guide/getting-started) page to complete the installation.
 
 <details>
   <summary><strong>Build from the repo</strong></summary>
@@ -99,11 +95,11 @@ Click "Save" after configuring, and restart the application.
 
 Install each agent from their respective pages:
 
-- [mnemnk-core-agents](https://github.com/mnemnk/mnemnk-core-agents)
+- [mnemnk-lifelogging-agents](https://github.com/mnemnk/mnemnk-lifelogging-agents)
   - Includes the following essential agents.
-  - [mnemnk-api](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-api)
-  - [mnemnk-application](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-application)
-  - [mnemnk-screen](https://github.com/mnemnk/mnemnk-core-agents/tree/main/mnemnk-screen)
+  - [mnemnk-api](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-api)
+  - [mnemnk-application](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-application)
+  - [mnemnk-screen](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-screen)
 - [mnemnk-langchain](https://github.com/mnemnk/mnemnk-langchain)
   - Agents based on [LangChain](https://www.langchain.com/langchain).
 
