@@ -1,47 +1,17 @@
 use anyhow::{Context as _, Result};
-use serde::Serialize;
-use serde_json::Value;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
-    AgentStatus, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentValue,
+    AsAgent, AsAgentData,
 };
 
-const EMIT_PUBLISH: &str = "mnemnk:write_board";
+// const EMIT_PUBLISH: &str = "mnemnk:write_board";
 
 struct BoardInAgent {
     data: AsAgentData,
     board_name: Option<String>,
-}
-
-impl BoardInAgent {
-    fn emit_publish(&self, kind: String, value: AgentValue) {
-        let mut json_value = serde_json::to_value(&value).unwrap_or_default();
-
-        // remove image from the value. it's too big to send to frontend
-        if json_value.get("image").is_some() {
-            json_value.as_object_mut().unwrap().remove("image");
-        }
-
-        #[derive(Clone, Debug, Serialize)]
-        struct WriteBoardMessage {
-            kind: String,
-            value: Value,
-        }
-
-        // emit the message to frontend
-        let message = WriteBoardMessage {
-            kind,
-            value: json_value,
-        };
-        self.app()
-            .emit(EMIT_PUBLISH, Some(message))
-            .unwrap_or_else(|e| {
-                log::error!("Failed to emit message: {}", e);
-            });
-    }
 }
 
 impl AsAgent for BoardInAgent {
@@ -53,13 +23,7 @@ impl AsAgent for BoardInAgent {
     ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
             board_name,
         })
     }
@@ -77,18 +41,18 @@ impl AsAgent for BoardInAgent {
         Ok(())
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         let mut board_name = self.board_name.clone().unwrap_or_default();
         if board_name.is_empty() {
             // if board_name is not set, stop processing
             return Ok(());
         }
         if board_name == "*" {
-            if data.kind.is_empty() {
-                // kind should not be empty, but just in case
+            if ch.is_empty() {
+                // ch should not be empty, but just in case
                 return Ok(());
             }
-            board_name = data.kind.clone()
+            board_name = ch;
         }
         let env = self.env();
         {
@@ -97,8 +61,6 @@ impl AsAgent for BoardInAgent {
         }
         env.try_send_board_out(board_name.clone(), data.clone())
             .context("Failed to send board")?;
-
-        self.emit_publish(board_name, data.value);
 
         Ok(())
     }
@@ -118,13 +80,7 @@ impl AsAgent for BoardOutAgent {
     ) -> Result<Self> {
         let board_name = config.as_ref().and_then(normalize_board_name);
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
             board_name,
         })
     }
@@ -164,22 +120,20 @@ impl AsAgent for BoardOutAgent {
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         let board_name = normalize_board_name(&config);
         if self.board_name != board_name {
-            if *self.status() == AgentStatus::Start {
-                if let Some(board_name) = &self.board_name {
-                    let env = self.env();
-                    let mut board_out_agents = env.board_out_agents.lock().unwrap();
-                    if let Some(nodes) = board_out_agents.get_mut(board_name) {
-                        nodes.retain(|x| x != &self.data.id);
-                    }
+            if let Some(board_name) = &self.board_name {
+                let env = self.env();
+                let mut board_out_agents = env.board_out_agents.lock().unwrap();
+                if let Some(nodes) = board_out_agents.get_mut(board_name) {
+                    nodes.retain(|x| x != &self.data.id);
                 }
-                if let Some(board_name) = &board_name {
-                    let env = self.env();
-                    let mut board_out_agents = env.board_out_agents.lock().unwrap();
-                    if let Some(nodes) = board_out_agents.get_mut(board_name) {
-                        nodes.push(self.data.id.clone());
-                    } else {
-                        board_out_agents.insert(board_name.clone(), vec![self.data.id.clone()]);
-                    }
+            }
+            if let Some(board_name) = &board_name {
+                let env = self.env();
+                let mut board_out_agents = env.board_out_agents.lock().unwrap();
+                if let Some(nodes) = board_out_agents.get_mut(board_name) {
+                    nodes.push(self.data.id.clone());
+                } else {
+                    board_out_agents.insert(board_name.clone(), vec![self.data.id.clone()]);
                 }
             }
             self.board_name = board_name;

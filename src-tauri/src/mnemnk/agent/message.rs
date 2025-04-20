@@ -164,7 +164,13 @@ pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
             continue;
         };
         for (target_agent, _source_handle, target_handle) in edges {
-            env.agent_input(&target_agent, target_handle, data.clone())
+            let target_ch = if target_handle == "*" {
+                // If target_handle is "*", use the board name
+                name.clone()
+            } else {
+                target_handle.clone()
+            };
+            env.agent_input(&target_agent, target_ch, data.clone())
                 .await
                 .unwrap_or_else(|e| {
                     log::error!("Failed to send message to {}: {}", target_agent, e);
