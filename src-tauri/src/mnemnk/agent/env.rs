@@ -340,7 +340,7 @@ impl AgentEnv {
                     match message {
                         AgentMessage::Input { ch, data } => {
                             agent.lock().unwrap().process(ch, data).unwrap_or_else(|e| {
-                                log::error!("Input Error {}: {}", agent_id, e);
+                                log::error!("Process Error {}: {}", agent_id, e);
                             });
                         }
                         AgentMessage::Config { config } => {
