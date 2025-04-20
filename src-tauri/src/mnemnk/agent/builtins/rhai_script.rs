@@ -40,7 +40,7 @@ impl AsAgent for RhaiExpressionAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
 
         let template = config

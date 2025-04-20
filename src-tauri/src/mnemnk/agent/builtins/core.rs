@@ -38,7 +38,7 @@ impl AsAgent for AsKindAgent {
         &mut self.data
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         let kind = self
             .data
             .config

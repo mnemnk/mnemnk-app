@@ -220,7 +220,7 @@ impl AsAgent for CommandAgent {
         Ok(())
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         #[derive(Debug, Serialize)]
         struct InData {
             ch: String,

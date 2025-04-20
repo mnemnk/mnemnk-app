@@ -78,7 +78,7 @@ pub trait Agent {
 
     fn stop(&mut self) -> Result<()>;
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()>;
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
 
     fn try_output(&self, ch: String, data: AgentData) -> Result<()> {
         let env = self.env();
@@ -198,7 +198,7 @@ pub trait AsAgent {
         Ok(())
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()>;
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
 }
 
 impl<T: AsAgent> Agent for T {
@@ -256,8 +256,8 @@ impl<T: AsAgent> Agent for T {
         Ok(())
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
-        if let Err(e) = self.input(ch, data) {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+        if let Err(e) = self.process(ch, data) {
             emit_error(self.app(), self.id().to_string(), e.to_string())?;
             return Err(e);
         }

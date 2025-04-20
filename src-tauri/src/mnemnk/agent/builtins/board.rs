@@ -77,7 +77,7 @@ impl AsAgent for BoardInAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
         let mut board_name = self.board_name.clone().unwrap_or_default();
         if board_name.is_empty() {
             // if board_name is not set, stop processing
@@ -187,7 +187,7 @@ impl AsAgent for BoardOutAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         // do nothing
         Ok(())
     }

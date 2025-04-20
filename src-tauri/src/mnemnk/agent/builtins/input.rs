@@ -50,7 +50,7 @@ impl AsAgent for UnitInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -106,7 +106,7 @@ impl AsAgent for BooleanInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -166,7 +166,7 @@ impl AsAgent for IntegerInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -226,7 +226,7 @@ impl AsAgent for NumberInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -287,7 +287,7 @@ impl AsAgent for StringInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -348,7 +348,7 @@ impl AsAgent for TextInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -409,7 +409,7 @@ impl AsAgent for ObjectInputAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
