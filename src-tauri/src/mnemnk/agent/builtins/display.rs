@@ -97,7 +97,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<DisplayDataAgent>),
         )
         .with_title("Display Data")
-        .with_category("Display")
+        .with_category("Core/Display")
         .with_inputs(vec!["data"])
         .with_display_config(vec![(
             "data".into(),
@@ -110,7 +110,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         "$debug_data".into(),
         AgentDefinition::new("Builtin", "$debug_data", Some(new_boxed::<DebugDataAgent>))
             .with_title("Debug Data")
-            .with_category("Display")
+            .with_category("Core/Display")
             .with_inputs(vec!["*"])
             .with_display_config(vec![(
                 "data".into(),
