@@ -420,7 +420,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         "$unit_input".into(),
         AgentDefinition::new("Builtin", "$unit_input", Some(new_boxed::<UnitInputAgent>))
             .with_title("Unit Input")
-            .with_category("Input")
+            .with_category("Core/Input")
             .with_outputs(vec!["unit"])
             .with_default_config(vec![(
                 "unit".into(),
@@ -437,7 +437,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<BooleanInputAgent>),
         )
         .with_title("Boolean Input")
-        .with_category("Input")
+        .with_category("Core/Input")
         .with_outputs(vec!["boolean"])
         .with_default_config(vec![(
             "boolean".into(),
@@ -454,7 +454,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<IntegerInputAgent>),
         )
         .with_title("Integer Input")
-        .with_category("Input")
+        .with_category("Core/Input")
         .with_outputs(vec!["integer"])
         .with_default_config(vec![(
             "integer".into(),
@@ -471,7 +471,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<NumberInputAgent>),
         )
         .with_title("Number Input")
-        .with_category("Input")
+        .with_category("Core/Input")
         .with_outputs(vec!["number"])
         .with_default_config(vec![(
             "number".into(),
@@ -488,7 +488,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<StringInputAgent>),
         )
         .with_title("String Input")
-        .with_category("Input")
+        .with_category("Core/Input")
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "string".into(),
@@ -501,7 +501,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         "$text_input".into(),
         AgentDefinition::new("Builtin", "$text_input", Some(new_boxed::<TextInputAgent>))
             .with_title("Text Input")
-            .with_category("Input")
+            .with_category("Core/Input")
             .with_outputs(vec!["text"])
             .with_default_config(vec![(
                 "text".into(),
@@ -518,7 +518,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             Some(new_boxed::<ObjectInputAgent>),
         )
         .with_title("Object Input")
-        .with_category("Input")
+        .with_category("Core/Input")
         .with_outputs(vec!["object"])
         .with_default_config(vec![(
             "object".into(),
