@@ -1,8 +1,6 @@
 use anyhow::{Context as _, Result};
 use tauri::{AppHandle, Manager};
 
-use crate::mnemnk::store;
-
 use super::{data::AgentData, env::AgentEnv};
 
 #[derive(Clone, Debug)]
@@ -14,9 +12,6 @@ pub enum EnvAgentMessage {
     },
     BoardOut {
         name: String,
-        data: AgentData,
-    },
-    Store {
         data: AgentData,
     },
 }
@@ -75,22 +70,6 @@ pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Resu
     env_tx
         .try_send(EnvAgentMessage::BoardOut { name, data })
         .context("Failed to try_send BoardOut message")
-}
-
-pub fn try_send_store(app: &AppHandle, data: AgentData) -> Result<()> {
-    let env = app.state::<AgentEnv>();
-    let env_tx;
-    {
-        env_tx = env
-            .tx
-            .lock()
-            .unwrap()
-            .clone()
-            .context("tx is not initialized")?;
-    }
-    env_tx
-        .try_send(EnvAgentMessage::Store { data })
-        .context("Failed to send Store message")
 }
 
 // Processing AgentOut message
@@ -177,8 +156,4 @@ pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
                 });
         }
     }
-}
-
-pub fn store(app_handle: &AppHandle, data: AgentData) {
-    store::store(app_handle, data);
 }

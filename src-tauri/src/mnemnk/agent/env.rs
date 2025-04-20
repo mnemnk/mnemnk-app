@@ -101,9 +101,6 @@ impl AgentEnv {
                     BoardOut { name, data } => {
                         message::board_out(&app_handle, name, data).await;
                     }
-                    Store { data } => {
-                        message::store(&app_handle, data);
-                    }
                 }
             }
         });
