@@ -65,7 +65,7 @@ pub struct IntervalTimerAgent {
 impl IntervalTimerAgent {
     fn start_timer(&mut self) -> Result<()> {
         let interval_sec = if let Some(config) = &self.data.config {
-            if let Some(seconds) = config.get("interval_seconds") {
+            if let Some(seconds) = config.get("interval_sec") {
                 seconds.as_i64().unwrap_or(10)
             } else {
                 10
