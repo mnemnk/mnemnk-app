@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::vec;
 
-use anyhow::Result;
+use anyhow::{bail, Context as _, Result};
+use regex::Regex;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Manager};
 
@@ -59,31 +60,20 @@ impl AsAgent for CounterAgent {
 pub struct IntervalTimerAgent {
     data: AsAgentData,
     timer_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
-    interval_sec: i64,
+    interval_ms: u64,
 }
 
 impl IntervalTimerAgent {
     fn start_timer(&mut self) -> Result<()> {
-        let interval_sec = if let Some(config) = &self.data.config {
-            if let Some(seconds) = config.get("interval_sec") {
-                seconds.as_i64().unwrap_or(10)
-            } else {
-                10
-            }
-        } else {
-            10
-        };
-
-        self.interval_sec = interval_sec;
-
         let app_handle = self.app().clone();
         let agent_id = self.id().to_string();
         let timer_handle = self.timer_handle.clone();
+        let interval_ms = self.interval_ms;
 
         let handle = tauri::async_runtime::spawn(async move {
             loop {
                 // Sleep for the configured interval
-                tokio::time::sleep(tokio::time::Duration::from_secs(interval_sec as u64)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(interval_ms)).await;
 
                 // Check if we've been stopped
                 if let Ok(handle) = timer_handle.lock() {
@@ -130,22 +120,26 @@ impl AsAgent for IntervalTimerAgent {
         def_name: String,
         config: Option<AgentConfig>,
     ) -> Result<Self> {
-        const DEFAULT_INTERVAL: i64 = 10;
+        const DEFAULT_INTERVAL_MS: u64 = 10000; // 10 seconds in milliseconds
 
-        let interval_sec = if let Some(config) = &config {
-            if let Some(seconds) = config.get("interval_sec") {
-                seconds.as_i64().unwrap_or(DEFAULT_INTERVAL)
+        let interval_ms = if let Some(config) = &config {
+            if let Some(interval) = config.get("interval") {
+                if let Some(interval_str) = interval.as_str() {
+                    parse_duration_to_ms(interval_str).unwrap_or(DEFAULT_INTERVAL_MS)
+                } else {
+                    DEFAULT_INTERVAL_MS
+                }
             } else {
-                DEFAULT_INTERVAL
+                DEFAULT_INTERVAL_MS
             }
         } else {
-            DEFAULT_INTERVAL
+            DEFAULT_INTERVAL_MS
         };
 
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
             timer_handle: Default::default(),
-            interval_sec,
+            interval_ms,
         })
     }
 
@@ -166,15 +160,17 @@ impl AsAgent for IntervalTimerAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        // Update the interval if it changed
-        if let Some(seconds) = config.get("interval_sec") {
-            let new_interval = seconds.as_i64().unwrap_or(10);
-            if new_interval != self.interval_sec && *self.status() == AgentStatus::Start {
-                // Restart the timer with the new interval
-                self.stop_timer()?;
-                self.start_timer()?;
+        // Check if interval has changed
+        if let Some(interval) = config.get("interval") {
+            if let Some(interval_str) = interval.as_str() {
+                let new_interval = parse_duration_to_ms(interval_str)?;
+                if new_interval != self.interval_ms && *self.status() == AgentStatus::Start {
+                    // Restart the timer with the new interval
+                    self.stop_timer()?;
+                    self.start_timer()?;
+                }
+                self.interval_ms = new_interval;
             }
-            self.interval_sec = new_interval;
         }
         Ok(())
     }
@@ -182,6 +178,41 @@ impl AsAgent for IntervalTimerAgent {
     fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         // This agent doesn't process input, it just outputs on a timer
         Ok(())
+    }
+}
+
+// Parse time duration strings like "2s", "10m", "200ms"
+fn parse_duration_to_ms(duration_str: &str) -> Result<u64> {
+    const MIN_DURATION: u64 = 10;
+
+    // Regular expression to match number followed by optional unit
+    let re = Regex::new(r"^(\d+)(?:([a-zA-Z]+))?$").context("Failed to compile regex")?;
+
+    if let Some(captures) = re.captures(duration_str.trim()) {
+        let value: u64 = captures.get(1).unwrap().as_str().parse()?;
+
+        // Get the unit if present, default to "s" (seconds)
+        let unit = captures
+            .get(2)
+            .map_or("s".to_string(), |m| m.as_str().to_lowercase());
+
+        // Convert to milliseconds based on unit
+        let milliseconds = match unit.as_str() {
+            "ms" => value,               // already in milliseconds
+            "s" => value * 1000,         // seconds to milliseconds
+            "m" => value * 60 * 1000,    // minutes to milliseconds
+            "h" => value * 3600 * 1000,  // hours to milliseconds
+            "d" => value * 86400 * 1000, // days to milliseconds
+            _ => bail!("Unknown time unit: {}", unit),
+        };
+
+        // Ensure we don't return less than the minimum duration
+        Ok(std::cmp::max(milliseconds, MIN_DURATION))
+    } else {
+        // If the string doesn't match the pattern, try to parse it as a plain number
+        // and assume it's in seconds
+        let value: u64 = duration_str.parse()?;
+        Ok(std::cmp::max(value * 1000, MIN_DURATION)) // Convert to ms
     }
 }
 
@@ -316,10 +347,10 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_category("Core/Utils")
         .with_outputs(vec!["unit"])
         .with_default_config(vec![(
-            "interval_sec".into(),
-            AgentConfigEntry::new(AgentValue::new_integer(10), "integer")
-                .with_title("Interval (sec)")
-                .with_description("Time interval in seconds between outputs"),
+            "interval".into(),
+            AgentConfigEntry::new(AgentValue::new_string("10s".to_string()), "string")
+                .with_title("Interval")
+                .with_description("Time interval (ex. 10s, 5m, 100ms, 1h, 1d)"),
         )]),
     );
 
