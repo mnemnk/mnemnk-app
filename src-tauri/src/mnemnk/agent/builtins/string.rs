@@ -40,7 +40,7 @@ impl AsAgent for RegexFilterAgent {
         &mut self.data
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
 
         let key = config
@@ -115,7 +115,7 @@ impl AsAgent for TemplateStringAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
         let config = self.data.config.as_ref().context("Missing config")?;
 
         let template = config

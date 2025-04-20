@@ -44,7 +44,7 @@ impl AsAgent for CounterAgent {
         Ok(())
     }
 
-    fn input(&mut self, ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, _data: AgentData) -> Result<()> {
         if ch == "reset" {
             self.count = 0;
         } else if ch == "in" {
@@ -179,7 +179,7 @@ impl AsAgent for IntervalTimerAgent {
         Ok(())
     }
 
-    fn input(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         // This agent doesn't process input, it just outputs on a timer
         Ok(())
     }
@@ -251,7 +251,7 @@ impl AsAgent for MemoryAgent {
         Ok(())
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         if ch == "reset" {
             // Reset command empties the memory
             self.memory.clear();

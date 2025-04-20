@@ -39,7 +39,7 @@ impl AsAgent for DatabaseAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
         try_send_store(self.app(), data)
     }
 }

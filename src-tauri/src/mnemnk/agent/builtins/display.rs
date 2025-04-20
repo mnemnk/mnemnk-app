@@ -39,7 +39,7 @@ impl AsAgent for DisplayDataAgent {
         &mut self.data
     }
 
-    fn input(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
         self.emit_display("data".to_string(), data)
     }
 }
@@ -75,7 +75,7 @@ impl AsAgent for DebugDataAgent {
         &mut self.data
     }
 
-    fn input(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         #[derive(Serialize)]
         struct DebugData {
             ch: String,
