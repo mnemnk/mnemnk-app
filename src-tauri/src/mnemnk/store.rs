@@ -1,3 +1,4 @@
+use std::io::{BufRead, Write};
 use std::sync::{LazyLock, Mutex};
 
 use anyhow::{Context as _, Result};
@@ -9,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs, io::Cursor, path::PathBuf};
 use surrealdb::{
     engine::local::{Db, RocksDb},
+    sql::Datetime,
     RecordId, Surreal,
 };
 use tauri::{
@@ -20,10 +22,10 @@ use tokio_util::task::TaskTracker;
 use super::{agent::AgentData, tokenize::tokenize_text};
 use crate::mnemnk::settings::{data_dir, CoreSettings};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Event {
     kind: String,
-    time: surrealdb::Datetime,
+    time: Datetime,
     agent: String,
     local_offset: i64,
     local_y: i64,
@@ -80,8 +82,6 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .query("DEFINE INDEX IF NOT EXISTS eventKindTimeIndex ON TABLE event COLUMNS kind,time")
         // text
         .query("DEFINE FIELD IF NOT EXISTS text ON TABLE event TYPE option<string>")
-        .query("REMOVE ANALYZER IF EXISTS eventTextAnalyzer")
-        .query("REMOVE INDEX IF EXISTS eventTextIndex ON TABLE event")
         .query("DEFINE FIELD IF NOT EXISTS text_tokens ON TABLE event TYPE option<string>")
         .query("DEFINE ANALYZER IF NOT EXISTS eventTextTokensAnalyzer TOKENIZERS blank")
         .query("DEFINE INDEX IF NOT EXISTS eventTextTokensIndex ON TABLE event COLUMNS text_tokens SEARCH ANALYZER eventTextTokensAnalyzer")
@@ -183,7 +183,7 @@ pub fn store(app: &AppHandle, data: AgentData) {
             .create("event")
             .content(Event {
                 kind,
-                time: surrealdb::Datetime::from(utc_dt),
+                time: utc_dt.into(),
                 agent: "".to_string(),
                 local_offset,
                 local_y,
@@ -410,7 +410,7 @@ pub async fn daily_stats_cmd(app: AppHandle) -> Result<Vec<DailyStats>, String> 
 struct EventRecordInternal {
     id: RecordId,
     kind: String,
-    time: surrealdb::Datetime,
+    time: Datetime,
     local_offset: i64,
     local_ymd: i64,
     value: serde_json::Value,
@@ -420,7 +420,7 @@ struct EventRecordInternal {
 pub struct EventRecord {
     id: String,
     kind: String,
-    time: surrealdb::Datetime,
+    time: Datetime,
     local_offset: i64,
     local_ymd: i64,
     value: serde_json::Value,
@@ -665,6 +665,209 @@ pub async fn search_events_cmd(app: AppHandle, query: String) -> Result<Vec<Even
         })
         .collect();
     Ok(events)
+}
+
+// Export
+
+pub async fn export_events(app: &AppHandle, path: &str) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    log::info!("Exporting events to {}", path);
+
+    // Query to get all events with necessary fields (excluding local_y, local_ym, local_ymd, text_tokens)
+    let sql = r#"
+        SELECT 
+            kind,
+            time,
+            agent,
+            local_offset,
+            value,
+            text
+        FROM
+            event
+        ORDER BY
+            time ASC
+        ;
+    "#;
+
+    let mut result = state.db.query(sql).await?;
+    let events: Vec<ExportEventRecord> = result.take(0)?;
+
+    log::info!("Found {} events to export", events.len());
+
+    // Open file for writing
+    let file = fs::File::create(path)?;
+    let mut writer = std::io::BufWriter::new(file);
+
+    // Write version and timestamp as first line
+    #[derive(Serialize)]
+    struct Header {
+        version: String,
+        timestamp: i64,
+    }
+
+    let header = Header {
+        version: "1.0".to_string(),
+        timestamp: chrono::Utc::now().timestamp(),
+    };
+
+    let header_json = serde_json::to_string(&header)?;
+    writeln!(writer, "{}", header_json)?;
+
+    // Write each event as a separate line
+    for event in events {
+        let event_json = serde_json::to_string(&event)?;
+        writeln!(writer, "{}", event_json)?;
+    }
+
+    writer.flush()?;
+
+    log::info!("Events exported successfully");
+
+    Ok(())
+}
+
+// Structure for export
+#[derive(Serialize, Deserialize)]
+struct ExportEventRecord {
+    kind: String,
+    time: Datetime,
+    agent: String,
+    local_offset: i64,
+    value: serde_json::Value,
+    text: Option<String>,
+}
+
+#[tauri::command]
+pub async fn export_events_cmd(app: AppHandle, path: String) -> Result<(), String> {
+    export_events(&app, &path).await.map_err(|e| e.to_string())
+}
+
+pub async fn import_events(app: &AppHandle, path: &str) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    log::info!("Importing events from {}", path);
+
+    let file = fs::File::open(path)?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut line = String::new();
+
+    // Parse header from first line
+    #[derive(Debug, Deserialize)]
+    struct Header {
+        version: String,
+        timestamp: i64,
+    }
+
+    reader.read_line(&mut line)?;
+    let header: Header = serde_json::from_str(line.trim())?;
+
+    log::info!(
+        "Importing data from export version: {} at {}",
+        header.version,
+        chrono::DateTime::from_timestamp(header.timestamp, 0)
+            .unwrap_or_default()
+            .with_timezone(&chrono::Local)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+    );
+
+    let mut success_count = 0;
+    let mut error_count = 0;
+
+    // Get day_start_hour setting, default to 0 if not set
+    let day_start_hour = {
+        let settings = app.state::<Mutex<CoreSettings>>();
+        let settings = settings.lock().unwrap();
+        settings.day_start_hour.unwrap_or(0)
+    };
+
+    line.clear();
+    while reader.read_line(&mut line)? > 0 {
+        if line.trim().is_empty() {
+            line.clear();
+            continue;
+        }
+
+        // Parse the event from the current line
+        let event: ExportEventRecord = match serde_json::from_str(line.trim()) {
+            Ok(event) => event,
+            Err(e) => {
+                log::error!("Error parsing event: {}", e);
+                error_count += 1;
+                line.clear();
+                continue;
+            }
+        };
+
+        let dt: DateTime<Utc> = event.time.clone().into();
+        let dt_local = DateTime::<Local>::from(dt);
+        let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt_local, day_start_hour);
+
+        // Calculate text_tokens if text exists
+        let text_tokens = event.text.as_ref().map(|t| tokenize_text(t));
+
+        let record = Event {
+            kind: event.kind,
+            time: event.time,
+            agent: event.agent,
+            local_offset: event.local_offset,
+            local_y,
+            local_ym,
+            local_ymd,
+            value: event.value,
+            text: event.text,
+            text_tokens,
+        };
+        for i in 0..3 {
+            match state
+                .db
+                .create::<Option<Record>>("event")
+                .content(record.clone())
+                .await
+            {
+                Ok(_) => {
+                    success_count += 1;
+                    if success_count % 1000 == 0 {
+                        log::info!("Imported {} events", success_count);
+                    }
+                    break;
+                }
+                Err(e) => {
+                    log::error!("Error importing event: {}", e);
+                    if i < 2 {
+                        log::info!("Retrying...");
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                    } else {
+                        log::error!("Failed to import event after 3 attempts");
+                        error_count += 1;
+                    }
+                }
+            }
+        }
+
+        line.clear();
+    }
+
+    if error_count > 0 {
+        log::warn!(
+            "Import completed with {} successes and {} errors",
+            success_count,
+            error_count
+        );
+    } else {
+        log::info!(
+            "Successfully imported {} events with no errors",
+            success_count
+        );
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn import_events_cmd(app: AppHandle, path: String) -> Result<(), String> {
+    import_events(&app, &path).await.map_err(|e| e.to_string())
 }
 
 // Tests
