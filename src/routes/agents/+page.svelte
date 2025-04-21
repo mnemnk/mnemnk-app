@@ -75,8 +75,24 @@
     flowNames = Object.keys(flows()).sort();
   }
 
+  let flowActivities = $state<Record<string, boolean>>({});
+
+  function updateFlowActivities() {
+    flowActivities = Object.fromEntries(
+      Object.entries(flows()).map(([name, flow]) => [
+        name,
+        flow.nodes.some((node) => node.data.enabled),
+      ]),
+    );
+  }
+
+  function updateCurrentFlowActivity() {
+    flowActivities[flowNameState.name] = nodes.some((node) => node.data.enabled);
+  }
+
   onMount(() => {
     updateFlowNames();
+    updateFlowActivities();
     return async () => {
       await syncFlow();
     };
@@ -135,6 +151,7 @@
 
   $effect(() => {
     checkNodeChange(nodes);
+    updateCurrentFlowActivity();
   });
 
   $effect(() => {
@@ -302,6 +319,7 @@
     if (!flow) return;
     flows()[flow.name] = deserializeAgentFlow(flow, agentDefs);
     updateFlowNames();
+    updateFlowActivities();
     await changeFlowName(flow.name);
   }
 
@@ -326,6 +344,7 @@
     flows()[newName] = flow;
     delete flows()[oldName];
     updateFlowNames();
+    updateFlowActivities();
     await changeFlowName(newName);
   }
 
@@ -344,6 +363,7 @@
     await deleteAgentFlow(flowNameState.name);
     delete flows()[flowNameState.name];
     updateFlowNames();
+    updateFlowActivities();
     // TODO: create a new flow when deleting the main flow
     flowNameState.name = "main";
   }
@@ -378,6 +398,7 @@
     const flow = deserializeAgentFlow(sflow, agentDefs);
     flows()[flow.name] = flow;
     updateFlowNames();
+    updateFlowActivities();
     await changeFlowName(flow.name);
   }
 
@@ -405,6 +426,7 @@
           await startAgent(node.id);
         }
       }
+      updateCurrentFlowActivity();
       return;
     }
 
@@ -415,6 +437,7 @@
         await startAgent(node.id);
       }
     }
+    updateCurrentFlowActivity();
   }
 
   async function onPause() {
@@ -427,6 +450,7 @@
           await stopAgent(node.id);
         }
       }
+      updateCurrentFlowActivity();
       return;
     }
 
@@ -437,6 +461,7 @@
         await stopAgent(node.id);
       }
     }
+    updateCurrentFlowActivity();
   }
 
   let nodeContextMenu: {
@@ -552,7 +577,7 @@
     />
   </SvelteFlow>
   <div class="absolute top-1 left-0 w-40">
-    <FlowList {flowNames} currentFlowName={flowNameState.name} {changeFlowName} />
+    <FlowList {flowNames} currentFlowName={flowNameState.name} {flowActivities} {changeFlowName} />
   </div>
   <div class="absolute right-0 top-1 w-60">
     <AgentList {agentDefs} {onAddAgent} />
