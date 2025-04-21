@@ -93,16 +93,21 @@ pub fn new_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<AgentFlo
 
 #[tauri::command]
 pub fn rename_agent_flow_cmd(
+    app: AppHandle,
     env: State<AgentEnv>,
     old_name: String,
     new_name: String,
 ) -> Result<String, String> {
-    flow::rename_agent_flow(&env, &old_name, &new_name).map_err(|e| e.to_string())
+    flow::rename_agent_flow(&app, &env, &old_name, &new_name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn delete_agent_flow_cmd(env: State<AgentEnv>, name: String) -> Result<(), String> {
-    flow::delete_agent_flow(&env, &name).map_err(|e| e.to_string())
+pub fn delete_agent_flow_cmd(
+    app: AppHandle,
+    env: State<AgentEnv>,
+    name: String,
+) -> Result<(), String> {
+    flow::delete_agent_flow(&app, &env, &name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
