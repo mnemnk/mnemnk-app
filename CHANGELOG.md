@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.0](https://github.com/mnemnk/mnemnk-app/compare/v0.16.1...v0.17.0) (2025-04-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 migrate API agent from Lifelogging agents
+
+### Features
+
+* 🎸 migrate API agent from Lifelogging ([#293](https://github.com/mnemnk/mnemnk-app/issues/293)) ([d18b3bb](https://github.com/mnemnk/mnemnk-app/commit/d18b3bbd2e8b5f9d1dd1e2d721e95cc7a63239fb))
+
+
+### Bug Fixes
+
+* 🐛 a lot of console outputs about SvelteFlow ([#296](https://github.com/mnemnk/mnemnk-app/issues/296)) ([0ef02f4](https://github.com/mnemnk/mnemnk-app/commit/0ef02f42f01465edd5e7028b64e71b04a143b667))
+* 🐛 mnemnk doesn't stop after migrating api agent ([#294](https://github.com/mnemnk/mnemnk-app/issues/294)) ([0af8a4d](https://github.com/mnemnk/mnemnk-app/commit/0af8a4df524b5decac312bfa76457c697dbac993))
+* 🐛 obsoleted agent global config prevents to open settings ([#295](https://github.com/mnemnk/mnemnk-app/issues/295)) ([b51b5bd](https://github.com/mnemnk/mnemnk-app/commit/b51b5bdcfa327e65c361c987e1f29c97bb63e963))
+* 🐛 set loglevel debug only for mnemnk ([#297](https://github.com/mnemnk/mnemnk-app/issues/297)) ([c50bd94](https://github.com/mnemnk/mnemnk-app/commit/c50bd94e769b5567e368c12f35895b983bcfd25f))
+
 ## [0.16.1](https://github.com/mnemnk/mnemnk-app/compare/v0.16.0...v0.16.1) (2025-04-21)
 
 ## [0.16.0](https://github.com/mnemnk/mnemnk-app/compare/v0.15.3...v0.16.0) (2025-04-21)
