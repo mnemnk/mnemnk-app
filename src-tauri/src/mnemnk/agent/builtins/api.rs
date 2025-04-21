@@ -8,7 +8,6 @@ mod implementation {
     use std::sync::{Arc, Mutex};
     use tauri::{AppHandle, Manager};
     use tokio::net::TcpListener;
-    use tokio::signal;
     use tokio::time::Duration;
     use tower_http::timeout::TimeoutLayer;
 
@@ -162,12 +161,9 @@ mod implementation {
                     .layer((TimeoutLayer::new(Duration::from_secs(10)),));
 
                 if let Ok(listener) = TcpListener::bind(&address).await {
-                    axum::serve(listener, app)
-                        .with_graceful_shutdown(shutdown_signal())
-                        .await
-                        .unwrap_or_else(|e| {
-                            log::error!("API server error: {}", e);
-                        });
+                    axum::serve(listener, app).await.unwrap_or_else(|e| {
+                        log::error!("API server error: {}", e);
+                    });
                 } else {
                     log::error!("Failed to bind to address: {}", address);
                 }
@@ -227,30 +223,6 @@ mod implementation {
         }
 
         Ok(Json(json!({"status": "ok"})))
-    }
-
-    async fn shutdown_signal() {
-        let ctrl_c = async {
-            signal::ctrl_c()
-                .await
-                .expect("failed to install Ctrl+C handler");
-        };
-
-        #[cfg(unix)]
-        let terminate = async {
-            signal::unix::signal(signal::unix::SignalKind::terminate())
-                .expect("failed to install signal handler")
-                .recv()
-                .await;
-        };
-
-        #[cfg(not(unix))]
-        let terminate = std::future::pending::<()>();
-
-        tokio::select! {
-            _ = ctrl_c => {},
-            _ = terminate => {},
-        }
     }
 }
 
