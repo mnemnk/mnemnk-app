@@ -97,7 +97,6 @@ Install each agent from their respective pages:
 
 - [mnemnk-lifelogging-agents](https://github.com/mnemnk/mnemnk-lifelogging-agents)
   - Includes the following essential agents.
-  - [mnemnk-api](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-api)
   - [mnemnk-application](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-application)
   - [mnemnk-screen](https://github.com/mnemnk/mnemnk-lifelogging-agents/tree/main/mnemnk-screen)
 - [mnemnk-langchain](https://github.com/mnemnk/mnemnk-langchain)
@@ -131,6 +130,10 @@ Akira Ishino - [stn](https://github.com/stn) - akira@lumilab.jp
 * [Svelte Flow](https://svelteflow.dev/)
 * [Tailwind CSS](https://tailwindcss.com/)
 * [Flowbite Svelte](https://flowbite-svelte.com/)
+
+* API agent
+  * [axum](https://github.com/tokio-rs/axum)
+  * [tower](https://github.com/tower-rs/tower)
 
 <!----------------------------------------------------------------------------->
 

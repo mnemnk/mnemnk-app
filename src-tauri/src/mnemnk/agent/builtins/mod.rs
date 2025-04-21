@@ -1,5 +1,6 @@
 use super::AgentDefinitions;
 
+mod api;
 mod board;
 mod command;
 mod core;
@@ -13,6 +14,7 @@ mod utils;
 pub(super) use command::CommandAgent;
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
+    api::init_agent_defs(defs);
     board::init_agent_defs(defs);
     core::init_agent_defs(defs);
     database::init_agent_defs(defs);

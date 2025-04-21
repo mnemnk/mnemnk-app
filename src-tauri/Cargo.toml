@@ -45,8 +45,17 @@ unicode-normalization = "0.1.24"
 unicode-script = "0.5.7"
 unicode-segmentation = "1.12.0"
 
+# API server dependencies
+axum = { version = "0.8", optional = true }
+axum-auth = { version = "0.8", features = ["auth-bearer"], optional = true }
+tower-http = { version = "0.6", features = ["timeout"], optional = true }
+
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
+
+[features]
+default = ["api"]
+api = ["axum", "axum-auth", "tower-http"]
