@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.16.0](https://github.com/mnemnk/mnemnk-app/compare/v0.15.3...v0.16.0) (2025-04-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 Rename Database agent to Event Database
+
+* 💡 rename database agent to event database ([#291](https://github.com/mnemnk/mnemnk-app/issues/291)) ([a743af2](https://github.com/mnemnk/mnemnk-app/commit/a743af2bd5c3f00210055114fcae124a5fc15d16))
+
+
+### Features
+
+* 🎸 export and import events ([#289](https://github.com/mnemnk/mnemnk-app/issues/289)) ([cf2dc9b](https://github.com/mnemnk/mnemnk-app/commit/cf2dc9b84b24a7456ac40d70c09dddc263e75364)), closes [#194](https://github.com/mnemnk/mnemnk-app/issues/194)
+* 🎸 interval timer agent ([#283](https://github.com/mnemnk/mnemnk-app/issues/283)) ([a08d898](https://github.com/mnemnk/mnemnk-app/commit/a08d898b23e4d3c966553727cf34b3446a856151))
+* 🎸 interval timer agent support ms ([#285](https://github.com/mnemnk/mnemnk-app/issues/285)) ([1d4a393](https://github.com/mnemnk/mnemnk-app/commit/1d4a3939ee9d9d74fa68aa3a00c8c72c7ab4810e))
+* 🎸 run agents async ([#279](https://github.com/mnemnk/mnemnk-app/issues/279)) ([90e9190](https://github.com/mnemnk/mnemnk-app/commit/90e9190ba7286ab2e63a9986a0af1a59f023af18))
+
+
+### Bug Fixes
+
+* 🐛 board ([#287](https://github.com/mnemnk/mnemnk-app/issues/287)) ([21acc09](https://github.com/mnemnk/mnemnk-app/commit/21acc090acdbb86a0a486f800d01ce03f213af76))
+* 🐛 syncFlow error ([#280](https://github.com/mnemnk/mnemnk-app/issues/280)) ([c7e8e3b](https://github.com/mnemnk/mnemnk-app/commit/c7e8e3b5e784a6b5f266a6a7aee7c31c60a686b3))
+
 ## [0.15.3](https://github.com/mnemnk/mnemnk-app/compare/v0.15.2...v0.15.3) (2025-04-18)
 
 
