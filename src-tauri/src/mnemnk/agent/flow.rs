@@ -111,17 +111,42 @@ fn agent_flows_dir(app: &AppHandle) -> Option<PathBuf> {
 
 fn read_agent_flows<P: AsRef<Path>>(dir: P) -> Result<AgentFlows> {
     let mut flows: AgentFlows = Default::default();
-    for entry in std::fs::read_dir(dir)? {
+    let base_dir = dir.as_ref().to_path_buf();
+    read_agent_flows_recursive(&base_dir, &base_dir, &mut flows)?;
+    Ok(flows)
+}
+
+fn read_agent_flows_recursive<P: AsRef<Path>>(
+    base_dir: &Path,
+    current_dir: P,
+    flows: &mut AgentFlows,
+) -> Result<()> {
+    for entry in std::fs::read_dir(current_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_file() || path.extension().unwrap_or_default() != "json" {
-            // TODO: subdirectories support
-            continue;
+
+        if path.is_dir() {
+            // Recursively process subdirectories
+            read_agent_flows_recursive(base_dir, &path, flows)?;
+        } else if path.is_file() && path.extension().unwrap_or_default() == "json" {
+            // Process JSON files
+            let mut flow = read_agent_flow(path.clone())?;
+
+            // Set the flow name to be the relative path from base_dir (without extension)
+            if let Some(relative_path) = path.strip_prefix(base_dir).ok() {
+                let relative_path_str = relative_path.to_string_lossy();
+                // Remove the .json extension
+                let flow_name = relative_path_str
+                    .trim_end_matches(".json")
+                    .replace('\\', "/"); // Ensure consistent path separators
+
+                flow.name = Some(flow_name.clone());
+                flows.insert(flow_name, flow);
+            }
         }
-        let flow = read_agent_flow(path)?;
-        flows.insert(flow.name.clone().unwrap(), flow);
     }
-    Ok(flows)
+
+    Ok(())
 }
 
 fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
@@ -130,31 +155,62 @@ fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
     }
     let content = std::fs::read_to_string(&path)?;
     let mut flow: AgentFlow = serde_json::from_str(&content)?;
-
-    let name = path.file_stem().unwrap().to_string_lossy().to_string();
-    flow.name = Some(name);
-
     flow.path = Some(path);
-
     Ok(flow)
 }
 
-pub fn rename_agent_flow(env: &AgentEnv, old_name: &str, new_name: &str) -> Result<String> {
+pub fn rename_agent_flow(
+    app: &AppHandle,
+    env: &AgentEnv,
+    old_name: &str,
+    new_name: &str,
+) -> Result<String> {
+    if old_name == new_name {
+        return Ok(old_name.to_string());
+    }
+
     let new_name = env.rename_agent_flow(old_name, new_name)?;
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.get_mut(&new_name) else {
         bail!("flow::rename_agent_flow: Agent flow {} not found", new_name);
     };
-    if let Some(path) = &flow.path {
+
+    // Check if the flow already saved
+    if let Some(path) = flow.path.clone() {
+        let base_dir = agent_flows_dir(app).context("Agent flows directory not found")?;
+
+        let mut new_path = base_dir.clone();
+
+        let path_components: Vec<&str> = new_name.split('/').collect();
+        for &component in &path_components[..path_components.len() - 1] {
+            new_path = new_path.join(component);
+        }
+        // Ensure the parent directory exists
+        if !new_path.exists() {
+            std::fs::create_dir_all(new_path.clone())?;
+        }
+
+        new_path = new_path
+            .join(path_components.last().context("no last component")?)
+            .with_extension("json");
+
         // Rename the file
-        let new_path = path.with_file_name(&new_name).with_extension("json");
         std::fs::rename(&path, &new_path)?;
         flow.path = Some(new_path);
+
+        // Clean up empty directories
+        let mut old_dir = path.parent().context("no parent")?.to_path_buf();
+        while old_dir != base_dir {
+            // Try to remove directory (will only succeed if empty)
+            let _ = std::fs::remove_dir(&old_dir);
+            old_dir = old_dir.parent().context("no parent")?.to_path_buf();
+        }
     }
+
     Ok(new_name)
 }
 
-pub fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
+pub fn delete_agent_flow(app: &AppHandle, env: &AgentEnv, name: &str) -> Result<()> {
     let mut flows = env.flows.lock().unwrap();
     let Some(flow) = flows.remove(name) else {
         bail!("flow::delete_agent_flow: Agent flow {} not found", name);
@@ -167,6 +223,15 @@ pub fn delete_agent_flow(env: &AgentEnv, name: &str) -> Result<()> {
 
     // Delete the file
     std::fs::remove_file(path).context("Failed to delete agent flow file")?;
+
+    // Clean up empty directories
+    let base_dir = agent_flows_dir(app).context("Agent flows directory not found")?;
+    let mut old_dir = path.parent().context("no parent")?.to_path_buf();
+    while old_dir != base_dir {
+        // Try to remove directory (will only succeed if empty)
+        let _ = std::fs::remove_dir(&old_dir);
+        old_dir = old_dir.parent().context("no parent")?.to_path_buf();
+    }
 
     Ok(())
 }
@@ -196,8 +261,20 @@ pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentF
             path = p.clone();
         } else {
             // If flow.path is None, this is the first time saving the AgentFlow, so set the path
-            let dir = agent_flows_dir(&app).context("Agent flows directory not found")?;
-            path = dir.join(name.clone()).with_extension("json");
+            let mut new_path = agent_flows_dir(&app).context("Agent flows directory not found")?;
+
+            let path_components: Vec<&str> = name.split('/').collect();
+            for &component in &path_components[..path_components.len() - 1] {
+                new_path = new_path.join(component);
+            }
+            // Ensure the parent directory exists
+            if !new_path.exists() {
+                std::fs::create_dir_all(new_path.clone())?;
+            }
+
+            path = new_path
+                .join(path_components.last().context("no last component")?)
+                .with_extension("json");
         }
     }
 
