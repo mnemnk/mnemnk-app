@@ -8,11 +8,15 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                .level(if cfg!(debug_assertions) {
-                    log::LevelFilter::Debug
-                } else {
-                    log::LevelFilter::Info
-                })
+                .level(log::LevelFilter::Info)
+                .level_for(
+                    "mnemnk_app_lib::*",
+                    if cfg!(debug_assertions) {
+                        log::LevelFilter::Debug
+                    } else {
+                        log::LevelFilter::Info
+                    },
+                )
                 .build(),
         )
         .plugin(tauri_plugin_store::Builder::new().build())
