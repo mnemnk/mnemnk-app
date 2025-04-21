@@ -1,5 +1,9 @@
 <script lang="ts">
+  import { getContext } from "svelte";
+
   import { Accordion, AccordionItem } from "flowbite-svelte";
+
+  import type { AgentFlow } from "@/lib/types";
 
   import FlowListItems from "./FlowListItems.svelte";
 
@@ -10,6 +14,14 @@
   }
 
   let { flowNames, currentFlowName, changeFlowName }: Props = $props();
+
+  const flows = getContext<() => Record<string, AgentFlow>>("agentFlows");
+
+  function hasEnabledAgents(flowName: string): boolean {
+    const flow = flows()[flowName];
+    if (!flow) return false;
+    return flow.nodes.some((node) => node.data.enabled);
+  }
 
   const directories = $derived.by(() => {
     const result: Record<string, any> = {
@@ -72,13 +84,19 @@
     {#each directories["."] as flowName}
       <button
         type="button"
-        class="w-full text-left p-1 pl-3 text-gray-400 hover:text-black hover:bg-gray-200 dark:hover:bg-gray-400"
+        class="w-full text-left p-1 pl-3 text-gray-400 hover:text-black hover:bg-gray-200 dark:hover:bg-gray-400 flex items-center"
         onclick={() => changeFlowName(flowName)}
       >
         {#if flowName === currentFlowName}
           <span class="text-semibold text-gray-900 dark:text-white">{flowName}</span>
         {:else}
           <span>{flowName}</span>
+        {/if}
+        {#if hasEnabledAgents(flowName)}
+          <span
+            class="flex-none inline-block w-2 h-2 ml-1 bg-green-500 rounded-full mr-2"
+            title="active"
+          ></span>
         {/if}
       </button>
     {/each}
@@ -94,7 +112,12 @@
           {dir}
         </div>
         <Accordion flush>
-          <FlowListItems directories={directories[dir]} {currentFlowName} {changeFlowName} />
+          <FlowListItems
+            directories={directories[dir]}
+            {currentFlowName}
+            {changeFlowName}
+            {hasEnabledAgents}
+          />
         </Accordion>
       </AccordionItem>
     {/each}
