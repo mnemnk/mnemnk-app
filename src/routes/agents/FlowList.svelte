@@ -1,27 +1,16 @@
 <script lang="ts">
-  import { getContext } from "svelte";
-
   import { Accordion, AccordionItem } from "flowbite-svelte";
-
-  import type { AgentFlow } from "@/lib/types";
 
   import FlowListItems from "./FlowListItems.svelte";
 
   interface Props {
     flowNames: string[];
     currentFlowName: string;
+    flowActivities: Record<string, any>;
     changeFlowName: (flowName: string) => void;
   }
 
-  let { flowNames, currentFlowName, changeFlowName }: Props = $props();
-
-  const flows = getContext<() => Record<string, AgentFlow>>("agentFlows");
-
-  function hasEnabledAgents(flowName: string): boolean {
-    const flow = flows()[flowName];
-    if (!flow) return false;
-    return flow.nodes.some((node) => node.data.enabled);
-  }
+  let { flowNames, currentFlowName, flowActivities, changeFlowName }: Props = $props();
 
   const directories = $derived.by(() => {
     const result: Record<string, any> = {
@@ -92,7 +81,7 @@
         {:else}
           <span>{flowName}</span>
         {/if}
-        {#if hasEnabledAgents(flowName)}
+        {#if flowActivities[flowName]}
           <span
             class="flex-none inline-block w-2 h-2 ml-1 bg-green-500 rounded-full mr-2"
             title="active"
@@ -115,8 +104,8 @@
           <FlowListItems
             directories={directories[dir]}
             {currentFlowName}
+            {flowActivities}
             {changeFlowName}
-            {hasEnabledAgents}
           />
         </Accordion>
       </AccordionItem>

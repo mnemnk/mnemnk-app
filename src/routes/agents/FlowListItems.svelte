@@ -6,11 +6,11 @@
   interface Props {
     directories: Record<string, any>;
     currentFlowName: string;
+    flowActivities: Record<string, any>;
     changeFlowName: (flowName: string) => void;
-    hasEnabledAgents: (flowName: string) => boolean;
   }
 
-  let { directories, currentFlowName, changeFlowName, hasEnabledAgents }: Props = $props();
+  let { directories, currentFlowName, flowActivities, changeFlowName }: Props = $props();
 
   const dirKeys = Object.keys(directories).sort();
 
@@ -37,8 +37,10 @@
           <span>{getDisplayName(flowName)}</span>
         {/if}
 
-        {#if hasEnabledAgents(flowName)}
-          <span class="flex-none inline-block w-2 h-2 bg-green-500 rounded-full mr-2" title="active"
+        {#if flowActivities[flowName]}
+          <span
+            class="flex-none inline-block w-2 h-2 ml-1 bg-green-500 rounded-full mr-2"
+            title="active"
           ></span>
         {/if}
       </button>
@@ -55,8 +57,8 @@
         <FlowListItems
           directories={directories[key]}
           {currentFlowName}
+          {flowActivities}
           {changeFlowName}
-          {hasEnabledAgents}
         />
       </Accordion>
     </AccordionItem>
