@@ -1,6 +1,7 @@
 <script lang="ts">
   import Agent from "./Agent.svelte";
   import Core from "./Core.svelte";
+  import Database from "./Database.svelte";
 
   const { data } = $props();
 
@@ -13,9 +14,7 @@
   <h1 class="text-xl font-semibold sm:text-2xl">Settings</h1>
   <Core {settings} />
 
-  <!-- <Card title="Search">
-    <Button onclick={reindex_text} class="w-fit m-2" outline>Reindex Text</Button>
-  </Card> -->
+  <Database />
 
   <h2 class="text-xl font-semibold sm:text-2xl">Agents</h2>
   {#each Object.entries(agentGlobalConfigs) as [agentName, agentConfig]}
