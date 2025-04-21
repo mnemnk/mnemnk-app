@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.1](https://github.com/mnemnk/mnemnk-app/compare/v0.17.0...v0.17.1) (2025-04-21)
+
+
+### Features
+
+* 🎸 flow directory ([#299](https://github.com/mnemnk/mnemnk-app/issues/299)) ([2b57dc6](https://github.com/mnemnk/mnemnk-app/commit/2b57dc67bcadfc686f22f87d9ff7015c43c562bd))
+* 🎸 flow folder ([#298](https://github.com/mnemnk/mnemnk-app/issues/298)) ([dd882b9](https://github.com/mnemnk/mnemnk-app/commit/dd882b9f6efefc45b3df9cfc8bb5557cbbf17de8))
+* 🎸 indicate running flows ([#300](https://github.com/mnemnk/mnemnk-app/issues/300)) ([9979a24](https://github.com/mnemnk/mnemnk-app/commit/9979a24fff269dfdbc80cf7e4af426a643016016))
+* 🎸 indicate running flows ([#301](https://github.com/mnemnk/mnemnk-app/issues/301)) ([9bde020](https://github.com/mnemnk/mnemnk-app/commit/9bde0202d6f5d2282ff0e4939b774167ff7c2271)), closes [#286](https://github.com/mnemnk/mnemnk-app/issues/286)
+
 ## [0.17.0](https://github.com/mnemnk/mnemnk-app/compare/v0.16.1...v0.17.0) (2025-04-21)
 
 
