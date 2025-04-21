@@ -7,9 +7,10 @@
     directories: Record<string, any>;
     currentFlowName: string;
     changeFlowName: (flowName: string) => void;
+    hasEnabledAgents: (flowName: string) => boolean;
   }
 
-  let { directories, currentFlowName, changeFlowName }: Props = $props();
+  let { directories, currentFlowName, changeFlowName, hasEnabledAgents }: Props = $props();
 
   const dirKeys = Object.keys(directories).sort();
 
@@ -26,7 +27,7 @@
     {#each flowNames as flowName}
       <button
         type="button"
-        class="w-full text-left p-1 pl-3 text-gray-400 hover:text-black hover:bg-gray-200 dark:hover:bg-gray-400"
+        class="w-full text-left p-1 pl-3 text-gray-400 hover:text-black hover:bg-gray-200 dark:hover:bg-gray-400 flex items-center"
         onclick={() => changeFlowName(flowName)}
       >
         {#if flowName === currentFlowName}
@@ -34,6 +35,11 @@
           >
         {:else}
           <span>{getDisplayName(flowName)}</span>
+        {/if}
+
+        {#if hasEnabledAgents(flowName)}
+          <span class="flex-none inline-block w-2 h-2 bg-green-500 rounded-full mr-2" title="active"
+          ></span>
         {/if}
       </button>
     {/each}
@@ -46,7 +52,12 @@
         {key}
       </div>
       <Accordion flush>
-        <FlowListItems directories={directories[key]} {currentFlowName} {changeFlowName} />
+        <FlowListItems
+          directories={directories[key]}
+          {currentFlowName}
+          {changeFlowName}
+          {hasEnabledAgents}
+        />
       </Accordion>
     </AccordionItem>
   {/if}
