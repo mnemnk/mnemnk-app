@@ -7,13 +7,13 @@ use crate::mnemnk::agent::{
 };
 use crate::mnemnk::store;
 
-// Database
+// Event Database
 
-struct DatabaseAgent {
+struct EventDatabaseAgent {
     data: AsAgentData,
 }
 
-impl AsAgent for DatabaseAgent {
+impl AsAgent for EventDatabaseAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -42,11 +42,15 @@ impl AsAgent for DatabaseAgent {
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // DatabaseAgent
     defs.insert(
-        "$database".into(),
-        AgentDefinition::new("Database", "$database", Some(new_boxed::<DatabaseAgent>))
-            .with_title("Database")
-            .with_description("Store data")
-            .with_category("Core/Database")
-            .with_inputs(vec!["event"]),
+        "$event_database".into(),
+        AgentDefinition::new(
+            "Database",
+            "$event_database",
+            Some(new_boxed::<EventDatabaseAgent>),
+        )
+        .with_title("Event Database")
+        .with_description("Store events in the database")
+        .with_category("Core/Database")
+        .with_inputs(vec!["event"]),
     );
 }
