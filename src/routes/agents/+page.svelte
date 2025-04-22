@@ -4,13 +4,15 @@
   import { getContext, onMount } from "svelte";
 
   import {
-    SvelteFlow,
-    Controls,
-    type NodeTypes,
     useSvelteFlow,
-    MiniMap,
     Background,
     BackgroundVariant,
+    Controls,
+    MiniMap,
+    SvelteFlow,
+    type Edge,
+    type Node,
+    type NodeTypes,
   } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
@@ -66,16 +68,24 @@
     agent: AgentNode,
   };
 
+  let nodes = $state.raw<AgentFlowNode[]>([]);
+  let edges = $state.raw<AgentFlowEdge[]>([]);
+
   const agentDefs = data.agentDefs;
   const flows = getContext<() => Record<string, AgentFlow>>("agentFlows");
 
-  let flowNames = $state<string[]>([]);
+  let flowNames = $state.raw<string[]>([]);
+
+  let flowActivities = $state<Record<string, boolean>>({});
+
+  function updateNodesAndEdges() {
+    nodes = [...flows()[flowNameState.name].nodes];
+    edges = [...flows()[flowNameState.name].edges];
+  }
 
   function updateFlowNames() {
     flowNames = Object.keys(flows()).sort();
   }
-
-  let flowActivities = $state<Record<string, boolean>>({});
 
   function updateFlowActivities() {
     flowActivities = Object.fromEntries(
@@ -91,6 +101,7 @@
   }
 
   onMount(() => {
+    updateNodesAndEdges();
     updateFlowNames();
     updateFlowActivities();
     return async () => {
@@ -101,17 +112,22 @@
   async function changeFlowName(name: string) {
     await syncFlow();
     flowNameState.name = name;
+    updateNodesAndEdges();
   }
 
-  let nodes = $state.raw<AgentFlowNode[]>([]);
-  let edges = $state.raw<AgentFlowEdge[]>([]);
-
-  $effect(() => {
-    if (flowNameState.name in flows()) {
-      nodes = [...flows()[flowNameState.name].nodes];
-      edges = [...flows()[flowNameState.name].edges];
+  async function handleOnDelete(params: { nodes: Node[]; edges: Edge[] }) {
+    if (params.edges && params.edges.length > 0) {
+      await checkEdgeChange(edges);
     }
-  });
+    if (params.nodes && params.nodes.length > 0) {
+      await checkNodeChange(nodes);
+      updateCurrentFlowActivity();
+    }
+  }
+
+  async function handleOnConnect() {
+    await checkEdgeChange(edges);
+  }
 
   async function checkNodeChange(nodes: AgentFlowNode[]) {
     const nodeIds = new Set(nodes.map((node) => node.id));
@@ -149,15 +165,6 @@
     }
   }
 
-  $effect(() => {
-    checkNodeChange(nodes);
-    updateCurrentFlowActivity();
-  });
-
-  $effect(() => {
-    checkEdgeChange(edges);
-  });
-
   async function syncFlow() {
     const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
     flows()[flowNameState.name] = deserializeAgentFlow(flow, agentDefs);
@@ -175,7 +182,7 @@
     return [selectedNodes, selectedEdges];
   }
 
-  function cutNodesAndEdges() {
+  async function cutNodesAndEdges() {
     const [selectedNodes, selectedEdges] = selectedNodesAndEdges();
     if (selectedNodes.length == 0 && selectedEdges.length == 0) {
       return;
@@ -185,7 +192,9 @@
 
     nodes = nodes.filter((node) => !node.selected);
     edges = edges.filter((edge) => !edge.selected);
-    // nodes and edges will be synced by checkNodeChange and checkEdgeChange
+    await checkNodeChange(nodes);
+    await checkEdgeChange(edges);
+    updateCurrentFlowActivity();
   }
 
   function copyNodesAndEdges() {
@@ -277,7 +286,7 @@
     });
 
     hotkeys("ctrl+x", () => {
-      cutNodesAndEdges();
+      /* await */ cutNodesAndEdges();
     });
     hotkeys("ctrl+c", () => {
       copyNodesAndEdges();
@@ -365,7 +374,7 @@
     updateFlowNames();
     updateFlowActivities();
     // TODO: create a new flow when deleting the main flow
-    flowNameState.name = "main";
+    changeFlowName("main");
   }
 
   async function onSaveFlow() {
@@ -524,6 +533,8 @@
     onnodeclick={handleNodeClick}
     onselectionclick={handleSelectionClick}
     onpaneclick={handlePaneClick}
+    ondelete={handleOnDelete}
+    onconnect={handleOnConnect}
     deleteKey={["Delete"]}
     connectionRadius={38}
     colorMode="dark"
