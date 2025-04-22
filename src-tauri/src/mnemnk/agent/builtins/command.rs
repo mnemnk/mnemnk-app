@@ -163,8 +163,9 @@ impl AsAgent for CommandAgent {
                             let mut commands = env.commands.lock().unwrap();
                             commands.remove(&agent_id);
                         }
+                        rx.close();
                         // TODO: Emit an event to the frontend indicating the agent has stopped
-                        break;
+                        return;
                     }
 
                     CommandEvent::Error(e) => {

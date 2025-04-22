@@ -349,6 +349,10 @@ impl AgentEnv {
                                     log::error!("Config Error {}: {}", agent_id, e);
                                 });
                         }
+                        AgentMessage::Stop => {
+                            rx.close();
+                            return;
+                        }
                     }
                 }
             });
@@ -372,8 +376,19 @@ impl AgentEnv {
         };
         if agent_status == agent::AgentStatus::Start {
             log::info!("Stopping agent {}", agent_id);
+
+            {
+                let mut agent_txs = self.agent_txs.lock().unwrap();
+                if let Some(tx) = agent_txs.remove(agent_id) {
+                    tx.try_send(AgentMessage::Stop).unwrap_or_else(|e| {
+                        log::error!("Failed to send stop message to agent {}: {}", agent_id, e);
+                    });
+                }
+            }
+
             agent.lock().unwrap().stop()?;
         }
+
         Ok(())
     }
 
@@ -390,7 +405,9 @@ impl AgentEnv {
             let agent = agent.lock().unwrap();
             agent.status().clone()
         };
-        if agent_status == agent::AgentStatus::Start {
+        if agent_status == agent::AgentStatus::Init {
+            agent.lock().unwrap().set_config(config.clone())?;
+        } else if agent_status == agent::AgentStatus::Start {
             let tx = {
                 let agent_txs = self.agent_txs.lock().unwrap();
                 let Some(tx) = agent_txs.get(agent_id) else {

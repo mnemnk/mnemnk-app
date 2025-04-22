@@ -30,6 +30,7 @@ pub enum AgentStatus {
 pub enum AgentMessage {
     Input { ch: String, data: AgentData },
     Config { config: AgentConfig },
+    Stop,
 }
 
 pub trait Agent {
