@@ -164,12 +164,14 @@ impl AsAgent for IntervalTimerAgent {
         if let Some(interval) = config.get("interval") {
             if let Some(interval_str) = interval.as_str() {
                 let new_interval = parse_duration_to_ms(interval_str)?;
-                if new_interval != self.interval_ms && *self.status() == AgentStatus::Start {
-                    // Restart the timer with the new interval
-                    self.stop_timer()?;
-                    self.start_timer()?;
+                if new_interval != self.interval_ms {
+                    self.interval_ms = new_interval;
+                    if *self.status() == AgentStatus::Start {
+                        // Restart the timer with the new interval
+                        self.stop_timer()?;
+                        self.start_timer()?;
+                    }
                 }
-                self.interval_ms = new_interval;
             }
         }
         Ok(())
