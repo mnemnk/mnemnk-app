@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.2](https://github.com/mnemnk/mnemnk-app/compare/v0.17.1...v0.17.2) (2025-04-22)
+
+
+### Bug Fixes
+
+* 🐛 set_config doesn't work before start ([#303](https://github.com/mnemnk/mnemnk-app/issues/303)) ([f1dc7a0](https://github.com/mnemnk/mnemnk-app/commit/f1dc7a062c80cc2cb2833ca963bec3f50ebdf2b0))
+
 ## [0.17.1](https://github.com/mnemnk/mnemnk-app/compare/v0.17.0...v0.17.1) (2025-04-21)
 
 
