@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.3](https://github.com/mnemnk/mnemnk-app/compare/v0.17.2...v0.17.3) (2025-04-22)
+
+
+### Bug Fixes
+
+* 🐛 old flow remains after rename and delete flow ([#304](https://github.com/mnemnk/mnemnk-app/issues/304)) ([502d508](https://github.com/mnemnk/mnemnk-app/commit/502d5081cbafc78184e380f2e721f496c7787b0b))
+
 ## [0.17.2](https://github.com/mnemnk/mnemnk-app/compare/v0.17.1...v0.17.2) (2025-04-22)
 
 
