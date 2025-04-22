@@ -354,7 +354,10 @@
     delete flows()[oldName];
     updateFlowNames();
     updateFlowActivities();
-    await changeFlowName(newName);
+    // We don't need to sync the current flow.
+    // await changeFlowName(newName);
+    flowNameState.name = newName;
+    updateNodesAndEdges();
   }
 
   // Delete Flow
@@ -374,7 +377,8 @@
     updateFlowNames();
     updateFlowActivities();
     // TODO: create a new flow when deleting the main flow
-    changeFlowName("main");
+    flowNameState.name = "main";
+    updateNodesAndEdges();
   }
 
   async function onSaveFlow() {
