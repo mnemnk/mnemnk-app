@@ -1,7 +1,7 @@
 use std::io::{BufRead, Write};
 use std::sync::{LazyLock, Mutex};
 
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use base64::{self, Engine as _};
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
 use image::RgbaImage;
@@ -17,7 +17,7 @@ use tauri::{
     http::{self, request::Request, response::Response, StatusCode},
     AppHandle, Manager, State,
 };
-use tokio_util::task::TaskTracker;
+use tokio::sync::{mpsc, oneshot};
 
 use super::{agent::AgentData, tokenize::tokenize_text};
 use crate::mnemnk::settings::{data_dir, CoreSettings};
@@ -43,15 +43,34 @@ struct Record {
     id: RecordId,
 }
 
+// Event types that can be sent to the store event loop
+enum StoreEvent {
+    InsertData {
+        table: String,
+        key: String,
+        value: serde_json::Value,
+    },
+    CreateEvent {
+        data: AgentData,
+        app: AppHandle,
+    },
+    Shutdown {
+        completion: oneshot::Sender<()>,
+    },
+}
+
 pub struct MnemnkDatabase {
     db: Surreal<Db>,
-    tracker: TaskTracker,
+    event_tx: mpsc::Sender<StoreEvent>,
 }
 
 pub async fn init(app: &AppHandle) -> Result<()> {
+    // TODO: the number of events should be configurable
+    let (event_tx, mut event_rx) = mpsc::channel::<StoreEvent>(1000);
+
     let store = MnemnkDatabase {
         db: Surreal::init(),
-        tracker: TaskTracker::new(),
+        event_tx,
     };
 
     let data_dir = data_dir(app).context("data_dir is not set")?;
@@ -88,6 +107,36 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .await?;
     log::info!("store::init: {:?}", _result);
 
+    let db_clone = store.db.clone();
+    tauri::async_runtime::spawn(async move {
+        log::info!("Store event loop started");
+
+        while let Some(event) = event_rx.recv().await {
+            match event {
+                StoreEvent::InsertData { table, key, value } => {
+                    process_insert(&db_clone, table, key, value)
+                        .await
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to insert data: {}", e);
+                        });
+                }
+                StoreEvent::CreateEvent { data, app } => {
+                    process_event(&db_clone, &app, data)
+                        .await
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to create event: {}", e);
+                        });
+                }
+                StoreEvent::Shutdown { completion } => {
+                    log::info!("Store event loop shutting down");
+                    let _ = completion.send(());
+                    break;
+                }
+            }
+        }
+        log::info!("Store event loop terminated");
+    });
+
     app.manage(store);
 
     Ok(())
@@ -95,133 +144,145 @@ pub async fn init(app: &AppHandle) -> Result<()> {
 
 pub async fn quit(app: &AppHandle) {
     let state = app.state::<MnemnkDatabase>();
-    state.tracker.close();
-    state.tracker.wait().await;
+
+    let (tx, rx) = oneshot::channel();
+    if let Err(e) = state
+        .event_tx
+        .send(StoreEvent::Shutdown { completion: tx })
+        .await
+    {
+        log::error!("Failed to send shutdown event to store: {}", e);
+    }
+
+    // Wait for the event loop to complete (with a timeout)
+    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(())) => {
+            log::info!("Store shutdown complete");
+        }
+        Ok(Err(e)) => {
+            log::error!("Store shutdown failed: {}", e);
+        }
+        Err(_) => {
+            log::warn!("Store shutdown did not complete within 5 seconds");
+        }
+    }
 }
 
 pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Value) {
     let state = app.state::<MnemnkDatabase>();
 
-    if state.tracker.is_closed() {
-        // The system is shutting down
-        log::warn!("insert: database is closed");
+    let event = StoreEvent::InsertData { table, key, value };
+
+    if let Err(e) = state.event_tx.try_send(event) {
+        log::error!("Failed to send insert event to store: {}", e);
     }
+}
 
-    let db = state.db.clone();
-    state.tracker.spawn(async move {
-        let record: Option<Record> = db
-            .insert((table, key))
-            .content(value)
-            .await
-            .unwrap_or_default();
-
-        if record.is_none() {
-            log::error!("Failed to store event");
-        }
-    });
+async fn process_insert(
+    db: &Surreal<Db>,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<()> {
+    let _: Option<Record> = db
+        .insert((table, key))
+        .content(value)
+        .await
+        .context("Failed to insert record")?;
+    Ok(())
 }
 
 pub fn create_event(app: &AppHandle, data: AgentData) {
     let state = app.state::<MnemnkDatabase>();
 
-    if state.tracker.is_closed() {
-        // The system is shutting down
-        log::warn!("store: database is closed");
+    let app_clone = app.clone();
+    let event = StoreEvent::CreateEvent {
+        data,
+        app: app_clone,
+    };
+
+    if let Err(e) = state.event_tx.try_send(event) {
+        log::error!("Failed to send create_event to store: {}", e);
     }
+}
 
-    let db = state.db.clone();
-    let app = app.clone();
-    state.tracker.spawn(async move {
-        let kind = data.kind;
-        let Some(mut json_value) = data.value.as_object().cloned() else {
-            log::error!("store: data is not an object");
-            return;
-        };
+async fn process_event(db: &Surreal<Db>, app: &AppHandle, data: AgentData) -> Result<()> {
+    let kind = data.kind;
+    let Some(mut json_value) = data.value.as_object().cloned() else {
+        return Err(anyhow::anyhow!("store: data is not an object"));
+    };
 
-        // extract timestamp from the value if it exists
-        let timestamp = if let Some(t) = json_value.get("t").cloned() {
-            // remove timestamp from the value
-            json_value.as_object_mut().unwrap().remove("t");
-            t.as_i64().unwrap()
-        } else {
-            Utc::now().timestamp_millis()
-        };
+    // extract timestamp from the value if it exists
+    let timestamp = if let Some(t) = json_value.get("t").cloned() {
+        // remove timestamp from the value
+        json_value.as_object_mut().unwrap().remove("t");
+        t.as_i64().unwrap()
+    } else {
+        Utc::now().timestamp_millis()
+    };
 
-        let Some(utc_dt) = Utc.timestamp_millis_opt(timestamp).single() else {
-            log::error!("store: Failed to parse timestamp: {}", timestamp);
-            return;
-        };
-        let local_dt: DateTime<Local> = DateTime::from(utc_dt);
-        let local_offset = local_dt.offset().local_minus_utc() as i64;
+    let Some(utc_dt) = Utc.timestamp_millis_opt(timestamp).single() else {
+        bail!("Failed to parse timestamp: {}", timestamp);
+    };
+    let local_dt: DateTime<Local> = DateTime::from(utc_dt);
+    let local_offset = local_dt.offset().local_minus_utc() as i64;
 
-        let day_start_hour: u32 = {
-            let settings = app.state::<Mutex<CoreSettings>>();
-            let settings = settings.lock().unwrap();
-            settings.day_start_hour.unwrap_or(0)
-        };
-        let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
-        // let adjusted_dt = if local_dt.hour() < day_start_hour {
-        //     local_dt - chrono::Duration::days(1)
-        // } else {
-        //     local_dt
-        // };
+    let day_start_hour: u32 = {
+        let settings = app.state::<Mutex<CoreSettings>>();
+        let settings = settings.lock().unwrap();
+        settings.day_start_hour.unwrap_or(0)
+    };
+    let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
 
-        // let local_y = adjusted_dt.year() as i64;
-        // let local_ym = local_y * 100 + (adjusted_dt.month() as i64);
-        // let local_ymd = local_ym * 100 + (adjusted_dt.day() as i64);
+    // extract text from the value if it exists
+    let text = if let Some(t) = json_value.get("text").cloned() {
+        // remove the text from the value
+        json_value.as_object_mut().unwrap().remove("text");
+        t.as_str().map(|s| s.to_string())
+    } else {
+        None
+    };
+    let text_tokens = text.as_ref().map(|t| tokenize_text(t));
 
-        // extract text from the value if it exists
-        let text = if let Some(t) = json_value.get("text").cloned() {
-            // remove the text from the value
-            json_value.as_object_mut().unwrap().remove("text");
-            t.as_str().map(|s| s.to_string())
-        } else {
-            None
-        };
-        let text_tokens = text.as_ref().map(|t| tokenize_text(t));
+    // extract image from the value if it exists
+    if let Some(image) = json_value.get("image").cloned() {
+        // remove image from the value. it's too big to store into the database.
+        json_value.as_object_mut().unwrap().remove("image");
+        let image = image.as_str().unwrap().to_string();
 
-        // extract image from the value if it exists
-        if let Some(image) = json_value.get("image").cloned() {
-            // remove image from the value. it's too big to store into the database.
-            json_value.as_object_mut().unwrap().remove("image");
-            let image = image.as_str().unwrap().to_string();
+        if let Some(image_id) = json_value.get("image_id").cloned() {
+            let image_id = image_id.as_str().unwrap().to_string();
 
-            if let Some(image_id) = json_value.get("image_id").cloned() {
-                let image_id = image_id.as_str().unwrap().to_string();
-
-                let app = app.clone();
-                let kind = kind.clone();
-                tauri::async_runtime::spawn(async move {
-                    save_image(&app, kind, image_id, image)
-                        .await
-                        .unwrap_or_else(|e| {
-                            log::error!("Failed to save image: {}", e);
-                        });
-                });
-            }
-        };
-
-        let record: Option<Record> = db
-            .create("event")
-            .content(Event {
-                kind,
-                time: utc_dt.into(),
-                agent: "".to_string(),
-                local_offset,
-                local_y,
-                local_ym,
-                local_ymd,
-                value: json_value,
-                text,
-                text_tokens,
-            })
-            .await
-            .unwrap_or_default();
-
-        if record.is_none() {
-            log::error!("Failed to store event");
+            let app = app.clone();
+            let kind = kind.clone();
+            tauri::async_runtime::spawn(async move {
+                save_image(&app, kind, image_id, image)
+                    .await
+                    .unwrap_or_else(|e| {
+                        log::error!("Failed to save image: {}", e);
+                    });
+            });
         }
-    });
+    };
+
+    let _: Option<Record> = db
+        .create("event")
+        .content(Event {
+            kind,
+            time: utc_dt.into(),
+            agent: "".to_string(),
+            local_offset,
+            local_y,
+            local_ym,
+            local_ymd,
+            value: json_value,
+            text,
+            text_tokens,
+        })
+        .await
+        .context("Failed to create event")?;
+
+    Ok(())
 }
 
 // Image
@@ -534,7 +595,7 @@ async fn reindex_ymd(app: &AppHandle, day_start_hour: u32) -> Result<()> {
     log::info!("store: reindexing local_ymd...");
     let state = app.state::<MnemnkDatabase>();
     let db = state.db.clone();
-    state.tracker.spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let Ok(mut result) = db
             .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
             .await
@@ -602,7 +663,7 @@ struct TextTokens {
 async fn reindex_text(app: &AppHandle) {
     let state = app.state::<MnemnkDatabase>();
     let db = state.db.clone();
-    state.tracker.spawn(async move {
+    tauri::async_runtime::spawn(async move {
         log::info!("store::init: reindexing text");
         let Ok(mut result) = db.query("SELECT id, text FROM event").await else {
             log::error!("store::reindex_text: failed to query events");
