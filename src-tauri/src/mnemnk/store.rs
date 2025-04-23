@@ -155,9 +155,17 @@ pub async fn quit(app: &AppHandle) {
     }
 
     // Wait for the event loop to complete (with a timeout)
-    let _ = tokio::time::timeout(std::time::Duration::from_secs(5), rx).await;
-
-    log::info!("Store shutdown complete");
+    match tokio::time::timeout(std::time::Duration::from_secs(5), rx).await {
+        Ok(Ok(())) => {
+            log::info!("Store shutdown complete");
+        }
+        Ok(Err(e)) => {
+            log::error!("Store shutdown failed: {}", e);
+        }
+        Err(_) => {
+            log::warn!("Store shutdown did not complete within 5 seconds");
+        }
+    }
 }
 
 pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Value) {
