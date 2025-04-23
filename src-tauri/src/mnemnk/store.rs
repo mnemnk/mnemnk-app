@@ -99,7 +99,29 @@ pub async fn quit(app: &AppHandle) {
     state.tracker.wait().await;
 }
 
-pub fn store(app: &AppHandle, data: AgentData) {
+pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Value) {
+    let state = app.state::<MnemnkDatabase>();
+
+    if state.tracker.is_closed() {
+        // The system is shutting down
+        log::warn!("store: database is closed");
+    }
+
+    let db = state.db.clone();
+    state.tracker.spawn(async move {
+        let record: Option<Record> = db
+            .insert((table, key))
+            .content(value)
+            .await
+            .unwrap_or_default();
+
+        if record.is_none() {
+            log::error!("Failed to store event");
+        }
+    });
+}
+
+pub fn create_event(app: &AppHandle, data: AgentData) {
     let state = app.state::<MnemnkDatabase>();
 
     if state.tracker.is_closed() {
