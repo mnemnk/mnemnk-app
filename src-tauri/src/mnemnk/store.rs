@@ -46,6 +46,7 @@ struct Record {
 // Event types that can be sent to the store event loop
 enum StoreEvent {
     InsertData {
+        database: String,
         table: String,
         key: String,
         value: serde_json::Value,
@@ -64,6 +65,9 @@ pub struct MnemnkDatabase {
     event_tx: mpsc::Sender<StoreEvent>,
 }
 
+const MNEMNK_NS: &str = "mnemnk";
+const MNEMNK_DB: &str = "mnemnk";
+
 pub async fn init(app: &AppHandle) -> Result<()> {
     // TODO: the number of events should be configurable
     let (event_tx, mut event_rx) = mpsc::channel::<StoreEvent>(1000);
@@ -79,7 +83,7 @@ pub async fn init(app: &AppHandle) -> Result<()> {
     let db = &store.db;
 
     db.connect::<RocksDb>(db_path).await?;
-    db.use_ns("mnemnk").use_db("mnemnk").await?;
+    db.use_ns(MNEMNK_NS).use_db(MNEMNK_DB).await?;
 
     log::info!("store::init: initializing tables");
     let _result = db
@@ -113,8 +117,13 @@ pub async fn init(app: &AppHandle) -> Result<()> {
 
         while let Some(event) = event_rx.recv().await {
             match event {
-                StoreEvent::InsertData { table, key, value } => {
-                    process_insert(&db_clone, table, key, value)
+                StoreEvent::InsertData {
+                    database,
+                    table,
+                    key,
+                    value,
+                } => {
+                    process_insert(&db_clone, database, table, key, value)
                         .await
                         .unwrap_or_else(|e| {
                             log::error!("Failed to insert data: {}", e);
@@ -168,10 +177,21 @@ pub async fn quit(app: &AppHandle) {
     }
 }
 
-pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Value) {
+pub fn insert(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) {
     let state = app.state::<MnemnkDatabase>();
 
-    let event = StoreEvent::InsertData { table, key, value };
+    let event = StoreEvent::InsertData {
+        database,
+        table,
+        key,
+        value,
+    };
 
     if let Err(e) = state.event_tx.try_send(event) {
         log::error!("Failed to send insert event to store: {}", e);
@@ -180,10 +200,14 @@ pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Va
 
 async fn process_insert(
     db: &Surreal<Db>,
+    database: String,
     table: String,
     key: String,
     value: serde_json::Value,
 ) -> Result<()> {
+    db.use_db(database)
+        .await
+        .context("Failed to use database")?;
     let _: Option<Record> = db
         .insert((table, key))
         .content(value)
@@ -264,6 +288,10 @@ async fn process_event(db: &Surreal<Db>, app: &AppHandle, data: AgentData) -> Re
             });
         }
     };
+
+    db.use_db(MNEMNK_DB)
+        .await
+        .context("Failed to use database")?;
 
     let _: Option<Record> = db
         .create("event")
