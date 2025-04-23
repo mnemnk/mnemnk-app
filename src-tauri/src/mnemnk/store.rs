@@ -104,7 +104,7 @@ pub fn insert(app: &AppHandle, table: String, key: String, value: serde_json::Va
 
     if state.tracker.is_closed() {
         // The system is shutting down
-        log::warn!("store: database is closed");
+        log::warn!("insert: database is closed");
     }
 
     let db = state.db.clone();
