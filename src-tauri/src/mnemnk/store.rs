@@ -57,7 +57,8 @@ enum StoreEvent {
         database: String,
         table: String,
         key: String,
-        response: std::sync::mpsc::Sender<Result<()>>,
+        return_before: bool,
+        response: std::sync::mpsc::Sender<Result<Option<serde_json::Value>>>,
     },
     ExportEvents {
         path: String,
@@ -99,6 +100,21 @@ enum StoreEvent {
     },
     Shutdown {
         completion: oneshot::Sender<()>,
+    },
+    Update {
+        database: String,
+        table: String,
+        key: String,
+        value: serde_json::Value,
+        response: std::sync::mpsc::Sender<Result<()>>,
+    },
+    UpdateMerge {
+        database: String,
+        table: String,
+        key: String,
+        value: serde_json::Value,
+        return_after: bool,
+        response: std::sync::mpsc::Sender<Result<Option<serde_json::Value>>>,
     },
 }
 
@@ -172,9 +188,11 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     database,
                     table,
                     key,
+                    return_before,
                     response,
                 } => {
-                    let result = process_delete(&app_clone, database, table, key).await;
+                    let result =
+                        process_delete(&app_clone, database, table, key, return_before).await;
                     response.send(result).unwrap_or_else(|e| {
                         log::error!("Failed to send delete result: {}", e);
                     });
@@ -253,6 +271,33 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     });
                     break;
                 }
+                StoreEvent::Update {
+                    database,
+                    table,
+                    key,
+                    value,
+                    response,
+                } => {
+                    let result = process_update(&app_clone, database, table, key, value).await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send update result: {}", e);
+                    });
+                }
+                StoreEvent::UpdateMerge {
+                    database,
+                    table,
+                    key,
+                    value,
+                    return_after,
+                    response,
+                } => {
+                    let result =
+                        process_update_merge(&app_clone, database, table, key, value, return_after)
+                            .await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send update_merge result: {}", e);
+                    });
+                }
             }
         }
         log::info!("Store event loop terminated");
@@ -289,7 +334,13 @@ pub async fn quit(app: &AppHandle) {
     }
 }
 
-pub fn delete(app: &AppHandle, database: String, table: String, key: String) -> Result<()> {
+pub fn delete(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    return_before: bool,
+) -> Result<Option<serde_json::Value>> {
     let state = app.state::<MnemnkDatabase>();
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -297,6 +348,7 @@ pub fn delete(app: &AppHandle, database: String, table: String, key: String) -> 
         database,
         table,
         key,
+        return_before,
         response: tx,
     };
 
@@ -310,12 +362,33 @@ async fn process_delete(
     database: String,
     table: String,
     key: String,
-) -> Result<()> {
+    return_before: bool,
+) -> Result<Option<serde_json::Value>> {
     let state = app.state::<MnemnkDatabase>();
     let db = &state.db;
     db.use_db(database).await?;
-    let _: Option<Record> = db.delete((table, key)).await?;
-    Ok(())
+
+    if return_before {
+        let mut groups = db
+            .query("DELETE FROM type::thing($table, $key) RETURN BEFORE")
+            .bind(("table", table))
+            .bind(("key", key))
+            .await?;
+
+        let data: surrealdb::Value = groups.take(0)?;
+        let data = data.into_inner().into_json();
+        let Some(records) = data.as_array() else {
+            return Ok(None);
+        };
+        let Some(record) = records.get(0) else {
+            return Ok(None);
+        };
+
+        Ok(Some(serde_json::to_value(record)?))
+    } else {
+        let _: Option<Record> = db.delete((table, key)).await?;
+        Ok(None)
+    }
 }
 
 pub fn insert(
@@ -411,6 +484,104 @@ async fn process_select(
     };
 
     Ok(Some(serde_json::to_value(record)?))
+}
+
+pub fn update(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Update {
+        database,
+        table,
+        key,
+        value,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive update result")?
+}
+
+async fn process_update(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+    let _: Option<Record> = db.update((table, key)).content(value).await?;
+    Ok(())
+}
+
+pub fn update_merge(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+    return_after: bool,
+) -> Result<Option<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::UpdateMerge {
+        database,
+        table,
+        key,
+        value,
+        return_after,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive update_merge result")?
+}
+
+async fn process_update_merge(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+    return_after: bool,
+) -> Result<Option<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+
+    if return_after {
+        let mut groups = db
+            .query("UPDATE type::thing($table, $key) MERGE $value RETURN AFTER")
+            .bind(("table", table))
+            .bind(("key", key))
+            .bind(("value", value))
+            .await?;
+
+        let data: surrealdb::Value = groups.take(0)?;
+        let data = data.into_inner().into_json();
+        let Some(records) = data.as_array() else {
+            return Ok(None);
+        };
+        let Some(record) = records.get(0) else {
+            return Ok(None);
+        };
+
+        Ok(Some(serde_json::to_value(record)?))
+    } else {
+        let _: Option<Record> = db.update((table, key)).merge(value).await?;
+        Ok(None)
+    }
 }
 
 pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
