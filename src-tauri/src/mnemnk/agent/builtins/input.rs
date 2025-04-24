@@ -49,10 +49,6 @@ impl AsAgent for UnitInputAgent {
 
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        Ok(())
-    }
 }
 
 // Boolean Input
@@ -103,10 +99,6 @@ impl AsAgent for BooleanInputAgent {
                 .context("Failed to output value")?;
         }
 
-        Ok(())
-    }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -165,10 +157,6 @@ impl AsAgent for IntegerInputAgent {
 
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        Ok(())
-    }
 }
 
 // Number Input
@@ -223,10 +211,6 @@ impl AsAgent for NumberInputAgent {
             .context("Failed to output value")?;
         }
 
-        Ok(())
-    }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -286,10 +270,6 @@ impl AsAgent for StringInputAgent {
 
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        Ok(())
-    }
 }
 
 // Text Input
@@ -347,10 +327,6 @@ impl AsAgent for TextInputAgent {
 
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        Ok(())
-    }
 }
 
 // Object Input
@@ -406,10 +382,6 @@ impl AsAgent for ObjectInputAgent {
             .context("Failed to output value")?;
         }
 
-        Ok(())
-    }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -492,7 +464,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "string".into(),
-            AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+            AgentConfigEntry::new(AgentValue::new_string(""), "string"),
         )]),
     );
 
@@ -505,7 +477,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["text"])
             .with_default_config(vec![(
                 "text".into(),
-                AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
+                AgentConfigEntry::new(AgentValue::new_text(""), "text"),
             )]),
     );
 

@@ -22,13 +22,7 @@ impl AsAgent for RhaiExpressionAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -84,7 +78,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["data"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(AgentValue::new_string("".to_string()), "text"),
+            AgentConfigEntry::new(AgentValue::new_string(""), "text"),
         )]),
     );
 }

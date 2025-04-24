@@ -189,12 +189,12 @@ impl AgentValue {
         AgentValue::Number(value)
     }
 
-    pub fn new_string(value: String) -> Self {
-        AgentValue::String(Arc::new(value))
+    pub fn new_string(value: impl Into<String>) -> Self {
+        AgentValue::String(Arc::new(value.into()))
     }
 
-    pub fn new_text(value: String) -> Self {
-        AgentValue::Text(Arc::new(value))
+    pub fn new_text(value: impl Into<String>) -> Self {
+        AgentValue::Text(Arc::new(value.into()))
     }
 
     pub fn new_array(value: Vec<AgentValue>) -> Self {

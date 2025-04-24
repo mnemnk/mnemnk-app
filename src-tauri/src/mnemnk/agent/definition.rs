@@ -94,7 +94,11 @@ pub type AgentNewBoxedFn = fn(
 ) -> Result<Box<dyn AsyncAgent>>;
 
 impl AgentDefinition {
-    pub fn new(kind: &str, name: &str, new_boxed: Option<AgentNewBoxedFn>) -> Self {
+    pub fn new(
+        kind: impl Into<String>,
+        name: impl Into<String>,
+        new_boxed: Option<AgentNewBoxedFn>,
+    ) -> Self {
         Self {
             kind: kind.into(),
             name: name.into(),
