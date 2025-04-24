@@ -10,7 +10,7 @@ pub fn run() {
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
                 .level_for(
-                    "mnemnk_app_lib::*",
+                    "mnemnk_app_lib",
                     if cfg!(debug_assertions) {
                         log::LevelFilter::Debug
                     } else {
