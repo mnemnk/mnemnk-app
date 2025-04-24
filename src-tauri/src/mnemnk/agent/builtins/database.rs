@@ -41,6 +41,62 @@ impl AsAgent for EventDatabaseAgent {
     }
 }
 
+// Database Delete
+struct DatabaseDeleteAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for DatabaseDeleteAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let config = self.data.config.as_ref().context("Missing config")?;
+        let db = config
+            .get("db")
+            .context("Missing db config")?
+            .as_str()
+            .context("db is not a string")?;
+        if db.is_empty() {
+            bail!("db is not set");
+        }
+
+        let table = config
+            .get("table")
+            .context("Missing table config")?
+            .as_str()
+            .context("table is not a string")?;
+        let table = if table.is_empty() {
+            bail!("table is not set");
+        } else {
+            table.to_string()
+        };
+
+        let key = data.as_str().context("key is not a string")?;
+        if key.is_empty() {
+            bail!("key is not set");
+        }
+
+        store::delete(self.app(), db.to_string(), table, key.to_string())
+    }
+}
+
 // Database Insert
 struct DatabaseInsertAgent {
     data: AsAgentData,
@@ -196,6 +252,29 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_title("Event Database")
         .with_category("Core/Database")
         .with_inputs(vec!["event"]),
+    );
+
+    // Database Delete
+    defs.insert(
+        "$database_delete".into(),
+        AgentDefinition::new(
+            "Database",
+            "$database_delete",
+            Some(new_boxed::<DatabaseDeleteAgent>),
+        )
+        .with_title("Database Delete")
+        .with_category("Core/Database")
+        .with_inputs(vec!["key"])
+        .with_default_config(vec![
+            (
+                "db".into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                "table".into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+        ]),
     );
 
     // Database Insert

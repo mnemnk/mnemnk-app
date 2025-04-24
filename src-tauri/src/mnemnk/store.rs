@@ -53,6 +53,12 @@ enum StoreEvent {
     DailyStats {
         response: oneshot::Sender<Result<Vec<DailyStats>>>,
     },
+    Delete {
+        database: String,
+        table: String,
+        key: String,
+        response: std::sync::mpsc::Sender<Result<()>>,
+    },
     ExportEvents {
         path: String,
         response: oneshot::Sender<Result<()>>,
@@ -162,6 +168,17 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                         log::error!("Failed to send daily stats");
                     });
                 }
+                StoreEvent::Delete {
+                    database,
+                    table,
+                    key,
+                    response,
+                } => {
+                    let result = process_delete(&app_clone, database, table, key).await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send delete result: {}", e);
+                    });
+                }
                 StoreEvent::ExportEvents { path, response } => {
                     let result = process_export_events(&app_clone, path).await;
                     response.send(result).unwrap_or_else(|_| {
@@ -193,8 +210,8 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     response,
                 } => {
                     let result = process_insert(&app_clone, database, table, key, value).await;
-                    response.send(result).unwrap_or_else(|_| {
-                        log::error!("Failed to send insert result");
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send insert result: {}", e);
                     });
                 }
                 StoreEvent::ReindexText { response } => {
@@ -225,8 +242,8 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     response,
                 } => {
                     let result = process_select(&app_clone, database, table, key).await;
-                    response.send(result).unwrap_or_else(|_| {
-                        log::error!("Failed to send select result");
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send select result: {}", e);
                     });
                 }
                 StoreEvent::Shutdown { completion } => {
@@ -270,6 +287,35 @@ pub async fn quit(app: &AppHandle) {
             log::warn!("Store shutdown did not complete within 5 seconds");
         }
     }
+}
+
+pub fn delete(app: &AppHandle, database: String, table: String, key: String) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Delete {
+        database,
+        table,
+        key,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive delete result")?
+}
+
+async fn process_delete(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+    let _: Option<Record> = db.delete((table, key)).await?;
+    Ok(())
 }
 
 pub fn insert(
@@ -336,27 +382,25 @@ async fn process_select(
     table: String,
     key: String,
 ) -> Result<Option<serde_json::Value>> {
-    let mut groups;
-    {
-        let state = app.state::<MnemnkDatabase>();
-        let db = &state.db;
-        db.use_db(database).await?;
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
 
-        // Deserialize the result into a Value doesn't work in SurrealDB 2.x
-        // https://github.com/surrealdb/surrealdb/issues/4921
-        //
-        // let Some(result): Option<surrealdb::sql::Value> = db.select((table, key)).await? else {
-        //     return Ok(None);
-        // };
-        // let value = serde_json::to_value(result)?;
-        // Ok(Some(value))
+    // Deserialize the result into a Value doesn't work in SurrealDB 2.x
+    // https://github.com/surrealdb/surrealdb/issues/4921
+    //
+    // let Some(result): Option<surrealdb::sql::Value> = db.select((table, key)).await? else {
+    //     return Ok(None);
+    // };
+    // let value = serde_json::to_value(result)?;
+    // Ok(Some(value))
 
-        groups = db
-            .query("select * from type::thing($table, $key)")
-            .bind(("table", table))
-            .bind(("key", key))
-            .await?;
-    }
+    let mut groups = db
+        .query("select * from type::thing($table, $key)")
+        .bind(("table", table))
+        .bind(("key", key))
+        .await?;
+
     let data: surrealdb::Value = groups.take(0)?;
     let data = data.into_inner().into_json();
     let Some(records) = data.as_array() else {
