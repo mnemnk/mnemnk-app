@@ -9,6 +9,7 @@ mod display;
 mod input;
 mod rhai_script;
 mod string;
+mod time;
 mod utils;
 
 pub(super) use command::CommandAgent;
@@ -22,5 +23,6 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     input::init_agent_defs(defs);
     rhai_script::init_agent_defs(defs);
     string::init_agent_defs(defs);
+    time::init_agent_defs(defs);
     utils::init_agent_defs(defs);
 }
