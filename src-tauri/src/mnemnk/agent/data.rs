@@ -97,6 +97,14 @@ impl AgentData {
             _ => AgentData::new_object(value),
         }
     }
+
+    pub fn as_str(&self) -> Option<&str> {
+        self.value.as_str()
+    }
+
+    pub fn as_object(&self) -> Option<&Value> {
+        self.value.as_object()
+    }
 }
 
 impl<'de> Deserialize<'de> for AgentData {

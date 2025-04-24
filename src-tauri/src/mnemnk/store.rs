@@ -44,16 +44,52 @@ struct Record {
 }
 
 // Event types that can be sent to the store event loop
+#[derive(Debug)]
 enum StoreEvent {
-    InsertData {
+    CreateEvent {
+        event: Event,
+        // response: std::sync::mpsc::Sender<Result<()>>,
+    },
+    DailyStats {
+        response: oneshot::Sender<Result<Vec<DailyStats>>>,
+    },
+    ExportEvents {
+        path: String,
+        response: oneshot::Sender<Result<()>>,
+    },
+    FindEventsByYmd {
+        year: i32,
+        month: i32,
+        day: i32,
+        response: oneshot::Sender<Result<Vec<EventRecordInternal>>>,
+    },
+    ImportEvents {
+        path: String,
+        response: oneshot::Sender<Result<()>>,
+    },
+    Insert {
         database: String,
         table: String,
         key: String,
         value: serde_json::Value,
+        response: std::sync::mpsc::Sender<Result<()>>,
     },
-    CreateEvent {
-        data: AgentData,
-        app: AppHandle,
+    ReindexText {
+        response: oneshot::Sender<Result<()>>,
+    },
+    ReindexYmd {
+        day_start_hour: u32,
+        response: oneshot::Sender<Result<()>>,
+    },
+    SearchEvents {
+        query: String,
+        response: oneshot::Sender<Result<Vec<EventRecordInternal>>>,
+    },
+    Select {
+        database: String,
+        table: String,
+        key: String,
+        response: std::sync::mpsc::Sender<Result<Option<serde_json::Value>>>,
     },
     Shutdown {
         completion: oneshot::Sender<()>,
@@ -69,20 +105,9 @@ const MNEMNK_NS: &str = "mnemnk";
 const MNEMNK_DB: &str = "mnemnk";
 
 pub async fn init(app: &AppHandle) -> Result<()> {
-    // TODO: the number of events should be configurable
-    let (event_tx, mut event_rx) = mpsc::channel::<StoreEvent>(1000);
-
-    let store = MnemnkDatabase {
-        db: Surreal::init(),
-        event_tx,
-    };
-
     let data_dir = data_dir(app).context("data_dir is not set")?;
     let db_path = PathBuf::from(data_dir).join("store.db");
-
-    let db = &store.db;
-
-    db.connect::<RocksDb>(db_path).await?;
+    let db = Surreal::new::<RocksDb>(db_path).await?;
     db.use_ns(MNEMNK_NS).use_db(MNEMNK_DB).await?;
 
     log::info!("store::init: initializing tables");
@@ -111,34 +136,104 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .await?;
     log::info!("store::init: {:?}", _result);
 
-    let db_clone = store.db.clone();
+    // TODO: the number of events should be configurable
+    let (event_tx, mut event_rx) = mpsc::channel::<StoreEvent>(1000);
+
+    let app_clone = app.clone();
     tauri::async_runtime::spawn(async move {
         log::info!("Store event loop started");
 
         while let Some(event) = event_rx.recv().await {
+            log::debug!("Store event: {:?}", event);
+
             match event {
-                StoreEvent::InsertData {
+                StoreEvent::CreateEvent { event } => {
+                    let result = process_create_event(&app_clone, event).await;
+                    // response.send(result).unwrap_or_else(|_| {
+                    //     log::error!("Failed to send create_event result");
+                    // });
+                    result.unwrap_or_else(|e| {
+                        log::error!("Failed to process_create_event: {}", e);
+                    });
+                }
+                StoreEvent::DailyStats { response } => {
+                    let result = process_daily_stats(&app_clone).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send daily stats");
+                    });
+                }
+                StoreEvent::ExportEvents { path, response } => {
+                    let result = process_export_events(&app_clone, path).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send export events");
+                    });
+                }
+                StoreEvent::FindEventsByYmd {
+                    year,
+                    month,
+                    day,
+                    response,
+                } => {
+                    let result = process_find_events_by_ymd(&app_clone, year, month, day).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send find events by ymd");
+                    });
+                }
+                StoreEvent::ImportEvents { path, response } => {
+                    let result = process_import_events(&app_clone, path).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send import events");
+                    });
+                }
+                StoreEvent::Insert {
                     database,
                     table,
                     key,
                     value,
+                    response,
                 } => {
-                    process_insert(&db_clone, database, table, key, value)
-                        .await
-                        .unwrap_or_else(|e| {
-                            log::error!("Failed to insert data: {}", e);
-                        });
+                    let result = process_insert(&app_clone, database, table, key, value).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send insert result");
+                    });
                 }
-                StoreEvent::CreateEvent { data, app } => {
-                    process_event(&db_clone, &app, data)
-                        .await
-                        .unwrap_or_else(|e| {
-                            log::error!("Failed to create event: {}", e);
-                        });
+                StoreEvent::ReindexText { response } => {
+                    let result = process_reindex_text(&app_clone).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send reindex text");
+                    });
+                }
+                StoreEvent::ReindexYmd {
+                    day_start_hour,
+                    response,
+                } => {
+                    let result = process_reindex_ymd(&app_clone, day_start_hour).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send reindex ymd");
+                    });
+                }
+                StoreEvent::SearchEvents { query, response } => {
+                    let result = process_search_events(&app_clone, query).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send search events");
+                    });
+                }
+                StoreEvent::Select {
+                    database,
+                    table,
+                    key,
+                    response,
+                } => {
+                    let result = process_select(&app_clone, database, table, key).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send select result");
+                    });
                 }
                 StoreEvent::Shutdown { completion } => {
                     log::info!("Store event loop shutting down");
-                    let _ = completion.send(());
+                    completion.send(()).unwrap_or_else(|_| {
+                        log::error!("Failed to send shutdown completion");
+                    });
                     break;
                 }
             }
@@ -146,7 +241,7 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         log::info!("Store event loop terminated");
     });
 
-    app.manage(store);
+    app.manage(MnemnkDatabase { db, event_tx });
 
     Ok(())
 }
@@ -183,54 +278,98 @@ pub fn insert(
     table: String,
     key: String,
     value: serde_json::Value,
-) {
+) -> Result<()> {
     let state = app.state::<MnemnkDatabase>();
 
-    let event = StoreEvent::InsertData {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Insert {
         database,
         table,
         key,
         value,
+        response: tx,
     };
 
-    if let Err(e) = state.event_tx.try_send(event) {
-        log::error!("Failed to send insert event to store: {}", e);
-    }
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive insert result")?
 }
 
 async fn process_insert(
-    db: &Surreal<Db>,
+    app: &AppHandle,
     database: String,
     table: String,
     key: String,
     value: serde_json::Value,
 ) -> Result<()> {
-    db.use_db(database)
-        .await
-        .context("Failed to use database")?;
-    let _: Option<Record> = db
-        .insert((table, key))
-        .content(value)
-        .await
-        .context("Failed to insert record")?;
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+    let _: Option<Record> = db.insert((table, key)).content(value).await?;
     Ok(())
 }
 
-pub fn create_event(app: &AppHandle, data: AgentData) {
+pub fn select(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+) -> Result<Option<serde_json::Value>> {
     let state = app.state::<MnemnkDatabase>();
 
-    let app_clone = app.clone();
-    let event = StoreEvent::CreateEvent {
-        data,
-        app: app_clone,
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Select {
+        database,
+        table,
+        key,
+        response: tx,
     };
 
-    if let Err(e) = state.event_tx.try_send(event) {
-        log::error!("Failed to send create_event to store: {}", e);
-    }
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive select result")?
 }
 
-async fn process_event(db: &Surreal<Db>, app: &AppHandle, data: AgentData) -> Result<()> {
+async fn process_select(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+) -> Result<Option<serde_json::Value>> {
+    let mut groups;
+    {
+        let state = app.state::<MnemnkDatabase>();
+        let db = &state.db;
+        db.use_db(database).await?;
+
+        // Deserialize the result into a Value doesn't work in SurrealDB 2.x
+        // https://github.com/surrealdb/surrealdb/issues/4921
+        //
+        // let Some(result): Option<surrealdb::sql::Value> = db.select((table, key)).await? else {
+        //     return Ok(None);
+        // };
+        // let value = serde_json::to_value(result)?;
+        // Ok(Some(value))
+
+        groups = db
+            .query("select * from type::thing($table, $key)")
+            .bind(("table", table))
+            .bind(("key", key))
+            .await?;
+    }
+    let data: surrealdb::Value = groups.take(0)?;
+    let data = data.into_inner().into_json();
+    let Some(records) = data.as_array() else {
+        return Ok(None);
+    };
+    let Some(record) = records.get(0) else {
+        return Ok(None);
+    };
+
+    Ok(Some(serde_json::to_value(record)?))
+}
+
+pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     let kind = data.kind;
     let Some(mut json_value) = data.value.as_object().cloned() else {
         return Err(anyhow::anyhow!("store: data is not an object"));
@@ -289,26 +428,56 @@ async fn process_event(db: &Surreal<Db>, app: &AppHandle, data: AgentData) -> Re
         }
     };
 
+    let event = Event {
+        kind,
+        time: utc_dt.into(),
+        agent: "".to_string(),
+        local_offset,
+        local_y,
+        local_ym,
+        local_ymd,
+        value: json_value,
+        text,
+        text_tokens,
+    };
+
+    log::debug!("store: create_event: {:?}", event);
+
+    let state = app.state::<MnemnkDatabase>();
+    // let (tx, rx) = std::sync::mpsc::channel();
+    let create_event = StoreEvent::CreateEvent {
+        event,
+        // response: tx,
+    };
+
+    log::debug!("store: create_event: sending event");
+
+    state.event_tx.try_send(create_event)?;
+
+    // log::debug!("store: create_event: waiting for result");
+
+    // let result = rx.recv()?;
+
+    // log::debug!("store: create_event: result: {:?}", result);
+
+    // result
+
+    Ok(())
+}
+
+async fn process_create_event(app: &AppHandle, event: Event) -> Result<()> {
+    log::debug!("store: process_create_event: {:?}", event);
+
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+
     db.use_db(MNEMNK_DB)
         .await
         .context("Failed to use database")?;
 
-    let _: Option<Record> = db
-        .create("event")
-        .content(Event {
-            kind,
-            time: utc_dt.into(),
-            agent: "".to_string(),
-            local_offset,
-            local_y,
-            local_ym,
-            local_ymd,
-            value: json_value,
-            text,
-            text_tokens,
-        })
-        .await
-        .context("Failed to create event")?;
+    let _: Option<Record> = db.create("event").content(event).await?;
+
+    log::debug!("store: process_create_event: event created");
 
     Ok(())
 }
@@ -491,6 +660,18 @@ pub struct DailyStats {
 }
 
 async fn daily_stats(app: &AppHandle) -> Result<Vec<DailyStats>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::DailyStats { response: tx })
+        .await?;
+
+    rx.await.context("Failed to receive daily stats")?
+}
+
+async fn process_daily_stats(app: &AppHandle) -> Result<Vec<DailyStats>> {
     let sql = r#"
         SELECT
             local_ymd AS date,
@@ -503,8 +684,9 @@ async fn daily_stats(app: &AppHandle) -> Result<Vec<DailyStats>> {
     "#;
 
     let state = app.state::<MnemnkDatabase>();
-
-    let mut result = state.db.query(sql).await?;
+    let db = state.db.clone();
+    db.use_db(MNEMNK_DB).await?;
+    let mut result = db.query(sql).await?;
     let daily_stats: Vec<DailyStats> = result.take(0)?;
     Ok(daily_stats)
 }
@@ -543,6 +725,28 @@ async fn find_events_by_ymd(
     month: i32,
     day: i32,
 ) -> Result<Vec<EventRecordInternal>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::FindEventsByYmd {
+            year,
+            month,
+            day,
+            response: tx,
+        })
+        .await?;
+
+    rx.await.context("Failed to receive find_events_by_ymd")?
+}
+
+async fn process_find_events_by_ymd(
+    app: &AppHandle,
+    year: i32,
+    month: i32,
+    day: i32,
+) -> Result<Vec<EventRecordInternal>> {
     let sql = r#"
         SELECT 
             id,
@@ -561,7 +765,9 @@ async fn find_events_by_ymd(
         "#;
     let local_ymd = year * 10000 + month * 100 + day;
     let state = app.state::<MnemnkDatabase>();
-    let mut result = state.db.query(sql).bind(("local_ymd", local_ymd)).await?;
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    let mut result = db.query(sql).bind(("local_ymd", local_ymd)).await?;
     let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
@@ -589,6 +795,8 @@ pub async fn find_events_by_ymd_cmd(
         .collect();
     Ok(events)
 }
+
+// reindex ymd
 
 #[tauri::command]
 pub async fn reindex_ymd_cmd(
@@ -620,46 +828,47 @@ struct LocalYmd {
 }
 
 async fn reindex_ymd(app: &AppHandle, day_start_hour: u32) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::ReindexYmd {
+            day_start_hour,
+            response: tx,
+        })
+        .await?;
+
+    rx.await.context("Failed to receive reindex_ymd")?
+}
+
+async fn process_reindex_ymd(app: &AppHandle, day_start_hour: u32) -> Result<()> {
     log::info!("store: reindexing local_ymd...");
     let state = app.state::<MnemnkDatabase>();
-    let db = state.db.clone();
-    tauri::async_runtime::spawn(async move {
-        let Ok(mut result) = db
-            .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
-            .await
-        else {
-            log::error!("store::reindex_ymd: failed to query events");
-            return;
-        };
-
-        let Ok(events) = result.take::<Vec<TimestampRecord>>(0) else {
-            log::error!("store::reindex_ymd: no results");
-            return;
-        };
-        let num_events = events.len();
-        let mut i = 0;
-        for rec in events {
-            i += 1;
-            if i % 100 == 0 {
-                log::info!("store: indexed {} / {}", i, num_events);
-            }
-            let dt = DateTime::from_timestamp(rec.timestamp, 0).unwrap_or_default();
-            let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt, day_start_hour);
-            if let Err(e) = db
-                .update::<Option<Event>>(rec.id)
-                .merge(LocalYmd {
-                    local_y,
-                    local_ym,
-                    local_ymd,
-                })
-                .await
-            {
-                log::error!("store::reindex_ymd: failed to update local_ymd: {}", e);
-                return;
-            }
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    let mut result = db
+        .query("SELECT id, time::unix(time) + local_offset AS timestamp FROM event;")
+        .await?;
+    let events = result.take::<Vec<TimestampRecord>>(0)?;
+    let num_events = events.len();
+    let mut i = 0;
+    for rec in events {
+        i += 1;
+        if i % 100 == 0 {
+            log::info!("store: indexed {} / {}", i, num_events);
         }
-        log::info!("store: reindexed local_ymd");
-    });
+        let dt = DateTime::from_timestamp(rec.timestamp, 0).unwrap_or_default();
+        let (local_y, local_ym, local_ymd) = adjust_local_ymd(dt, day_start_hour);
+        db.update::<Option<Event>>(rec.id)
+            .merge(LocalYmd {
+                local_y,
+                local_ym,
+                local_ymd,
+            })
+            .await?;
+    }
+    log::info!("store: reindexed local_ymd");
     Ok(())
 }
 
@@ -688,51 +897,76 @@ struct TextTokens {
     text_tokens: Option<String>,
 }
 
-async fn reindex_text(app: &AppHandle) {
+async fn reindex_text(app: &AppHandle) -> Result<()> {
     let state = app.state::<MnemnkDatabase>();
-    let db = state.db.clone();
-    tauri::async_runtime::spawn(async move {
-        log::info!("store::init: reindexing text");
-        let Ok(mut result) = db.query("SELECT id, text FROM event").await else {
-            log::error!("store::reindex_text: failed to query events");
-            return;
-        };
-        let Ok(texts) = result.take::<Vec<TextRecord>>(0) else {
-            log::error!("store::reindex_text: no results");
-            return;
-        };
-        let num_texts = texts.len();
-        let mut i = 0;
-        for rec in texts {
-            i += 1;
-            if i % 100 == 0 {
-                log::info!("store::init: indexed {} / {}", i, num_texts);
-            }
-            if rec.text.is_none() {
-                continue;
-            }
-            let tokenized_text = tokenize_text(&rec.text.unwrap());
-            if let Err(e) = db
-                .update::<Option<Event>>(rec.id)
-                .merge(TextTokens {
-                    text_tokens: Some(tokenized_text),
-                })
-                .await
-            {
-                log::error!("store::reindex_text: failed to update text_tokens: {}", e);
-                return;
-            }
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::ReindexText { response: tx })
+        .await?;
+
+    rx.await.context("Failed to receive reindex_text")?
+}
+
+async fn process_reindex_text(app: &AppHandle) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    log::info!("store::init: reindexing text");
+    let mut result = db.query("SELECT id, text FROM event").await?;
+    let texts = result.take::<Vec<TextRecord>>(0)?;
+    let num_texts = texts.len();
+    let mut i = 0;
+    for rec in texts {
+        i += 1;
+        if i % 100 == 0 {
+            log::info!("store::init: indexed {} / {}", i, num_texts);
         }
-    });
+        if rec.text.is_none() {
+            continue;
+        }
+        let tokenized_text = tokenize_text(&rec.text.unwrap());
+        db.update::<Option<Event>>(rec.id)
+            .merge(TextTokens {
+                text_tokens: Some(tokenized_text),
+            })
+            .await?;
+    }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn reindex_text_cmd(app: AppHandle) -> Result<(), String> {
-    reindex_text(&app).await;
+    reindex_text(&app).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 
+// search events
+
 async fn search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecordInternal>> {
+    let tokenized_query = tokenize_text(&query);
+    if tokenized_query.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::SearchEvents {
+            query: tokenized_query,
+            response: tx,
+        })
+        .await?;
+
+    rx.await.context("Failed to receive search_events")?
+}
+
+async fn process_search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecordInternal>> {
+    log::debug!("store: search_events: {}", query);
+
     let sql = r#"
         SELECT 
             id,
@@ -749,12 +983,11 @@ async fn search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecord
             time ASC
         ;
         "#;
-    let tokenized_query = tokenize_text(&query);
-    if tokenized_query.is_empty() {
-        return Ok(Vec::new());
-    }
+
     let state = app.state::<MnemnkDatabase>();
-    let mut result = state.db.query(sql).bind(("query", tokenized_query)).await?;
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    let mut result = db.query(sql).bind(("query", query)).await?;
     let events: Vec<EventRecordInternal> = result.take(0)?;
     Ok(events)
 }
@@ -783,6 +1016,21 @@ pub async fn search_events_cmd(app: AppHandle, query: String) -> Result<Vec<Even
 pub async fn export_events(app: &AppHandle, path: &str) -> Result<()> {
     let state = app.state::<MnemnkDatabase>();
 
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::ExportEvents {
+            path: path.to_string(),
+            response: tx,
+        })
+        .await?;
+
+    rx.await.context("Failed to receive export_events")?
+}
+
+pub async fn process_export_events(app: &AppHandle, path: String) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
     log::info!("Exporting events to {}", path);
 
     // Query to get all events with necessary fields (excluding local_y, local_ym, local_ymd, text_tokens)
@@ -801,7 +1049,9 @@ pub async fn export_events(app: &AppHandle, path: &str) -> Result<()> {
         ;
     "#;
 
-    let mut result = state.db.query(sql).await?;
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    let mut result = db.query(sql).await?;
     let events: Vec<ExportEventRecord> = result.take(0)?;
 
     log::info!("Found {} events to export", events.len());
@@ -854,7 +1104,24 @@ pub async fn export_events_cmd(app: AppHandle, path: String) -> Result<(), Strin
     export_events(&app, &path).await.map_err(|e| e.to_string())
 }
 
+// import
+
 pub async fn import_events(app: &AppHandle, path: &str) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = oneshot::channel();
+    state
+        .event_tx
+        .send(StoreEvent::ImportEvents {
+            path: path.to_string(),
+            response: tx,
+        })
+        .await?;
+
+    rx.await.context("Failed to receive import_events")?
+}
+
+pub async fn process_import_events(app: &AppHandle, path: String) -> Result<()> {
     let state = app.state::<MnemnkDatabase>();
 
     log::info!("Importing events from {}", path);
