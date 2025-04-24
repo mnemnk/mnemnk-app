@@ -144,7 +144,7 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         log::info!("Store event loop started");
 
         while let Some(event) = event_rx.recv().await {
-            log::debug!("Store event: {:?}", event);
+            // log::debug!("Store event: {:?}", event);
 
             match event {
                 StoreEvent::CreateEvent { event } => {
@@ -441,7 +441,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
         text_tokens,
     };
 
-    log::debug!("store: create_event: {:?}", event);
+    // log::debug!("store: create_event: {:?}", event);
 
     let state = app.state::<MnemnkDatabase>();
     // let (tx, rx) = std::sync::mpsc::channel();
@@ -450,7 +450,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
         // response: tx,
     };
 
-    log::debug!("store: create_event: sending event");
+    // log::debug!("store: create_event: sending event");
 
     state.event_tx.try_send(create_event)?;
 
@@ -466,7 +466,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
 }
 
 async fn process_create_event(app: &AppHandle, event: Event) -> Result<()> {
-    log::debug!("store: process_create_event: {:?}", event);
+    // log::debug!("store: process_create_event: {:?}", event);
 
     let state = app.state::<MnemnkDatabase>();
     let db = &state.db;
@@ -477,7 +477,7 @@ async fn process_create_event(app: &AppHandle, event: Event) -> Result<()> {
 
     let _: Option<Record> = db.create("event").content(event).await?;
 
-    log::debug!("store: process_create_event: event created");
+    // log::debug!("store: process_create_event: event created");
 
     Ok(())
 }
@@ -965,8 +965,6 @@ async fn search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecord
 }
 
 async fn process_search_events(app: &AppHandle, query: String) -> Result<Vec<EventRecordInternal>> {
-    log::debug!("store: search_events: {}", query);
-
     let sql = r#"
         SELECT 
             id,
