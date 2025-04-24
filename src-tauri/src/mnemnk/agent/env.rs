@@ -1,18 +1,23 @@
 use anyhow::{bail, Context as _, Result};
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::process::CommandChild;
 use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, emit_input, AgentConfig, AgentMessage, AsyncAgent};
+use super::agent::{self, AgentConfig, AgentMessage, AsyncAgent};
 use super::data::AgentData;
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, EnvAgentMessage};
+
+const EMIT_DISPLAY: &str = "mnemnk:display";
+const EMIT_ERROR: &str = "mnemnk:error";
+const EMIT_INPUT: &str = "mnemnk:input";
 
 pub struct AgentEnv {
     // AppHandle
@@ -441,8 +446,15 @@ impl AgentEnv {
                 };
                 tx.clone()
             };
-            emit_input(&self.app, agent_id.to_string(), ch.clone());
-            tx.send(AgentMessage::Input { ch, data }).await?;
+            tx.send(AgentMessage::Input {
+                ch: ch.clone(),
+                data,
+            })
+            .await?;
+            self.emit_input(agent_id.to_string(), ch)
+                .unwrap_or_else(|e| {
+                    log::error!("Failed to emit input message: {}", e);
+                });
         }
         Ok(())
     }
@@ -462,6 +474,53 @@ impl AgentEnv {
 
     pub fn try_send_board_out(&self, name: String, data: AgentData) -> Result<()> {
         message::try_send_board_out(self, name, data)
+    }
+
+    // Returns a list of agent IDs connected to the given agent's input handles
+    #[allow(unused)]
+    fn connected_input_agents(&self, agent_id: &str) -> Result<HashMap<String, Vec<String>>> {
+        let mut result = HashMap::new();
+
+        // Look through all edges to find connections to this agent's input handles
+        let edges = self.edges.lock().unwrap();
+        for (source_id, targets) in edges.iter() {
+            for (target_id, _source_handle, target_handle) in targets {
+                if target_id == agent_id {
+                    // This edge connects to one of our input handles
+                    if !result.contains_key(target_handle) {
+                        result.insert(target_handle.clone(), Vec::new());
+                    }
+                    result
+                        .get_mut(target_handle)
+                        .unwrap()
+                        .push(source_id.clone());
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    // Returns a list of agent IDs connected to the given agent's output handles
+    #[allow(unused)]
+    fn connected_output_agents(&self, agent_id: &str) -> Result<HashMap<String, Vec<String>>> {
+        let mut result = HashMap::new();
+
+        // Look for edges where this agent is the source
+        let edges = self.edges.lock().unwrap();
+        if let Some(targets) = edges.get(agent_id) {
+            for (target_id, source_handle, _target_handle) in targets {
+                if !result.contains_key(source_handle) {
+                    result.insert(source_handle.clone(), Vec::new());
+                }
+                result
+                    .get_mut(source_handle)
+                    .unwrap()
+                    .push(target_id.clone());
+            }
+        }
+
+        Ok(result)
     }
 
     pub fn quit(&self) {
@@ -504,5 +563,55 @@ impl AgentEnv {
                 }
             }
         }
+    }
+
+    pub fn emit_error(&self, agent_id: String, message: String) -> Result<()> {
+        #[derive(Clone, Serialize)]
+        struct ErrorMessage {
+            agent_id: String,
+            message: String,
+        }
+
+        self.app
+            .emit(EMIT_ERROR, ErrorMessage { agent_id, message })
+            .context("Failed to emit error message")?;
+
+        Ok(())
+    }
+
+    pub fn emit_input(&self, agent_id: String, ch: String) -> Result<()> {
+        #[derive(Clone, Serialize)]
+        struct InputMessage {
+            agent_id: String,
+            ch: String,
+        }
+
+        self.app
+            .emit(EMIT_INPUT, InputMessage { agent_id, ch })
+            .context("Failed to emit input message")?;
+
+        Ok(())
+    }
+
+    pub fn emit_display(&self, agent_id: String, key: String, data: AgentData) -> Result<()> {
+        #[derive(Clone, Serialize)]
+        struct DisplayMessage {
+            agent_id: String,
+            key: String,
+            data: AgentData,
+        }
+
+        self.app
+            .emit(
+                EMIT_DISPLAY,
+                DisplayMessage {
+                    agent_id,
+                    key,
+                    data,
+                },
+            )
+            .context("Failed to emit display message")?;
+
+        Ok(())
     }
 }

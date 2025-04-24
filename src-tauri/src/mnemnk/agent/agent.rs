@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
-use anyhow::{Context as _, Result};
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State};
+use anyhow::Result;
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
@@ -45,20 +44,28 @@ pub trait Agent {
 
     fn app(&self) -> &AppHandle;
 
-    fn env(&self) -> State<AgentEnv> {
-        self.app().state::<AgentEnv>()
-    }
-
     fn id(&self) -> &str;
 
     fn status(&self) -> &AgentStatus;
 
-    #[allow(unused)]
+    // #[allow(unused)]
     fn def_name(&self) -> &str;
 
     fn config(&self) -> Option<&AgentConfig>;
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()>;
+
+    fn start(&mut self) -> Result<()>;
+
+    fn stop(&mut self) -> Result<()>;
+
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
+
+    // Utility methods
+
+    fn env(&self) -> State<AgentEnv> {
+        self.app().state::<AgentEnv>()
+    }
 
     fn global_config(&self) -> Option<AgentConfig> {
         settings::get_agent_global_config(self.app(), self.def_name())
@@ -74,79 +81,6 @@ pub trait Agent {
         }
         Some(merged_config)
     }
-
-    fn start(&mut self) -> Result<()>;
-
-    fn stop(&mut self) -> Result<()>;
-
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
-
-    fn try_output(&self, ch: String, data: AgentData) -> Result<()> {
-        let env = self.env();
-        env.try_send_agent_out(self.id().to_string(), ch, data)
-    }
-
-    fn emit_display(&self, key: String, data: AgentData) -> Result<()> {
-        let message = DisplayMessage {
-            agent_id: self.id().to_string(),
-            key,
-            data,
-        };
-        self.app()
-            .emit(EMIT_DISPLAY, message)
-            .context("Failed to emit display message")?;
-        Ok(())
-    }
-
-    #[allow(unused)]
-    fn emit_error(&self, message: String) -> Result<()> {
-        let error_message = ErrorMessage {
-            agent_id: self.id().to_string(),
-            message,
-        };
-        self.app()
-            .emit(EMIT_ERROR, error_message)
-            .context("Failed to emit error message")?;
-        Ok(())
-    }
-}
-
-const EMIT_DISPLAY: &str = "mnemnk:display";
-const EMIT_ERROR: &str = "mnemnk:error";
-const EMIT_INPUT: &str = "mnemnk:input";
-
-#[derive(Clone, Serialize)]
-struct DisplayMessage {
-    agent_id: String,
-    key: String,
-    data: AgentData,
-}
-
-#[derive(Clone, Serialize)]
-struct ErrorMessage {
-    agent_id: String,
-    message: String,
-}
-
-pub fn emit_error(app: &AppHandle, agent_id: String, message: String) -> Result<()> {
-    let error_message = ErrorMessage { agent_id, message };
-    app.emit(EMIT_ERROR, error_message)
-        .context("Failed to emit error message")?;
-    Ok(())
-}
-
-#[derive(Clone, Serialize)]
-struct InputMessage {
-    agent_id: String,
-    ch: String,
-}
-
-pub fn emit_input(app: &AppHandle, agent_id: String, ch: String) {
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let input_message = InputMessage { agent_id, ch };
-        app.emit(EMIT_INPUT, input_message).ok();
-    });
 }
 
 pub struct AsAgentData {
@@ -245,7 +179,8 @@ impl<T: AsAgent> Agent for T {
         self.mut_data().status = AgentStatus::Start;
 
         if let Err(e) = self.start() {
-            emit_error(self.app(), self.id().to_string(), e.to_string())?;
+            self.env()
+                .emit_error(self.id().to_string(), e.to_string())?;
             return Err(e);
         }
 
@@ -261,7 +196,8 @@ impl<T: AsAgent> Agent for T {
 
     fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         if let Err(e) = self.process(ch, data) {
-            emit_error(self.app(), self.id().to_string(), e.to_string())?;
+            self.env()
+                .emit_error(self.id().to_string(), e.to_string())?;
             return Err(e);
         }
         Ok(())
