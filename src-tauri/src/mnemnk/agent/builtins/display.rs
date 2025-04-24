@@ -4,8 +4,8 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
-    AsAgent, AsAgentData,
+    AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions,
+    AgentDisplayConfigEntry, AsAgent, AsAgentData,
 };
 
 // Display Data
