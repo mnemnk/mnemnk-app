@@ -116,6 +116,21 @@ enum StoreEvent {
         return_after: bool,
         response: std::sync::mpsc::Sender<Result<Option<serde_json::Value>>>,
     },
+    Upsert {
+        database: String,
+        table: String,
+        key: String,
+        value: serde_json::Value,
+        response: std::sync::mpsc::Sender<Result<()>>,
+    },
+    UpsertMerge {
+        database: String,
+        table: String,
+        key: String,
+        value: serde_json::Value,
+        return_after: bool,
+        response: std::sync::mpsc::Sender<Result<Option<serde_json::Value>>>,
+    },
 }
 
 pub struct MnemnkDatabase {
@@ -296,6 +311,33 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                             .await;
                     response.send(result).unwrap_or_else(|e| {
                         log::error!("Failed to send update_merge result: {}", e);
+                    });
+                }
+                StoreEvent::Upsert {
+                    database,
+                    table,
+                    key,
+                    value,
+                    response,
+                } => {
+                    let result = process_upsert(&app_clone, database, table, key, value).await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send upsert result: {}", e);
+                    });
+                }
+                StoreEvent::UpsertMerge {
+                    database,
+                    table,
+                    key,
+                    value,
+                    return_after,
+                    response,
+                } => {
+                    let result =
+                        process_upsert_merge(&app_clone, database, table, key, value, return_after)
+                            .await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send upsert_merge result: {}", e);
                     });
                 }
             }
@@ -580,6 +622,104 @@ async fn process_update_merge(
         Ok(Some(serde_json::to_value(record)?))
     } else {
         let _: Option<Record> = db.update((table, key)).merge(value).await?;
+        Ok(None)
+    }
+}
+
+pub fn upsert(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Upsert {
+        database,
+        table,
+        key,
+        value,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive upsert result")?
+}
+
+async fn process_upsert(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<()> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+    let _: Option<Record> = db.upsert((table, key)).content(value).await?;
+    Ok(())
+}
+
+pub fn upsert_merge(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+    return_after: bool,
+) -> Result<Option<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::UpsertMerge {
+        database,
+        table,
+        key,
+        value,
+        return_after,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive upsert_merge result")?
+}
+
+async fn process_upsert_merge(
+    app: &AppHandle,
+    database: String,
+    table: String,
+    key: String,
+    value: serde_json::Value,
+    return_after: bool,
+) -> Result<Option<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(database).await?;
+
+    if return_after {
+        let mut groups = db
+            .query("UPSERT type::thing($table, $key) MERGE $value RETURN AFTER")
+            .bind(("table", table))
+            .bind(("key", key))
+            .bind(("value", value))
+            .await?;
+
+        let data: surrealdb::Value = groups.take(0)?;
+        let data = data.into_inner().into_json();
+        let Some(records) = data.as_array() else {
+            return Ok(None);
+        };
+        let Some(record) = records.get(0) else {
+            return Ok(None);
+        };
+
+        Ok(Some(serde_json::to_value(record)?))
+    } else {
+        let _: Option<Record> = db.upsert((table, key)).merge(value).await?;
         Ok(None)
     }
 }
