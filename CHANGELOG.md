@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.4](https://github.com/mnemnk/mnemnk-app/compare/v0.17.3...v0.17.4) (2025-04-24)
+
+
+### Features
+
+* 🎸 add db and table configs into Database Insert agent ([#307](https://github.com/mnemnk/mnemnk-app/issues/307)) ([24f0e45](https://github.com/mnemnk/mnemnk-app/commit/24f0e4598139dcda20c52a284e1eefeede03c88a))
+* 🎸 Database Delete agent ([#313](https://github.com/mnemnk/mnemnk-app/issues/313)) ([f6e3716](https://github.com/mnemnk/mnemnk-app/commit/f6e371609056adfe9afbdba5e697b3cb209af45f))
+* 🎸 Database Insert agent ([#305](https://github.com/mnemnk/mnemnk-app/issues/305)) ([3e8127a](https://github.com/mnemnk/mnemnk-app/commit/3e8127a995d89a89367e63fee60452947a3fe589))
+* 🎸 Database Insert and Select agents ([#309](https://github.com/mnemnk/mnemnk-app/issues/309)) ([e3ba560](https://github.com/mnemnk/mnemnk-app/commit/e3ba56095764b5930f4f99168c034b997b3f7848))
+* 🎸 Delay agent ([#311](https://github.com/mnemnk/mnemnk-app/issues/311)) ([e0dd4a0](https://github.com/mnemnk/mnemnk-app/commit/e0dd4a097730e8636a9babb445f77ecd9ab0ae7a))
+* 🎸 event loop for store ([#306](https://github.com/mnemnk/mnemnk-app/issues/306)) ([ecc2af6](https://github.com/mnemnk/mnemnk-app/commit/ecc2af6045c56d793db62d181856b1686e3f40fd))
+
+
+### Bug Fixes
+
+* 🐛 API agent doesn't use global config ([#315](https://github.com/mnemnk/mnemnk-app/issues/315)) ([8644db0](https://github.com/mnemnk/mnemnk-app/commit/8644db03869e70e2d0cd2f54497af2caf6d49e69))
+* 🐛 debug log level for mnemnk_app_lib ([#308](https://github.com/mnemnk/mnemnk-app/issues/308)) ([c20c94c](https://github.com/mnemnk/mnemnk-app/commit/c20c94cbc58cfb9b32389665b8b47a7c902c9bfc))
+* 🐛 remove debug logs ([#310](https://github.com/mnemnk/mnemnk-app/issues/310)) ([dfda359](https://github.com/mnemnk/mnemnk-app/commit/dfda359c7874f2b8c770053e5a501d6318931714))
+
 ## [0.17.3](https://github.com/mnemnk/mnemnk-app/compare/v0.17.2...v0.17.3) (2025-04-22)
 
 
