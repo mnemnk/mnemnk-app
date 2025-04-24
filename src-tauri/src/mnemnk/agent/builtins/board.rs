@@ -7,8 +7,6 @@ use crate::mnemnk::agent::{
     AsAgent, AsAgentData,
 };
 
-// const EMIT_PUBLISH: &str = "mnemnk:write_board";
-
 struct BoardInAgent {
     data: AsAgentData,
     board_name: Option<String>,
@@ -140,11 +138,6 @@ impl AsAgent for BoardOutAgent {
         }
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        // do nothing
-        Ok(())
-    }
 }
 
 fn normalize_board_name(config: &AgentConfig) -> Option<String> {
@@ -170,7 +163,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_inputs(vec!["*"])
             .with_default_config(vec![(
                 "board_name".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                AgentConfigEntry::new(AgentValue::new_string(""), "string")
                     .with_title("Board Name")
                     .with_description("* = source kind"),
             )]),
@@ -185,7 +178,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["*"])
             .with_default_config(vec![(
                 "board_name".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                AgentConfigEntry::new(AgentValue::new_string(""), "string")
                     .with_title("Board Name"),
             )]),
     );

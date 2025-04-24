@@ -199,7 +199,9 @@ pub trait AsAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
+    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl<T: AsAgent> Agent for T {

@@ -164,13 +164,11 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![
             (
                 "field".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
-                    .with_title("Field"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Field"),
             ),
             (
                 "regex".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
-                    .with_title("Regex"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Regex"),
             ),
         ]),
     );
@@ -189,7 +187,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["string"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+            AgentConfigEntry::new(AgentValue::new_string(""), "string"),
         )]),
     );
 
@@ -209,7 +207,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["text"])
         .with_default_config(vec![(
             "template".into(),
-            AgentConfigEntry::new(AgentValue::new_text("".to_string()), "text"),
+            AgentConfigEntry::new(AgentValue::new_text(""), "text"),
         )]),
     );
 }

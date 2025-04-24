@@ -209,11 +209,6 @@ impl AsAgent for IntervalTimerAgent {
         }
         Ok(())
     }
-
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-        // This agent doesn't process input, it just outputs on a timer
-        Ok(())
-    }
 }
 
 // Parse time duration strings like "2s", "10m", "200ms"
@@ -289,7 +284,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec!["unit"])
         .with_default_config(vec![(
             "interval".into(),
-            AgentConfigEntry::new(AgentValue::new_string("10s".to_string()), "string")
+            AgentConfigEntry::new(AgentValue::new_string("10s"), "string")
                 .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
         )]),
     );

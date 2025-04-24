@@ -124,12 +124,6 @@ mod implementation {
 
             Ok(())
         }
-
-        fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
-            // The API agent doesn't process input directly;
-            // it receives HTTP requests and forwards them as output
-            Ok(())
-        }
     }
 
     #[derive(Debug, Deserialize, Serialize)]
@@ -281,16 +275,13 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_global_config(vec![
                 (
                     "address".into(),
-                    AgentConfigEntry::new(
-                        AgentValue::new_string("localhost:3296".to_string()),
-                        "string",
-                    )
-                    .with_title("Address")
-                    .with_description("API server address (host:port)"),
+                    AgentConfigEntry::new(AgentValue::new_string("localhost:3296"), "string")
+                        .with_title("Address")
+                        .with_description("API server address (host:port)"),
                 ),
                 (
                     "api_key".into(),
-                    AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
+                    AgentConfigEntry::new(AgentValue::new_string(""), "string")
                         .with_title("API Key")
                         .with_description("API key for authentication"),
                 ),

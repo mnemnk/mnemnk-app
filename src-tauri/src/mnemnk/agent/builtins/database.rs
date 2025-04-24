@@ -212,11 +212,11 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![
             (
                 "db".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
             (
                 "table".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
         ]),
     );
@@ -236,11 +236,11 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![
             (
                 "db".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
             (
                 "table".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
         ]),
     );

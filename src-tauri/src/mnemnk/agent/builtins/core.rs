@@ -75,8 +75,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_outputs(vec!["*"])
             .with_default_config(vec![(
                 "kind".into(),
-                AgentConfigEntry::new(AgentValue::new_string("".to_string()), "string")
-                    .with_title("Kind"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Kind"),
             )]),
     );
 }
