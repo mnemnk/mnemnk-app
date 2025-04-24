@@ -18,8 +18,6 @@ mod implementation {
     pub struct ApiAgent {
         data: AsAgentData,
         server_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
-        address: String,
-        api_key: Option<String>,
     }
 
     impl AsAgent for ApiAgent {
@@ -29,43 +27,9 @@ mod implementation {
             def_name: String,
             config: Option<AgentConfig>,
         ) -> Result<Self> {
-            let address = if let Some(config) = &config {
-                if let Some(address) = config.get("address") {
-                    if let Some(address_str) = address.as_str() {
-                        address_str.to_string()
-                    } else {
-                        DEFAULT_ADDRESS.to_string()
-                    }
-                } else {
-                    DEFAULT_ADDRESS.to_string()
-                }
-            } else {
-                DEFAULT_ADDRESS.to_string()
-            };
-
-            let api_key = if let Some(config) = &config {
-                if let Some(key) = config.get("api_key") {
-                    if let Some(key_str) = key.as_str() {
-                        if key_str.is_empty() {
-                            None
-                        } else {
-                            Some(key_str.to_string())
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
             Ok(Self {
                 data: AsAgentData::new(app, id, def_name, config),
                 server_handle: Arc::new(Mutex::new(None)),
-                address,
-                api_key,
             })
         }
 
@@ -86,44 +50,6 @@ mod implementation {
             self.stop_server()?;
             Ok(())
         }
-
-        fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-            // Extract the new address and API key
-            let new_address = config
-                .get("address")
-                .and_then(|v| v.as_str())
-                .unwrap_or(DEFAULT_ADDRESS)
-                .to_string();
-
-            let new_api_key = if let Some(key) = config.get("api_key") {
-                if let Some(key_str) = key.as_str() {
-                    if key_str.is_empty() {
-                        None
-                    } else {
-                        Some(key_str.to_string())
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-
-            // Check if the configuration has changed
-            if new_address != self.address || new_api_key != self.api_key {
-                // Update the configuration
-                self.address = new_address;
-                self.api_key = new_api_key;
-
-                // Restart the server if it's running
-                if self.server_handle.lock().unwrap().is_some() {
-                    self.stop_server()?;
-                    self.start_server()?;
-                }
-            }
-
-            Ok(())
-        }
     }
 
     #[derive(Debug, Deserialize, Serialize)]
@@ -137,8 +63,18 @@ mod implementation {
         fn start_server(&mut self) -> Result<()> {
             let app_handle = self.app().clone();
             let agent_id = self.id().to_string();
-            let address = self.address.clone();
-            let api_key = self.api_key.clone();
+
+            let address = self
+                .global_config()
+                .and_then(|c| c.get("address").cloned())
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .unwrap_or(DEFAULT_ADDRESS.to_string());
+            let api_key = self
+                .global_config()
+                .and_then(|c| c.get("api_key").cloned())
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .and_then(|s| if s.is_empty() { None } else { Some(s) });
+
             let server_handle = self.server_handle.clone();
 
             let handle = tokio::spawn(async move {
