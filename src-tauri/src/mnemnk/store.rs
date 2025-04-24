@@ -175,8 +175,8 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     response,
                 } => {
                     let result = process_delete(&app_clone, database, table, key).await;
-                    response.send(result).unwrap_or_else(|_| {
-                        log::error!("Failed to send delete result");
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send delete result: {}", e);
                     });
                 }
                 StoreEvent::ExportEvents { path, response } => {
@@ -210,8 +210,8 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     response,
                 } => {
                     let result = process_insert(&app_clone, database, table, key, value).await;
-                    response.send(result).unwrap_or_else(|_| {
-                        log::error!("Failed to send insert result");
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send insert result: {}", e);
                     });
                 }
                 StoreEvent::ReindexText { response } => {
@@ -242,8 +242,8 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     response,
                 } => {
                     let result = process_select(&app_clone, database, table, key).await;
-                    response.send(result).unwrap_or_else(|_| {
-                        log::error!("Failed to send select result");
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send select result: {}", e);
                     });
                 }
                 StoreEvent::Shutdown { completion } => {
