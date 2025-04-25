@@ -1,12 +1,11 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 
 use crate::mnemnk::settings;
 
-use super::data::{AgentData, AgentValue};
+use super::config::AgentConfig;
+use super::data::AgentData;
 use super::env::AgentEnv;
 
 #[derive(Debug, Error)]
@@ -75,8 +74,8 @@ pub trait Agent {
         let mut merged_config = self.global_config().unwrap_or_default();
         let config = self.config();
         if let Some(config) = config {
-            for (key, value) in config.iter() {
-                merged_config.insert(key.clone(), value.clone());
+            for (key, value) in config {
+                merged_config.set(key.clone(), value.clone());
             }
         }
         Some(merged_config)
@@ -103,9 +102,6 @@ impl AsAgentData {
         }
     }
 }
-
-pub type AgentConfigs = HashMap<String, AgentConfig>;
-pub type AgentConfig = HashMap<String, AgentValue>;
 
 pub trait AsAgent {
     fn new(

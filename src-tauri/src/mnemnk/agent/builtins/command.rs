@@ -256,13 +256,7 @@ impl CommandAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 

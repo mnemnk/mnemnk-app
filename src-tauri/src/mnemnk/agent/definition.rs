@@ -6,14 +6,18 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use thiserror::Error;
 
-use super::agent::{AgentConfig, AsyncAgent};
+use super::agent::AsyncAgent;
 use super::builtins;
+use super::config::AgentConfig;
 use super::data::AgentValue;
 use crate::mnemnk::settings;
 
 static AGENTS_DIR: &str = "agents";
 static MNEMNK_JSON: &str = "mnemnk.json";
 static MNEMNK_LOCAL_JSON: &str = "mnemnk.local.json";
+
+pub static AGENT_KIND_BUILTIN: &str = "Builtin";
+pub static AGENT_KIND_DATABASE: &str = "Database";
 
 #[derive(Debug, Error)]
 pub enum AgentDefinitionError {

@@ -3,6 +3,7 @@ use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
     AgentDefinitions, AgentStatus, AgentValue, AsAgent, AsAgentData,
@@ -21,13 +22,7 @@ impl AsAgent for UnitInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -43,7 +38,7 @@ impl AsAgent for UnitInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
-            self.try_output("unit".to_string(), AgentData::new_unit())
+            self.try_output(CONFIG_UNIT.to_string(), AgentData::new_unit())
                 .context("Failed to output value")?;
         }
 
@@ -64,13 +59,7 @@ impl AsAgent for BooleanInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -87,15 +76,11 @@ impl AsAgent for BooleanInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("boolean")
-                .context("Missing boolean")?
-                .as_bool()
-                .context("boolean in config is not a boolean")?;
-            self.try_output("boolean".to_string(), AgentData::new_boolean(value))
+                .config()
+                .context("no context")?
+                .get_bool(CONFIG_BOOLEAN)
+                .context("not a boolean")?;
+            self.try_output(CONFIG_BOOLEAN.to_string(), AgentData::new_boolean(value))
                 .context("Failed to output value")?;
         }
 
@@ -116,13 +101,7 @@ impl AsAgent for IntegerInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -139,20 +118,12 @@ impl AsAgent for IntegerInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("integer")
-                .context("Missing integer")?;
-            self.try_output(
-                "integer".to_string(),
-                AgentData {
-                    kind: "integer".to_string(),
-                    value: value.clone(),
-                },
-            )
-            .context("Failed to output value")?;
+                .config()
+                .context("no context")?
+                .get_integer(CONFIG_INTEGER)
+                .context("not an integer")?;
+            self.try_output(CONFIG_INTEGER.to_string(), AgentData::new_integer(value))
+                .context("Failed to output value")?;
         }
 
         Ok(())
@@ -172,13 +143,7 @@ impl AsAgent for NumberInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -195,20 +160,12 @@ impl AsAgent for NumberInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("number")
-                .context("Missing number")?;
-            self.try_output(
-                "number".to_string(),
-                AgentData {
-                    kind: "number".to_string(),
-                    value: value.clone(),
-                },
-            )
-            .context("Failed to output value")?;
+                .config()
+                .context("no context")?
+                .get_number(CONFIG_NUMBER)
+                .context("not a number")?;
+            self.try_output(CONFIG_NUMBER.to_string(), AgentData::new_number(value))
+                .context("Failed to output value")?;
         }
 
         Ok(())
@@ -228,13 +185,7 @@ impl AsAgent for StringInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -251,21 +202,12 @@ impl AsAgent for StringInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("string")
-                .context("Missing string")?
-                .clone();
-            self.try_output(
-                "string".to_string(),
-                AgentData {
-                    kind: "string".to_string(),
-                    value,
-                },
-            )
-            .context("Failed to output value")?;
+                .config()
+                .context("no context")?
+                .get_string(CONFIG_STRING)
+                .context("not a string")?;
+            self.try_output(CONFIG_STRING.to_string(), AgentData::new_string(value))
+                .context("Failed to output value")?;
         }
 
         Ok(())
@@ -285,13 +227,7 @@ impl AsAgent for TextInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -308,21 +244,12 @@ impl AsAgent for TextInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("text")
-                .context("Missing text")?
-                .clone();
-            self.try_output(
-                "text".to_string(),
-                AgentData {
-                    kind: "text".to_string(),
-                    value,
-                },
-            )
-            .context("Failed to output text")?;
+                .config()
+                .context("no context")?
+                .get_string(CONFIG_TEXT)
+                .context("not a text")?;
+            self.try_output(CONFIG_TEXT.to_string(), AgentData::new_text(value))
+                .context("Failed to output text")?;
         }
 
         Ok(())
@@ -342,13 +269,7 @@ impl AsAgent for ObjectInputAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -365,54 +286,60 @@ impl AsAgent for ObjectInputAgent {
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
             let value = self
-                .data
-                .config
-                .as_ref()
-                .context("Missing config")?
-                .get("object")
-                .context("Missing object")?
+                .config()
+                .context("no context")?
+                .get_object(CONFIG_OBJECT)
+                .context("not an object")?
                 .clone();
-            self.try_output(
-                "object".to_string(),
-                AgentData {
-                    kind: "object".to_string(),
-                    value,
-                },
-            )
-            .context("Failed to output value")?;
+            self.try_output(CONFIG_OBJECT.to_string(), AgentData::new_object(value))
+                .context("Failed to output value")?;
         }
 
         Ok(())
     }
 }
 
+static CATEGORY: &str = "Core/Input";
+
+static CONFIG_UNIT: &str = "unit";
+static CONFIG_BOOLEAN: &str = "boolean";
+static CONFIG_INTEGER: &str = "integer";
+static CONFIG_NUMBER: &str = "number";
+static CONFIG_STRING: &str = "string";
+static CONFIG_TEXT: &str = "text";
+static CONFIG_OBJECT: &str = "object";
+
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Unit Input
     defs.insert(
         "$unit_input".into(),
-        AgentDefinition::new("Builtin", "$unit_input", Some(new_boxed::<UnitInputAgent>))
-            .with_title("Unit Input")
-            .with_category("Core/Input")
-            .with_outputs(vec!["unit"])
-            .with_default_config(vec![(
-                "unit".into(),
-                AgentConfigEntry::new(AgentValue::new_unit(), "unit"),
-            )]),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$unit_input",
+            Some(new_boxed::<UnitInputAgent>),
+        )
+        .with_title("Unit Input")
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_UNIT])
+        .with_default_config(vec![(
+            CONFIG_UNIT.into(),
+            AgentConfigEntry::new(AgentValue::new_unit(), "unit"),
+        )]),
     );
 
     // Boolean Input
     defs.insert(
         "$boolean_input".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$boolean_input",
             Some(new_boxed::<BooleanInputAgent>),
         )
         .with_title("Boolean Input")
-        .with_category("Core/Input")
-        .with_outputs(vec!["boolean"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_BOOLEAN])
         .with_default_config(vec![(
-            "boolean".into(),
+            CONFIG_BOOLEAN.into(),
             AgentConfigEntry::new(AgentValue::new_boolean(false), "boolean"),
         )]),
     );
@@ -421,15 +348,15 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$integer_input".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$integer_input",
             Some(new_boxed::<IntegerInputAgent>),
         )
         .with_title("Integer Input")
-        .with_category("Core/Input")
-        .with_outputs(vec!["integer"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_INTEGER])
         .with_default_config(vec![(
-            "integer".into(),
+            CONFIG_INTEGER.into(),
             AgentConfigEntry::new(AgentValue::new_integer(0), "integer"),
         )]),
     );
@@ -438,15 +365,15 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$number_input".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$number_input",
             Some(new_boxed::<NumberInputAgent>),
         )
         .with_title("Number Input")
-        .with_category("Core/Input")
-        .with_outputs(vec!["number"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_NUMBER])
         .with_default_config(vec![(
-            "number".into(),
+            CONFIG_NUMBER.into(),
             AgentConfigEntry::new(AgentValue::new_number(0.0), "number"),
         )]),
     );
@@ -455,15 +382,15 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$string_input".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$string_input",
             Some(new_boxed::<StringInputAgent>),
         )
         .with_title("String Input")
-        .with_category("Core/Input")
-        .with_outputs(vec!["string"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_STRING])
         .with_default_config(vec![(
-            "string".into(),
+            CONFIG_STRING.into(),
             AgentConfigEntry::new(AgentValue::new_string(""), "string"),
         )]),
     );
@@ -471,29 +398,33 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Text Input
     defs.insert(
         "$text_input".into(),
-        AgentDefinition::new("Builtin", "$text_input", Some(new_boxed::<TextInputAgent>))
-            .with_title("Text Input")
-            .with_category("Core/Input")
-            .with_outputs(vec!["text"])
-            .with_default_config(vec![(
-                "text".into(),
-                AgentConfigEntry::new(AgentValue::new_text(""), "text"),
-            )]),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$text_input",
+            Some(new_boxed::<TextInputAgent>),
+        )
+        .with_title("Text Input")
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_TEXT])
+        .with_default_config(vec![(
+            CONFIG_TEXT.into(),
+            AgentConfigEntry::new(AgentValue::new_text(""), "text"),
+        )]),
     );
 
     // Object Input
     defs.insert(
         "$object_input".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$object_input",
             Some(new_boxed::<ObjectInputAgent>),
         )
         .with_title("Object Input")
-        .with_category("Core/Input")
-        .with_outputs(vec!["object"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CONFIG_OBJECT])
         .with_default_config(vec![(
-            "object".into(),
+            CONFIG_OBJECT.into(),
             AgentConfigEntry::new(AgentValue::new_object(Value::Null), "object"),
         )]),
     );

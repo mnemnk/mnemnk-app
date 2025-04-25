@@ -189,13 +189,13 @@ pub fn init_agent_global_configs(app: &AppHandle, agent_defs: &AgentDefinitions)
             if let Some(existing_config) = agent_global_configs.get_mut(agent_name) {
                 for (key, config_entry) in global_config.iter() {
                     if !existing_config.contains_key(key) {
-                        existing_config.insert(key.clone(), config_entry.value.clone());
+                        existing_config.set(key.clone(), config_entry.value.clone());
                     }
                 }
             } else {
                 let mut new_config = AgentConfig::default();
                 for (key, config_entry) in global_config.iter() {
-                    new_config.insert(key.clone(), config_entry.value.clone());
+                    new_config.set(key.clone(), config_entry.value.clone());
                 }
                 agent_global_configs.insert(agent_name.clone(), new_config);
             }
