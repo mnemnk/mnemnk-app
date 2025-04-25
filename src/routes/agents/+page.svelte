@@ -681,7 +681,31 @@
 
 <style>
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
-    stroke-width: 6px;
+    stroke-width: 8px;
     stroke-opacity: 0.8;
+  }
+
+  :global(.svelte-flow__resize-control.handle) {
+    border: 6px solid #00f0ff;
+    box-shadow: 0 0 16px #00f0ff;
+    border-radius: 10px;
+    width: 0px;
+    height: 0px;
+  }
+  :global(.svelte-flow__resize-control.line.top) {
+    border: 6px solid #00f0ff;
+    box-shadow: 0 0 16px #00f0ff;
+  }
+  :global(.svelte-flow__resize-control.line.right) {
+    border: 6px solid #00f0ff;
+    box-shadow: 0 0 16px #00f0ff;
+  }
+  :global(.svelte-flow__resize-control.line.bottom) {
+    border: 6px solid #00f0ff;
+    box-shadow: 0 0 16px #00f0ff;
+  }
+  :global(.svelte-flow__resize-control.line.left) {
+    border: 6px solid #00f0ff;
+    box-shadow: 0 0 16px #00f0ff;
   }
 </style>
