@@ -344,17 +344,17 @@ impl AgentValue {
         }
     }
 
-    #[allow(unused)]
     pub fn as_i64(&self) -> Option<i64> {
         match self {
             AgentValue::Integer(i) => Some(*i),
+            AgentValue::Number(n) => Some(*n as i64),
             _ => None,
         }
     }
 
-    #[allow(unused)]
     pub fn as_f64(&self) -> Option<f64> {
         match self {
+            AgentValue::Integer(i) => Some(*i as f64),
             AgentValue::Number(n) => Some(*n),
             _ => None,
         }

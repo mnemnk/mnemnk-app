@@ -6,8 +6,8 @@ use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
-use super::data::AgentValue;
 use super::env::AgentEnv;
+use super::AgentConfig;
 use crate::mnemnk::settings;
 
 pub type AgentFlows = HashMap<String, AgentFlow>;
@@ -35,7 +35,7 @@ pub struct AgentFlowNode {
     pub title: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub config: Option<AgentFlowNodeConfig>,
+    pub config: Option<AgentConfig>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub x: Option<f64>,
@@ -49,8 +49,6 @@ pub struct AgentFlowNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<f64>,
 }
-
-pub type AgentFlowNodeConfig = HashMap<String, AgentValue>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlowEdge {

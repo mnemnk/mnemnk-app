@@ -19,7 +19,9 @@ impl AsAgent for BoardInAgent {
         def_name: String,
         config: Option<AgentConfig>,
     ) -> Result<Self> {
-        let board_name = config.as_ref().and_then(normalize_board_name);
+        let board_name = config
+            .as_ref()
+            .and_then(|c| c.get_string(CONFIG_BOARD_NAME));
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
             board_name,
@@ -35,7 +37,7 @@ impl AsAgent for BoardInAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.board_name = normalize_board_name(&config);
+        self.board_name = config.get_string(CONFIG_BOARD_NAME);
         Ok(())
     }
 
@@ -76,7 +78,9 @@ impl AsAgent for BoardOutAgent {
         def_name: String,
         config: Option<AgentConfig>,
     ) -> Result<Self> {
-        let board_name = config.as_ref().and_then(normalize_board_name);
+        let board_name = config
+            .as_ref()
+            .and_then(|c| c.get_string(CONFIG_BOARD_NAME));
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
             board_name,
@@ -116,7 +120,7 @@ impl AsAgent for BoardOutAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        let board_name = normalize_board_name(&config);
+        let board_name = config.get_string(CONFIG_BOARD_NAME);
         if self.board_name != board_name {
             if let Some(board_name) = &self.board_name {
                 let env = self.env();
@@ -140,18 +144,7 @@ impl AsAgent for BoardOutAgent {
     }
 }
 
-fn normalize_board_name(config: &AgentConfig) -> Option<String> {
-    let Some(board_name) = config.get("board_name") else {
-        // board_name is not set
-        return None;
-    };
-    let board_name = board_name.as_str().unwrap_or_default().trim();
-    if board_name.is_empty() {
-        // board_name is empty
-        return None;
-    }
-    return Some(board_name.to_string());
-}
+static CONFIG_BOARD_NAME: &str = "$board";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // BoardInAgent
@@ -162,7 +155,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_category("Core")
             .with_inputs(vec!["*"])
             .with_default_config(vec![(
-                "board_name".into(),
+                CONFIG_BOARD_NAME.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string")
                     .with_title("Board Name")
                     .with_description("* = source kind"),
@@ -177,7 +170,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             .with_category("Core")
             .with_outputs(vec!["*"])
             .with_default_config(vec![(
-                "board_name".into(),
+                CONFIG_BOARD_NAME.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string")
                     .with_title("Board Name"),
             )]),

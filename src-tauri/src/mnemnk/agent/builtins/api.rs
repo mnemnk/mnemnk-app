@@ -1,6 +1,6 @@
 #[cfg(feature = "api")]
 mod implementation {
-    use anyhow::Result;
+    use anyhow::{Context as _, Result};
     use axum::{extract::State, routing::post, Json, Router};
     use axum_auth::AuthBearer;
     use serde::{Deserialize, Serialize};
@@ -12,8 +12,6 @@ mod implementation {
     use tower_http::timeout::TimeoutLayer;
 
     use crate::mnemnk::agent::{Agent, AgentConfig, AgentData, AsAgent, AsAgentData};
-
-    const DEFAULT_ADDRESS: &str = "localhost:3296";
 
     pub struct ApiAgent {
         data: AsAgentData,
@@ -64,16 +62,9 @@ mod implementation {
             let app_handle = self.app().clone();
             let agent_id = self.id().to_string();
 
-            let address = self
-                .global_config()
-                .and_then(|c| c.get("address").cloned())
-                .and_then(|v| v.as_str().map(|s| s.to_string()))
-                .unwrap_or(DEFAULT_ADDRESS.to_string());
-            let api_key = self
-                .global_config()
-                .and_then(|c| c.get("api_key").cloned())
-                .and_then(|v| v.as_str().map(|s| s.to_string()))
-                .and_then(|s| if s.is_empty() { None } else { Some(s) });
+            let global_config = self.global_config().context("no global config")?;
+            let address = global_config.get_string_or("address", super::ADDRESS_DEFAULT);
+            let api_key = global_config.get_string("api_key");
 
             let server_handle = self.server_handle.clone();
 
@@ -198,25 +189,31 @@ mod implementation {
 pub use implementation::ApiAgent;
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{AgentConfigEntry, AgentDefinition, AgentDefinitions, AgentValue};
+
+static CONFIG_ADDRESS: &str = "address";
+static CONFIG_API_KEY: &str = "api_key";
+
+static ADDRESS_DEFAULT: &str = "localhost:3296";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // API Agent
     defs.insert(
         "$api".into(),
-        AgentDefinition::new("Builtin", "$api", Some(new_boxed::<ApiAgent>))
+        AgentDefinition::new(AGENT_KIND_BUILTIN, "$api", Some(new_boxed::<ApiAgent>))
             .with_title("API")
             .with_category("Core")
             .with_outputs(vec!["*"])
             .with_global_config(vec![
                 (
-                    "address".into(),
-                    AgentConfigEntry::new(AgentValue::new_string("localhost:3296"), "string")
+                    CONFIG_ADDRESS.into(),
+                    AgentConfigEntry::new(AgentValue::new_string(ADDRESS_DEFAULT), "string")
                         .with_title("Address")
                         .with_description("API server address (host:port)"),
                 ),
                 (
-                    "api_key".into(),
+                    CONFIG_API_KEY.into(),
                     AgentConfigEntry::new(AgentValue::new_string(""), "string")
                         .with_title("API Key")
                         .with_description("API key for authentication"),

@@ -4,6 +4,7 @@ use regex::Regex;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
     AgentDefinitions, AgentValue, AsAgent, AsAgentData,
@@ -22,13 +23,7 @@ impl AsAgent for RegexFilterAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -41,39 +36,29 @@ impl AsAgent for RegexFilterAgent {
     }
 
     fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
-        let config = self.data.config.as_ref().context("Missing config")?;
-
-        let key = config
-            .get("key")
-            .context("Missing key")?
-            .as_str()
-            .context("key is not a string")?;
-        if key.is_empty() {
-            // key is not set
-            return Ok(());
+        let config = self.config().context("missing config")?;
+        let field = config.get_string_or_default(CONFIG_FIELD);
+        if field.is_empty() {
+            bail!("field is not set");
         }
 
-        let regex = config
-            .get("regex")
-            .context("Missing regex")?
-            .as_str()
-            .context("regex is not a string")?;
+        let regex = config.get_string_or_default(CONFIG_REGEX);
         if regex.is_empty() {
-            // regex is not set
-            return Ok(());
+            bail!("regex is not set");
         }
-        let regex = Regex::new(regex).context("Failed to compile regex")?;
+        let regex = Regex::new(&regex).context("Failed to compile regex")?;
 
         if let AgentValue::Object(value) = &data.value {
-            let Some(key_value) = value.get(key) else {
-                // value does not have the key
+            let Some(key_value) = value.get(field) else {
+                // value does not have the field
                 return Ok(());
             };
-            let key_value = key_value
-                .as_str()
-                .context("value is not a string")?
-                .to_string();
-            if regex.is_match(&key_value) {
+            let key_value = key_value.as_str().map(|s| s.to_string());
+            if key_value.is_none() {
+                // value is not a string
+                return Ok(());
+            }
+            if regex.is_match(key_value.unwrap().as_str()) {
                 // value matches the regex
                 self.try_output(ch, data)
                     .context("Failed to output regex result")?;
@@ -97,13 +82,7 @@ impl AsAgent for TemplateStringAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -116,20 +95,15 @@ impl AsAgent for TemplateStringAgent {
     }
 
     fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let config = self.data.config.as_ref().context("Missing config")?;
+        let config = self.config().context("missing config")?;
 
-        let template = config
-            .get("template")
-            .context("Missing template")?
-            .as_str()
-            .context("template is not a string")?;
+        let template = config.get_string_or_default(CONFIG_TEMPLATE);
         if template.is_empty() {
-            // template is not set
-            return Ok(());
+            bail!("template is not set");
         }
 
         let reg = Handlebars::new();
-        let rendered_string = reg.render_template(template, &data)?;
+        let rendered_string = reg.render_template(&template, &data)?;
 
         let (kind, out_value) = match self.def_name() {
             "$template_string" => ("string", AgentValue::new_string(rendered_string)),
@@ -148,26 +122,35 @@ impl AsAgent for TemplateStringAgent {
     }
 }
 
+static CATEGORY: &str = "Core/String";
+
+static CH_STRING: &str = "string";
+static CH_TEXT: &str = "text";
+
+static CONFIG_FIELD: &str = "field";
+static CONFIG_REGEX: &str = "regex";
+static CONFIG_TEMPLATE: &str = "template";
+
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // RegexFilterAgent
     defs.insert(
         "$regex_filter".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$regex_filter",
             Some(new_boxed::<RegexFilterAgent>),
         )
         .with_title("Regex Filter")
-        .with_category("Core/String")
+        .with_category(CATEGORY)
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
         .with_default_config(vec![
             (
-                "field".into(),
+                CONFIG_FIELD.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Field"),
             ),
             (
-                "regex".into(),
+                CONFIG_REGEX.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Regex"),
             ),
         ]),
@@ -177,16 +160,16 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$template_string".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$template_string",
             Some(new_boxed::<TemplateStringAgent>),
         )
         .with_title("Template String")
-        .with_category("Core/String")
+        .with_category(CATEGORY)
         .with_inputs(vec!["*"])
-        .with_outputs(vec!["string"])
+        .with_outputs(vec![CH_STRING])
         .with_default_config(vec![(
-            "template".into(),
+            CONFIG_TEMPLATE.into(),
             AgentConfigEntry::new(AgentValue::new_string(""), "string"),
         )]),
     );
@@ -197,16 +180,16 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         AgentDefinition::new(
             // We can use TemplateStringAgent for `$template_text` too,
             // since the only difference is the config type.
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$template_text",
             Some(new_boxed::<TemplateStringAgent>),
         )
         .with_title("Template Text")
-        .with_category("Core/String")
+        .with_category(CATEGORY)
         .with_inputs(vec!["*"])
-        .with_outputs(vec!["text"])
+        .with_outputs(vec![CH_TEXT])
         .with_default_config(vec![(
-            "template".into(),
+            CONFIG_TEMPLATE.into(),
             AgentConfigEntry::new(AgentValue::new_text(""), "text"),
         )]),
     );

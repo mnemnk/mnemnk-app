@@ -9,7 +9,8 @@ use tokio::sync::mpsc;
 
 use crate::mnemnk::settings;
 
-use super::agent::{self, AgentConfig, AgentMessage, AsyncAgent};
+use super::agent::{self, AgentMessage, AsyncAgent};
+use super::config::AgentConfig;
 use super::data::AgentData;
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};

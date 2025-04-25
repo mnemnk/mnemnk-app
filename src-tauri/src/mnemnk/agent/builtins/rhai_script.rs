@@ -4,6 +4,7 @@ use rhai::{Dynamic, Scope};
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
     AgentDefinitions, AgentValue, AsAgent, AsAgentData,
@@ -35,13 +36,11 @@ impl AsAgent for RhaiExpressionAgent {
     }
 
     fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let config = self.data.config.as_ref().context("Missing config")?;
+        let config = self.config().context("missing config")?;
 
         let template = config
-            .get("template")
-            .context("Missing template")?
-            .as_str()
-            .context("template is not a string")?;
+            .get_string(CONFIG_TEMPLATE)
+            .context("missing template")?;
         if template.is_empty() {
             // template is not set
             return Ok(());
@@ -54,30 +53,33 @@ impl AsAgent for RhaiExpressionAgent {
         let env = self.env();
         let result: Dynamic = env
             .rhai_engine
-            .eval_expression_with_scope(&mut scope, template)?;
+            .eval_expression_with_scope(&mut scope, &template)?;
 
         let out_data: AgentData = from_dynamic(&result)?;
 
-        self.try_output("data".to_string(), out_data)
+        self.try_output(CH_DATA.to_string(), out_data)
             .context("Failed to output template")
     }
 }
+
+static CH_DATA: &str = "data";
+static CONFIG_TEMPLATE: &str = "template";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Template String Agent
     defs.insert(
         "$rhai_expression".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$rhai_expression",
             Some(new_boxed::<RhaiExpressionAgent>),
         )
         .with_title("Rhai Expression")
         .with_category("Core/Script")
-        .with_inputs(vec!["data"])
-        .with_outputs(vec!["data"])
+        .with_inputs(vec![CH_DATA])
+        .with_outputs(vec![CH_DATA])
         .with_default_config(vec![(
-            "template".into(),
+            CONFIG_TEMPLATE.into(),
             AgentConfigEntry::new(AgentValue::new_string(""), "text"),
         )]),
     );

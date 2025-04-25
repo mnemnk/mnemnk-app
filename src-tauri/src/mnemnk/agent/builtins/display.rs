@@ -3,6 +3,7 @@ use serde::Serialize;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions,
     AgentDisplayConfigEntry, AsAgent, AsAgentData,
@@ -21,13 +22,7 @@ impl AsAgent for DisplayDataAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -40,7 +35,7 @@ impl AsAgent for DisplayDataAgent {
     }
 
     fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        self.emit_display("data".to_string(), data)
+        self.emit_display(DISPLAY_DATA.to_string(), data)
     }
 }
 
@@ -57,13 +52,7 @@ impl AsAgent for DebugDataAgent {
         config: Option<AgentConfig>,
     ) -> Result<Self> {
         Ok(Self {
-            data: AsAgentData {
-                app,
-                id,
-                status: Default::default(),
-                def_name,
-                config,
-            },
+            data: AsAgentData::new(app, id, def_name, config),
         })
     }
 
@@ -83,24 +72,28 @@ impl AsAgent for DebugDataAgent {
         }
         let debug_data = DebugData { ch, data };
         let data = AgentData::new_object(serde_json::to_value(&debug_data)?);
-        self.emit_display("data".to_string(), data)
+        self.emit_display(DISPLAY_DATA.to_string(), data)
     }
 }
+
+static CATEGORY: &str = "Core/Display";
+
+static DISPLAY_DATA: &str = "data";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Display Data
     defs.insert(
         "$display_data".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$display_data",
             Some(new_boxed::<DisplayDataAgent>),
         )
         .with_title("Display Data")
-        .with_category("Core/Display")
+        .with_category(CATEGORY)
         .with_inputs(vec!["data"])
         .with_display_config(vec![(
-            "data".into(),
+            DISPLAY_DATA.into(),
             AgentDisplayConfigEntry::new("*").with_hide_title(),
         )]),
     );
@@ -108,13 +101,17 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Debug Data
     defs.insert(
         "$debug_data".into(),
-        AgentDefinition::new("Builtin", "$debug_data", Some(new_boxed::<DebugDataAgent>))
-            .with_title("Debug Data")
-            .with_category("Core/Display")
-            .with_inputs(vec!["*"])
-            .with_display_config(vec![(
-                "data".into(),
-                AgentDisplayConfigEntry::new("object").with_hide_title(),
-            )]),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$debug_data",
+            Some(new_boxed::<DebugDataAgent>),
+        )
+        .with_title("Debug Data")
+        .with_category(CATEGORY)
+        .with_inputs(vec!["*"])
+        .with_display_config(vec![(
+            DISPLAY_DATA.into(),
+            AgentDisplayConfigEntry::new("object").with_hide_title(),
+        )]),
     );
 }

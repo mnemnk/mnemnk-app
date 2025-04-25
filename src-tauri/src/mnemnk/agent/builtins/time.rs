@@ -8,6 +8,7 @@ use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Manager};
 
 use crate::mnemnk::agent::agent::new_boxed;
+use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentEnv,
     AgentStatus, AgentValue, AsAgent, AsAgentData,
@@ -41,21 +42,9 @@ impl AsAgent for DelayAgent {
     }
 
     fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
-        const DEFAULT_DELAY_MS: i64 = 1000; // Default delay in milliseconds
-
-        let config = self.data.config.as_ref().context("Missing config")?;
-
-        let delay_ms = if let Some(delay) = config.get("delay") {
-            delay.as_i64().unwrap_or(DEFAULT_DELAY_MS)
-        } else {
-            DEFAULT_DELAY_MS
-        };
-
-        let max_tasks = if let Some(max_tasks) = config.get("max_tasks") {
-            max_tasks.as_i64().unwrap_or(10)
-        } else {
-            10
-        };
+        let config = self.config().context("Missing config")?;
+        let delay_ms = config.get_integer_or(CONFIG_DELAY, DELAY_MS_DEFAULT);
+        let max_tasks = config.get_integer_or(CONFIG_MAX_TASKS, MAX_TASKS_DEFAULT);
 
         let agent_id = self.id().to_string();
         let app_handle = self.app().clone();
@@ -119,7 +108,7 @@ impl IntervalTimerAgent {
                 let env = app_handle.state::<AgentEnv>();
                 if let Err(e) = env.try_send_agent_out(
                     agent_id.clone(),
-                    "unit".to_string(),
+                    CH_UNIT.to_string(),
                     AgentData::new_unit(),
                 ) {
                     log::error!("Failed to send interval timer output: {}", e);
@@ -153,21 +142,11 @@ impl AsAgent for IntervalTimerAgent {
         def_name: String,
         config: Option<AgentConfig>,
     ) -> Result<Self> {
-        const DEFAULT_INTERVAL_MS: u64 = 10000; // 10 seconds in milliseconds
-
-        let interval_ms = if let Some(config) = &config {
-            if let Some(interval) = config.get("interval") {
-                if let Some(interval_str) = interval.as_str() {
-                    parse_duration_to_ms(interval_str).unwrap_or(DEFAULT_INTERVAL_MS)
-                } else {
-                    DEFAULT_INTERVAL_MS
-                }
-            } else {
-                DEFAULT_INTERVAL_MS
-            }
-        } else {
-            DEFAULT_INTERVAL_MS
-        };
+        let interval = config
+            .as_ref()
+            .and_then(|c| c.get_string(CONFIG_INTERVAL))
+            .unwrap_or_else(|| INTERVAL_DEFAULT.to_string());
+        let interval_ms = parse_duration_to_ms(&interval)?;
 
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
@@ -194,16 +173,14 @@ impl AsAgent for IntervalTimerAgent {
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
         // Check if interval has changed
-        if let Some(interval) = config.get("interval") {
-            if let Some(interval_str) = interval.as_str() {
-                let new_interval = parse_duration_to_ms(interval_str)?;
-                if new_interval != self.interval_ms {
-                    self.interval_ms = new_interval;
-                    if *self.status() == AgentStatus::Start {
-                        // Restart the timer with the new interval
-                        self.stop_timer()?;
-                        self.start_timer()?;
-                    }
+        if let Some(interval) = config.get_string(CONFIG_INTERVAL) {
+            let new_interval = parse_duration_to_ms(&interval)?;
+            if new_interval != self.interval_ms {
+                self.interval_ms = new_interval;
+                if *self.status() == AgentStatus::Start {
+                    // Restart the timer with the new interval
+                    self.stop_timer()?;
+                    self.start_timer()?;
                 }
             }
         }
@@ -246,25 +223,37 @@ fn parse_duration_to_ms(duration_str: &str) -> Result<u64> {
     }
 }
 
+static CATEGORY: &str = "Core/Time";
+
+static CH_UNIT: &str = "unit";
+
+static CONFIG_DELAY: &str = "delay";
+static CONFIG_MAX_TASKS: &str = "max_tasks";
+static CONFIG_INTERVAL: &str = "interval";
+
+const DELAY_MS_DEFAULT: i64 = 1000; // 1 second in milliseconds
+const MAX_TASKS_DEFAULT: i64 = 10;
+static INTERVAL_DEFAULT: &str = "10s";
+
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Delay Agent
     defs.insert(
         "$delay".into(),
-        AgentDefinition::new("Builtin", "$delay", Some(new_boxed::<DelayAgent>))
+        AgentDefinition::new(AGENT_KIND_BUILTIN, "$delay", Some(new_boxed::<DelayAgent>))
             .with_title("Delay")
             .with_description("Delays output by a specified time")
-            .with_category("Core/Time")
+            .with_category(CATEGORY)
             .with_inputs(vec!["*"])
             .with_outputs(vec!["*"])
             .with_default_config(vec![
                 (
-                    "delay".into(),
-                    AgentConfigEntry::new(AgentValue::new_integer(1000), "integer")
+                    CONFIG_DELAY.into(),
+                    AgentConfigEntry::new(AgentValue::new_integer(DELAY_MS_DEFAULT), "integer")
                         .with_title("delay (ms)"),
                 ),
                 (
-                    "max_tasks".into(),
-                    AgentConfigEntry::new(AgentValue::new_integer(10), "integer")
+                    CONFIG_MAX_TASKS.into(),
+                    AgentConfigEntry::new(AgentValue::new_integer(MAX_TASKS_DEFAULT), "integer")
                         .with_title("max tasks"),
                 ),
             ]),
@@ -274,17 +263,17 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
         "$interval_timer".into(),
         AgentDefinition::new(
-            "Builtin",
+            AGENT_KIND_BUILTIN,
             "$interval_timer",
             Some(new_boxed::<IntervalTimerAgent>),
         )
         .with_title("Interval Timer")
         .with_description("Outputs a unit signal at specified intervals")
-        .with_category("Core/Time")
-        .with_outputs(vec!["unit"])
+        .with_category(CATEGORY)
+        .with_outputs(vec![CH_UNIT])
         .with_default_config(vec![(
-            "interval".into(),
-            AgentConfigEntry::new(AgentValue::new_string("10s"), "string")
+            CONFIG_INTERVAL.into(),
+            AgentConfigEntry::new(AgentValue::new_string(INTERVAL_DEFAULT), "string")
                 .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
         )]),
     );
