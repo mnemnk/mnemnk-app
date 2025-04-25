@@ -35,7 +35,7 @@ impl AsAgent for DisplayDataAgent {
     }
 
     fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        self.emit_display(DISPLAY_DATA.to_string(), data)
+        self.emit_display(DISPLAY_DATA, data)
     }
 }
 
@@ -72,7 +72,7 @@ impl AsAgent for DebugDataAgent {
         }
         let debug_data = DebugData { ch, data };
         let data = AgentData::new_object(serde_json::to_value(&debug_data)?);
-        self.emit_display(DISPLAY_DATA.to_string(), data)
+        self.emit_display(DISPLAY_DATA, data)
     }
 }
 

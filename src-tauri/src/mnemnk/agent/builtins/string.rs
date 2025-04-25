@@ -112,7 +112,7 @@ impl AsAgent for TemplateStringAgent {
         };
 
         self.try_output(
-            kind.to_string(),
+            kind,
             AgentData {
                 kind: kind.to_string(),
                 value: out_value,

@@ -84,14 +84,14 @@ impl AsAgent for DatabaseDeleteAgent {
                     "key": key,
                     "value": value,
                 }));
-                self.try_output(CH_KV.to_string(), data)?;
+                self.try_output(CH_KV, data)?;
             } else {
                 // value is empty
-                self.try_output(CH_KV.to_string(), AgentData::new_unit())?;
+                self.try_output(CH_KV, AgentData::new_unit())?;
             }
         } else {
             // return_before is false
-            self.try_output(CH_KV.to_string(), AgentData::new_unit())?;
+            self.try_output(CH_KV, AgentData::new_unit())?;
         }
 
         Ok(())
@@ -173,9 +173,9 @@ impl AsAgent for DatabaseSelectAgent {
                 "key": key,
                 "value": value,
             }));
-            self.try_output(CH_KV.to_string(), data)?;
+            self.try_output(CH_KV, data)?;
         } else {
-            self.try_output(CH_KV.to_string(), AgentData::new_unit())?;
+            self.try_output(CH_KV, AgentData::new_unit())?;
         }
         Ok(())
     }

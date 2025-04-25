@@ -38,7 +38,7 @@ impl AsAgent for UnitInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
-            self.try_output(CONFIG_UNIT.to_string(), AgentData::new_unit())
+            self.try_output(CONFIG_UNIT, AgentData::new_unit())
                 .context("Failed to output value")?;
         }
 
@@ -80,7 +80,7 @@ impl AsAgent for BooleanInputAgent {
                 .context("no context")?
                 .get_bool(CONFIG_BOOLEAN)
                 .context("not a boolean")?;
-            self.try_output(CONFIG_BOOLEAN.to_string(), AgentData::new_boolean(value))
+            self.try_output(CONFIG_BOOLEAN, AgentData::new_boolean(value))
                 .context("Failed to output value")?;
         }
 
@@ -122,7 +122,7 @@ impl AsAgent for IntegerInputAgent {
                 .context("no context")?
                 .get_integer(CONFIG_INTEGER)
                 .context("not an integer")?;
-            self.try_output(CONFIG_INTEGER.to_string(), AgentData::new_integer(value))
+            self.try_output(CONFIG_INTEGER, AgentData::new_integer(value))
                 .context("Failed to output value")?;
         }
 
@@ -164,7 +164,7 @@ impl AsAgent for NumberInputAgent {
                 .context("no context")?
                 .get_number(CONFIG_NUMBER)
                 .context("not a number")?;
-            self.try_output(CONFIG_NUMBER.to_string(), AgentData::new_number(value))
+            self.try_output(CONFIG_NUMBER, AgentData::new_number(value))
                 .context("Failed to output value")?;
         }
 
@@ -206,7 +206,7 @@ impl AsAgent for StringInputAgent {
                 .context("no context")?
                 .get_string(CONFIG_STRING)
                 .context("not a string")?;
-            self.try_output(CONFIG_STRING.to_string(), AgentData::new_string(value))
+            self.try_output(CONFIG_STRING, AgentData::new_string(value))
                 .context("Failed to output value")?;
         }
 
@@ -248,7 +248,7 @@ impl AsAgent for TextInputAgent {
                 .context("no context")?
                 .get_string(CONFIG_TEXT)
                 .context("not a text")?;
-            self.try_output(CONFIG_TEXT.to_string(), AgentData::new_text(value))
+            self.try_output(CONFIG_TEXT, AgentData::new_text(value))
                 .context("Failed to output text")?;
         }
 
@@ -291,7 +291,7 @@ impl AsAgent for ObjectInputAgent {
                 .get_object(CONFIG_OBJECT)
                 .context("not an object")?
                 .clone();
-            self.try_output(CONFIG_OBJECT.to_string(), AgentData::new_object(value))
+            self.try_output(CONFIG_OBJECT, AgentData::new_object(value))
                 .context("Failed to output value")?;
         }
 

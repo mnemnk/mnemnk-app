@@ -57,7 +57,7 @@ impl AsAgent for RhaiExpressionAgent {
 
         let out_data: AgentData = from_dynamic(&result)?;
 
-        self.try_output(CH_DATA.to_string(), out_data)
+        self.try_output(CH_DATA, out_data)
             .context("Failed to output template")
     }
 }
