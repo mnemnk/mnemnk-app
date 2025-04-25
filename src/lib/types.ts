@@ -61,6 +61,7 @@ export type SAgentFlow = {
   nodes: SAgentFlowNode[];
   edges: SAgentFlowEdge[];
   name: string;
+  viewport: Viewport | null;
 };
 
 export type SAgentConfigs = Record<string, SAgentConfig>;
@@ -90,6 +91,7 @@ export type AgentFlow = {
   nodes: AgentFlowNode[];
   edges: AgentFlowEdge[];
   name: string;
+  viewport: Viewport | null;
 };
 
 export type AgentFlowNode = Node & {
@@ -108,6 +110,12 @@ export type AgentFlowNodeConfig = Record<string, any>;
 export type AgentFlowNodeDisplay = Record<string, any>;
 
 export type AgentFlowEdge = Edge;
+
+export type Viewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
 
 // events
 

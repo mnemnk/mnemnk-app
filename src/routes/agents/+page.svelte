@@ -60,7 +60,7 @@
 
   let { data } = $props();
 
-  const { screenToFlowPosition, updateEdge, updateNode, updateNodeData } =
+  const { getViewport, screenToFlowPosition, setViewport, updateEdge, updateNode, updateNodeData } =
     $derived(useSvelteFlow());
   setAgentDefinitionsContext(data.agentDefs);
 
@@ -81,6 +81,10 @@
   function updateNodesAndEdges() {
     nodes = [...flows()[flowNameState.name].nodes];
     edges = [...flows()[flowNameState.name].edges];
+    const viewport = flows()[flowNameState.name].viewport;
+    if (viewport) {
+      setViewport(viewport);
+    }
   }
 
   function updateFlowNames() {
@@ -166,7 +170,8 @@
   }
 
   async function syncFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
+    const viewport = getViewport();
+    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs, viewport);
     flows()[flowNameState.name] = deserializeAgentFlow(flow, agentDefs);
     await insertAgentFlow(flow);
   }
@@ -383,14 +388,16 @@
 
   async function onSaveFlow() {
     if (flowNameState.name in flows()) {
-      const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
+      const viewport = getViewport();
+      const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs, viewport);
       await saveAgentFlow(flow);
       flows()[flowNameState.name] = deserializeAgentFlow(flow, agentDefs);
     }
   }
 
   function onExportFlow() {
-    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs);
+    const viewport = getViewport();
+    const flow = serializeAgentFlow(nodes, edges, flowNameState.name, agentDefs, viewport);
     const jsonStr = JSON.stringify(flow, null, 2);
     const blob = new Blob([jsonStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);

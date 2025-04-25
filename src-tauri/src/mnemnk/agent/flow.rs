@@ -20,9 +20,19 @@ pub struct AgentFlow {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub viewport: Option<Viewport>,
+
     #[serde(skip)]
     // Only set when reading/saving the file under the agent_flows_dir
     path: Option<PathBuf>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub struct Viewport {
+    pub x: f64,
+    pub y: f64,
+    pub zoom: f64,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]

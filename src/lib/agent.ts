@@ -18,6 +18,7 @@ import type {
   SAgentFlowEdge,
   SAgentFlowNode,
   SAgentFlows,
+  Viewport,
 } from "./types";
 
 export async function startAgent(agentId: string): Promise<void> {
@@ -139,6 +140,7 @@ export function deserializeAgentFlow(
     nodes: nodes,
     edges: validEdges.map((edge) => deserializeAgentFlowEdge(edge)),
     name: flow.name,
+    viewport: flow.viewport,
   };
 }
 
@@ -240,11 +242,13 @@ export function serializeAgentFlow(
   edges: AgentFlowEdge[],
   name: string,
   agent_defs: SAgentDefinitions,
+  viewport: Viewport,
 ): SAgentFlow {
   return {
     nodes: nodes.map((node) => serializeAgentFlowNode(node, agent_defs)),
     edges: edges.map((edge) => serializeAgentFlowEdge(edge)),
     name,
+    viewport,
   };
 }
 
