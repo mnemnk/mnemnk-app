@@ -72,7 +72,7 @@
   });
 </script>
 
-<NodeResizer isVisible={selected} variant="line" {onResize} />
+<NodeResizer isVisible={selected} {onResize} />
 <div
   class="{bgColor} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
   style="height: {ht ? `${ht}px` : 'auto'}; border-color: {calculateHighlightColor(
