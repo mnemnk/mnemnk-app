@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.5](https://github.com/mnemnk/mnemnk-app/compare/v0.17.4...v0.17.5) (2025-04-25)
+
+
+### Features
+
+* 🎸 Database Update and Database Update Merge ([#316](https://github.com/mnemnk/mnemnk-app/issues/316)) ([bcbd4fa](https://github.com/mnemnk/mnemnk-app/commit/bcbd4fa564a8f3d64dc52c9ded2749b82ff1e251))
+* 🎸 Database Upsert and Upsert Merge agents ([#317](https://github.com/mnemnk/mnemnk-app/issues/317)) ([702d20d](https://github.com/mnemnk/mnemnk-app/commit/702d20d180adf5d4f8c65a7c211671b1ae54fe03))
+
 ## [0.17.4](https://github.com/mnemnk/mnemnk-app/compare/v0.17.3...v0.17.4) (2025-04-24)
 
 
