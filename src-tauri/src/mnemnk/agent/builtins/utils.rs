@@ -39,7 +39,7 @@ impl AsAgent for CounterAgent {
 
     fn start(&mut self) -> Result<()> {
         self.count = 0;
-        self.emit_display(DISPLAY_COUNT.to_string(), AgentData::new_integer(0))?;
+        self.emit_display(DISPLAY_COUNT, AgentData::new_integer(0))?;
         Ok(())
     }
 
@@ -49,11 +49,8 @@ impl AsAgent for CounterAgent {
         } else if ch == CH_IN {
             self.count += 1;
         }
-        self.try_output(CH_COUNT.to_string(), AgentData::new_integer(self.count))?;
-        self.emit_display(
-            DISPLAY_COUNT.to_string(),
-            AgentData::new_integer(self.count),
-        )
+        self.try_output(CH_COUNT, AgentData::new_integer(self.count))?;
+        self.emit_display(DISPLAY_COUNT, AgentData::new_integer(self.count))
     }
 }
 
@@ -92,7 +89,7 @@ impl AsAgent for MemoryAgent {
             // Reset command empties the memory
             self.memory.clear();
 
-            self.try_output(CH_RESET.to_string(), AgentData::new_unit())?;
+            self.try_output(CH_RESET, AgentData::new_unit())?;
         } else if ch == CH_IN {
             // Add new data to memory
             self.memory.push(data.clone());
@@ -115,7 +112,7 @@ impl AsAgent for MemoryAgent {
             let memory_array =
                 AgentValue::new_array(self.memory.iter().map(|data| data.value.clone()).collect());
             self.try_output(
-                CH_MEMORY.to_string(),
+                CH_MEMORY,
                 AgentData {
                     kind: self.memory[0].kind.clone(),
                     value: memory_array,
