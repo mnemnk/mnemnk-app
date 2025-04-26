@@ -102,19 +102,20 @@ impl AgentConfig {
     }
 }
 
-impl<'a> Iterator for &'a AgentConfig {
-    type Item = (&'a String, &'a AgentValue);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.iter().next()
-    }
-}
-
 impl IntoIterator for AgentConfig {
     type Item = (String, AgentValue);
     type IntoIter = std::collections::hash_map::IntoIter<String, AgentValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a AgentConfig {
+    type Item = (&'a String, &'a AgentValue);
+    type IntoIter = std::collections::hash_map::Iter<'a, String, AgentValue>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
     }
 }
