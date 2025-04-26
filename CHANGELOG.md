@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.6](https://github.com/mnemnk/mnemnk-app/compare/v0.17.5...v0.17.6) (2025-04-26)
+
+
+### Features
+
+* 🎸 preserve viewport ([#320](https://github.com/mnemnk/mnemnk-app/issues/320)) ([2b7ae16](https://github.com/mnemnk/mnemnk-app/commit/2b7ae16597dc7b0459a76d5bfa78fae4597d39f3)), closes [#185](https://github.com/mnemnk/mnemnk-app/issues/185)
+
 ## [0.17.5](https://github.com/mnemnk/mnemnk-app/compare/v0.17.4...v0.17.5) (2025-04-25)
 
 
