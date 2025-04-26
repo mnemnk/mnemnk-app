@@ -680,32 +680,36 @@
 {/if}
 
 <style>
+  :root {
+    --resize-control-size: 6px;
+    --resize-control-color: #00eeff;
+  }
+
   :global(.svelte-flow__edge .svelte-flow__edge-path) {
     stroke-width: 8px;
     stroke-opacity: 0.8;
   }
 
   :global(.svelte-flow__resize-control.handle) {
-    border: 6px solid #00f0ff;
-    box-shadow: 0 0 16px #00f0ff;
-    border-radius: 10px;
+    border: calc(var(--resize-control-size) * 1.5) solid var(--resize-control-color);
+    border-radius: var(--resize-control-size);
     width: 0px;
     height: 0px;
   }
   :global(.svelte-flow__resize-control.line.top) {
-    border: 6px solid #00f0ff;
-    box-shadow: 0 0 16px #00f0ff;
+    border: var(--resize-control-size) solid var(--resize-control-color);
+    border-image: linear-gradient(to top, #000, var(--resize-control-color)) 1;
   }
   :global(.svelte-flow__resize-control.line.right) {
-    border: 6px solid #00f0ff;
-    box-shadow: 0 0 16px #00f0ff;
+    border: var(--resize-control-size) solid var(--resize-control-color);
+    border-image: linear-gradient(to right, #000, var(--resize-control-color)) 1;
   }
   :global(.svelte-flow__resize-control.line.bottom) {
-    border: 6px solid #00f0ff;
-    box-shadow: 0 0 16px #00f0ff;
+    border: var(--resize-control-size) solid var(--resize-control-color);
+    border-image: linear-gradient(to bottom, #000, var(--resize-control-color)) 1;
   }
   :global(.svelte-flow__resize-control.line.left) {
-    border: 6px solid #00f0ff;
-    box-shadow: 0 0 16px #00f0ff;
+    border: var(--resize-control-size) solid var(--resize-control-color);
+    border-image: linear-gradient(to left, #000, var(--resize-control-color)) 1;
   }
 </style>
