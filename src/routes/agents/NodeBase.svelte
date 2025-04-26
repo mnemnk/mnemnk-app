@@ -5,9 +5,6 @@
     "bg-rose-400 dark:bg-rose-400 opacity-50",
   ];
 
-  const highlightBorderOklch = [0.96, 0.13, 105];
-  const borderOklch = [0.57, 0, 0];
-
   const DEFAULT_HANDLE_STYLE = "width: 11px; height: 11px;";
 
   const HANDLE_OFFSET = 71;
@@ -56,13 +53,6 @@
     damping: 1.0,
   });
 
-  function calculateHighlightColor(t: number, startOklch: number[], endOklch: number[]) {
-    const l = Math.round((endOklch[0] + t * (startOklch[0] - endOklch[0])) * 100) / 100;
-    const c = Math.round((endOklch[1] + t * (startOklch[1] - endOklch[1])) * 100) / 100;
-    const h = Math.round((endOklch[2] + t * (startOklch[2] - endOklch[2])) * 100) / 100;
-    return `oklch(${l} ${c} ${h})`;
-  }
-
   $effect(() => {
     if (highlightCount > lastHighlightCount) {
       highlight.set(1, { instant: true });
@@ -74,12 +64,9 @@
 
 <NodeResizer isVisible={selected} {onResize} />
 <div
-  class="{bgColor} flex flex-col p-0 text-black dark:text-white border-2 rounded-xl"
-  style="height: {ht ? `${ht}px` : 'auto'}; border-color: {calculateHighlightColor(
-    highlight.current,
-    highlightBorderOklch,
-    borderOklch,
-  )};"
+  class="{bgColor} flex flex-col p-0 text-black dark:text-white border-2 border-color-[#777] rounded-xl"
+  style:height={ht ? `${ht}px` : "auto"}
+  style:box-shadow={highlight.current > 0.05 ? `0 0 ${highlight.current * 20}px #fff78b` : ""}
 >
   <div class="w-full min-w-40 flex-none pl-4 pr-4 pb-2 {titleColor} rounded-t-lg">
     {@render title()}
