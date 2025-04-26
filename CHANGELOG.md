@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.7](https://github.com/mnemnk/mnemnk-app/compare/v0.17.6...v0.17.7) (2025-04-26)
+
+
+### Bug Fixes
+
+* 🐛 wrong iter implementation of AgentConfig ([#325](https://github.com/mnemnk/mnemnk-app/issues/325)) ([5f88a13](https://github.com/mnemnk/mnemnk-app/commit/5f88a138a7a2c873e1df385f13a16cf72c7ced92)), closes [#324](https://github.com/mnemnk/mnemnk-app/issues/324)
+
 ## [0.17.6](https://github.com/mnemnk/mnemnk-app/compare/v0.17.5...v0.17.6) (2025-04-26)
 
 

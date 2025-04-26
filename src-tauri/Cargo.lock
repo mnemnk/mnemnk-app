@@ -3687,7 +3687,7 @@ dependencies = [
 
 [[package]]
 name = "mnemnk-app"
-version = "0.17.6"
+version = "0.17.7"
 dependencies = [
  "anyhow",
  "axum",
