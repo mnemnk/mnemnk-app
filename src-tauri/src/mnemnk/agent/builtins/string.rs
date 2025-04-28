@@ -11,35 +11,53 @@ use crate::mnemnk::agent::{
 };
 
 // Allow List
-struct AllowListAgent {
+struct AllowOrBlockListAgent {
     data: AsAgentData,
     regex_set: Option<RegexSet>,
 }
 
-impl AllowListAgent {
-    fn parse_allow_list(allow_list: &str) -> Option<RegexSet> {
-        let allow_list: Vec<String> = allow_list
+impl AllowOrBlockListAgent {
+    fn parse_regex_list(regex_list: &str) -> Option<RegexSet> {
+        let regex_list: Vec<String> = regex_list
             .split_terminator('\n')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .map(|s| format!("^{}", s))
             .collect();
-        if allow_list.is_empty() {
+        if regex_list.is_empty() {
             return None;
         }
-        match RegexSet::new(allow_list) {
+        match RegexSet::new(regex_list) {
             Ok(set) => {
                 return Some(set);
             }
             Err(e) => {
-                log::error!("Failed to parse allow list regex: {}", e);
+                log::error!("Failed to parse regex list: {}", e);
                 return None;
             }
         }
     }
+
+    fn is_match(&self, data: &AgentData, field: &str) -> bool {
+        if self.regex_set.is_none() {
+            return false;
+        }
+        if let AgentValue::Object(value) = &data.value {
+            let Some(key_value) = value.get(field) else {
+                // value does not have the field
+                return false;
+            };
+            let Some(key_value) = key_value.as_str().map(|s| s.to_string()) else {
+                // value is not a string
+                return false;
+            };
+            return self.regex_set.as_ref().unwrap().is_match(&key_value);
+        }
+        false
+    }
 }
 
-impl AsAgent for AllowListAgent {
+impl AsAgent for AllowOrBlockListAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -48,12 +66,12 @@ impl AsAgent for AllowListAgent {
     ) -> Result<Self> {
         let allow_list = config
             .as_ref()
-            .and_then(|c| c.get_string(CONFIG_ALLOW_LIST))
+            .and_then(|c| c.get_string(CONFIG_REGEX_LIST))
             .unwrap_or_default();
 
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
-            regex_set: AllowListAgent::parse_allow_list(&allow_list),
+            regex_set: Self::parse_regex_list(&allow_list),
         })
     }
 
@@ -66,11 +84,11 @@ impl AsAgent for AllowListAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        let allow_list = config.get_string(CONFIG_ALLOW_LIST);
+        let allow_list = config.get_string(CONFIG_REGEX_LIST);
         if allow_list.is_none() {
             return Ok(());
         }
-        self.regex_set = AllowListAgent::parse_allow_list(allow_list.unwrap().as_str());
+        self.regex_set = Self::parse_regex_list(allow_list.unwrap().as_str());
         Ok(())
     }
 
@@ -80,30 +98,18 @@ impl AsAgent for AllowListAgent {
         if field.is_empty() {
             bail!("field is not set");
         }
-        if self.regex_set.is_none() {
-            // no regex set
-            return Ok(());
-        }
 
-        if let AgentValue::Object(value) = &data.value {
-            let Some(key_value) = value.get(field) else {
-                // value does not have the field
-                return Ok(());
-            };
-            let key_value = key_value.as_str().map(|s| s.to_string());
-            if key_value.is_none() {
-                // value is not a string
-                return Ok(());
-            }
-            if self
-                .regex_set
-                .as_ref()
-                .unwrap()
-                .is_match(key_value.unwrap().as_str())
-            {
+        if self.def_name() == "$allow_list" {
+            if self.is_match(&data, &field) {
                 // value matches the regex
                 self.try_output(ch, data)
-                    .context("Failed to output a result")?;
+                    .context("Failed to output allow list result")?;
+            }
+        } else if self.def_name() == "$block_list" {
+            if !self.is_match(&data, &field) {
+                // value does not match the regex
+                self.try_output(ch, data)
+                    .context("Failed to output block list result")?;
             }
         }
 
@@ -228,9 +234,9 @@ static CATEGORY: &str = "Core/String";
 static CH_STRING: &str = "string";
 static CH_TEXT: &str = "text";
 
-static CONFIG_ALLOW_LIST: &str = "allow_list";
 static CONFIG_FIELD: &str = "field";
 static CONFIG_REGEX: &str = "regex";
+static CONFIG_REGEX_LIST: &str = "regex_list";
 static CONFIG_TEMPLATE: &str = "template";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
@@ -239,7 +245,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
             "$allow_list",
-            Some(new_boxed::<AllowListAgent>),
+            Some(new_boxed::<AllowOrBlockListAgent>),
         )
         .with_title("Allow List")
         .with_category(CATEGORY)
@@ -251,8 +257,31 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                 AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Field"),
             ),
             (
-                CONFIG_ALLOW_LIST.into(),
-                AgentConfigEntry::new(AgentValue::new_text(""), "text").with_title("allow list"),
+                CONFIG_REGEX_LIST.into(),
+                AgentConfigEntry::new(AgentValue::new_text(""), "text").with_title("regex list"),
+            ),
+        ]),
+    );
+
+    defs.insert(
+        "$block_list".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$block_list",
+            Some(new_boxed::<AllowOrBlockListAgent>),
+        )
+        .with_title("Block List")
+        .with_category(CATEGORY)
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["*"])
+        .with_default_config(vec![
+            (
+                CONFIG_FIELD.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Field"),
+            ),
+            (
+                CONFIG_REGEX_LIST.into(),
+                AgentConfigEntry::new(AgentValue::new_text(""), "text").with_title("regex list"),
             ),
         ]),
     );
