@@ -11,12 +11,12 @@ use crate::mnemnk::agent::{
 };
 
 // Allow List
-struct AllowOrBlockListAgent {
+struct PassOrBlockRegexListAgent {
     data: AsAgentData,
     regex_set: Option<RegexSet>,
 }
 
-impl AllowOrBlockListAgent {
+impl PassOrBlockRegexListAgent {
     fn parse_regex_list(regex_list: &str) -> Option<RegexSet> {
         let regex_list: Vec<String> = regex_list
             .split_terminator('\n')
@@ -57,7 +57,7 @@ impl AllowOrBlockListAgent {
     }
 }
 
-impl AsAgent for AllowOrBlockListAgent {
+impl AsAgent for PassOrBlockRegexListAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -99,17 +99,17 @@ impl AsAgent for AllowOrBlockListAgent {
             bail!("field is not set");
         }
 
-        if self.def_name() == "$allow_list" {
+        if self.def_name() == "$pass_regex_list" {
             if self.is_match(&data, &field) {
                 // value matches the regex
                 self.try_output(ch, data)
-                    .context("Failed to output allow list result")?;
+                    .context("Failed to output result")?;
             }
-        } else if self.def_name() == "$block_list" {
+        } else if self.def_name() == "$block_regex_list" {
             if !self.is_match(&data, &field) {
                 // value does not match the regex
                 self.try_output(ch, data)
-                    .context("Failed to output block list result")?;
+                    .context("Failed to output result")?;
             }
         }
 
@@ -241,13 +241,13 @@ static CONFIG_TEMPLATE: &str = "template";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
-        "$allow_list".into(),
+        "$pass_regex_list".into(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$allow_list",
-            Some(new_boxed::<AllowOrBlockListAgent>),
+            "$pass_regex_list",
+            Some(new_boxed::<PassOrBlockRegexListAgent>),
         )
-        .with_title("Allow List")
+        .with_title("Pass Regex List")
         .with_category(CATEGORY)
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
@@ -264,13 +264,13 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     );
 
     defs.insert(
-        "$block_list".into(),
+        "$block_regex_list".into(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$block_list",
-            Some(new_boxed::<AllowOrBlockListAgent>),
+            "$block_regex_list",
+            Some(new_boxed::<PassOrBlockRegexListAgent>),
         )
-        .with_title("Block List")
+        .with_title("Block Regex List")
         .with_category(CATEGORY)
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
