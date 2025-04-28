@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.8](https://github.com/mnemnk/mnemnk-app/compare/v0.17.7...v0.17.8) (2025-04-28)
+
+
+### Features
+
+* 🎸 Allow List agent ([#329](https://github.com/mnemnk/mnemnk-app/issues/329)) ([4566bbb](https://github.com/mnemnk/mnemnk-app/commit/4566bbb80daabf2ef32b77527c3c73c5c6ee94bd))
+* 🎸 block list agent ([#330](https://github.com/mnemnk/mnemnk-app/issues/330)) ([17f9fc6](https://github.com/mnemnk/mnemnk-app/commit/17f9fc685739d5633b17a43c29267a6d3490a1ec))
+* 🎸 enable copy text from display ([#326](https://github.com/mnemnk/mnemnk-app/issues/326)) ([87e2b5e](https://github.com/mnemnk/mnemnk-app/commit/87e2b5e68856eba30bfb0bd7f2e1f1c12d474584))
+* 🎸 improve flow menu UIs ([#328](https://github.com/mnemnk/mnemnk-app/issues/328)) ([bad0283](https://github.com/mnemnk/mnemnk-app/commit/bad02836daa8a3b55982a58cf79ea1d26da590d9))
+
+
+### Bug Fixes
+
+* 🐛 deserialize AgentData ([#327](https://github.com/mnemnk/mnemnk-app/issues/327)) ([ec6ada4](https://github.com/mnemnk/mnemnk-app/commit/ec6ada485a0c981b7585d0cbc52ca9065c7a8d16))
+
 ## [0.17.7](https://github.com/mnemnk/mnemnk-app/compare/v0.17.6...v0.17.7) (2025-04-26)
 
 
