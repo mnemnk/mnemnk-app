@@ -1,7 +1,7 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
 
-  import { getContext, onMount } from "svelte";
+  import { getContext, onMount, tick } from "svelte";
 
   import {
     useSvelteFlow,
@@ -16,7 +16,7 @@
   } from "@xyflow/svelte";
   // 👇 this is important! You need to import the styles for Svelte Flow to work
   import "@xyflow/svelte/dist/style.css";
-  import { Button, ButtonGroup, GradientButton, Modal } from "flowbite-svelte";
+  import { Button, ButtonGroup, GradientButton, Modal, Toast } from "flowbite-svelte";
   import { ExclamationCircleOutline, PauseOutline, PlayOutline } from "flowbite-svelte-icons";
   import hotkeys from "hotkeys-js";
 
@@ -320,70 +320,100 @@
 
   let newFlowModal = $state(false);
   let newFlowName = $state("");
+  let newFlowInput = $state<HTMLInputElement>();
 
-  function onNewFlow() {
+  async function onNewFlow() {
     newFlowName = "";
     newFlowModal = true;
+    await tick();
+    newFlowInput?.focus();
   }
 
-  async function createNewFlow() {
+  async function handleCreateNewFlow() {
     newFlowModal = false;
     if (!newFlowName) return;
-    const flow = await newAgentFlow(newFlowName);
-    if (!flow) return;
+    const name = await createNewFlow(newFlowName);
+    if (!name) return;
+    await changeFlowName(name);
+  }
+
+  async function createNewFlow(name: string | null): Promise<string | null> {
+    if (!name) return null;
+    const flow = await newAgentFlow(name);
+    if (!flow) return null;
     flows()[flow.name] = deserializeAgentFlow(flow, agentDefs);
     updateFlowNames();
     updateFlowActivities();
-    await changeFlowName(flow.name);
+    return flow.name;
   }
 
   // Rename Flow
 
   let renameFlowModal = $state(false);
   let renameFlowName = $state("");
+  let renameFlowInput = $state<HTMLInputElement>();
 
-  function onRenameFlow() {
+  async function onRenameFlow() {
     renameFlowName = flowNameState.name;
     renameFlowModal = true;
+    await tick();
+    renameFlowInput?.focus();
   }
 
-  async function renameFlow() {
+  async function handleRenameFlow() {
     renameFlowModal = false;
     if (!renameFlowName || renameFlowName === flowNameState.name) return;
-    const oldName = flowNameState.name;
-    const newName = await renameAgentFlow(flowNameState.name, renameFlowName);
+    const newName = await renameFlow(flowNameState.name, renameFlowName);
     if (!newName) return;
-    const flow = flows()[oldName];
-    flow.name = newName;
-    flows()[newName] = flow;
-    delete flows()[oldName];
-    updateFlowNames();
-    updateFlowActivities();
     // We don't need to sync the current flow.
     // await changeFlowName(newName);
     flowNameState.name = newName;
     updateNodesAndEdges();
   }
 
+  async function renameFlow(old: string, rename: string): Promise<string | null> {
+    if (!old || !rename) return null;
+    const newName = await renameAgentFlow(old, rename);
+    if (!newName) return null;
+    const flow = flows()[old];
+    flow.name = newName;
+    flows()[newName] = flow;
+    delete flows()[old];
+    updateFlowNames();
+    updateFlowActivities();
+    return newName;
+  }
+
   // Delete Flow
 
   let deleteFlowModal = $state(false);
+  let cannotDeleteToast = $state(false);
 
   function onDeleteFlow() {
+    if (flowNameState.name === "main") {
+      cannotDeleteToast = true;
+      return;
+    }
+
     deleteFlowModal = true;
   }
 
-  async function deleteFlow() {
+  async function handleDeleteFlow() {
     deleteFlowModal = false;
-    const flow = flows()[flowNameState.name];
-    if (!flow) return;
-    await deleteAgentFlow(flowNameState.name);
-    delete flows()[flowNameState.name];
-    updateFlowNames();
-    updateFlowActivities();
-    // TODO: create a new flow when deleting the main flow
+    await deleteFlow(flowNameState.name);
+
     flowNameState.name = "main";
     updateNodesAndEdges();
+  }
+
+  async function deleteFlow(name: string) {
+    if (!name) return;
+    const flow = flows()[name];
+    if (!flow) return;
+    await deleteAgentFlow(name);
+    delete flows()[name];
+    updateFlowNames();
+    updateFlowActivities();
   }
 
   async function onSaveFlow() {
@@ -608,26 +638,24 @@
 
 {#if newFlowModal}
   <Modal title="New Flow" bind:open={newFlowModal} classBackdrop="bg-transparent backdrop-blur-xs">
-    <div class="flex flex-col">
-      <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-        >Flow Name</label
-      >
-      <input
-        type="text"
-        id="flow_name"
-        bind:value={newFlowName}
-        class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        placeholder="Flow Name"
-        onkeydown={(e) => {
-          if (e.key === "Enter") {
-            createNewFlow();
-          }
-        }}
-      />
-    </div>
-    <div class="flex justify-end mt-4">
-      <GradientButton color="pinkToOrange" onclick={createNewFlow}>Create</GradientButton>
-    </div>
+    <form onsubmit={handleCreateNewFlow} autocomplete="off">
+      <div class="flex flex-col">
+        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >Flow Name</label
+        >
+        <input
+          bind:this={newFlowInput}
+          type="text"
+          id="flow_name"
+          bind:value={newFlowName}
+          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Flow Name"
+        />
+      </div>
+      <div class="flex justify-end mt-4">
+        <GradientButton color="pinkToOrange">Create</GradientButton>
+      </div>
+    </form>
   </Modal>
 {/if}
 
@@ -637,26 +665,24 @@
     bind:open={renameFlowModal}
     classBackdrop="bg-transparent backdrop-blur-xs"
   >
-    <div class="flex flex-col">
-      <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-        >Flow Name</label
-      >
-      <input
-        type="text"
-        id="flow_name"
-        bind:value={renameFlowName}
-        class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        placeholder="Flow Name"
-        onkeydown={(e) => {
-          if (e.key === "Enter") {
-            renameFlow();
-          }
-        }}
-      />
-    </div>
-    <div class="flex justify-end mt-4">
-      <GradientButton color="pinkToOrange" onclick={renameFlow}>Rename</GradientButton>
-    </div>
+    <form onsubmit={handleRenameFlow} autocomplete="off">
+      <div class="flex flex-col">
+        <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+          >Flow Name</label
+        >
+        <input
+          bind:this={renameFlowInput}
+          type="text"
+          id="flow_name"
+          bind:value={renameFlowName}
+          class="block p-2 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          placeholder="Flow Name"
+        />
+      </div>
+      <div class="flex justify-end mt-4">
+        <GradientButton color="pinkToOrange">Rename</GradientButton>
+      </div>
+    </form>
   </Modal>
 {/if}
 
@@ -673,10 +699,16 @@
       <h3 class="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">
         Are you sure you want to delete this flow?
       </h3>
-      <Button onclick={deleteFlow} color="red" class="me-2">Delete</Button>
+      <Button onclick={handleDeleteFlow} color="red" class="me-2">Delete</Button>
       <Button color="alternative">Cancel</Button>
     </div>
   </Modal>
+{/if}
+
+{#if cannotDeleteToast}
+  <Toast bind:toastStatus={cannotDeleteToast} class="absolute top-1/2 left-1/2 z-50">
+    "main" flow cannot be deleted.
+  </Toast>
 {/if}
 
 <style>
