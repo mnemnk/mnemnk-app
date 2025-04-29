@@ -306,7 +306,19 @@ pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentF
 
 pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
-    let mut flow = read_agent_flow(path)?;
+    let mut flow = read_agent_flow(path.clone())?;
+
+    // Set name
+    let name = path
+        .file_stem()
+        .context("Failed to get file stem")?
+        .to_string_lossy()
+        .trim()
+        .to_string();
+    if name.is_empty() {
+        bail!("Agent flow name is empty");
+    }
+    flow.name = Some(name);
 
     // reset path of the flow
     flow.path = None;
