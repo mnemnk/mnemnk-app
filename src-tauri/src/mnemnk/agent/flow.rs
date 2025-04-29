@@ -306,7 +306,26 @@ pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentF
 
 pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
-    let mut flow = read_agent_flow(path)?;
+    let mut flow = read_agent_flow(path.clone())?;
+
+    // Get the base name from the file name
+    let base_name = path
+        .file_stem()
+        .context("Failed to get file stem")?
+        .to_string_lossy()
+        .trim()
+        .to_string();
+    if base_name.is_empty() {
+        bail!("Agent flow name is empty");
+    }
+
+    // Unique name for the flow
+    let name;
+    {
+        let agent_flows = env.flows.lock().unwrap();
+        name = unique_flow_name(&agent_flows, &base_name);
+    }
+    flow.name = Some(name.clone());
 
     // reset path of the flow
     flow.path = None;
@@ -320,17 +339,6 @@ pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     for node in &mut flow.nodes {
         node.enabled = false;
     }
-
-    // Unique name for the flow
-    let name;
-    {
-        let agent_flows = env.flows.lock().unwrap();
-        name = unique_flow_name(
-            &agent_flows,
-            flow.name.as_deref().context("Agent flow name not set")?,
-        );
-    }
-    flow.name = Some(name.clone());
 
     env.add_agent_flow(&flow)
         .context("Failed to add agent flow")?;
