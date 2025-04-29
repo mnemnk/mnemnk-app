@@ -1,4 +1,4 @@
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use serde_json::Value;
 use tauri::AppHandle;
 
@@ -285,14 +285,17 @@ impl AsAgent for ObjectInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
-            let value = self
-                .config()
-                .context("no context")?
-                .get_object(CONFIG_OBJECT)
-                .context("not an object")?
-                .clone();
-            self.try_output(CONFIG_OBJECT, AgentData::new_object(value))
-                .context("Failed to output value")?;
+            let config = self.config().context("no context")?;
+            let value = config.get(CONFIG_OBJECT).context("no object")?;
+            if let Some(obj) = value.as_object() {
+                self.try_output(CONFIG_OBJECT, AgentData::new_object(obj.clone()))
+                    .context("Failed to output value")?;
+            } else if let Some(arr) = value.as_array() {
+                self.try_output(CONFIG_OBJECT, AgentData::new_array("object", arr.clone()))
+                    .context("Failed to output value")?;
+            } else {
+                bail!("not an object");
+            }
         }
 
         Ok(())
