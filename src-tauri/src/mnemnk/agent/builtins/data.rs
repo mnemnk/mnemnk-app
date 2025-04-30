@@ -288,7 +288,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         "$get_property".to_string(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$geet_property",
+            "$get_property",
             Some(new_boxed::<GetPropertyAgent>),
         )
         .with_title("Get Property")
