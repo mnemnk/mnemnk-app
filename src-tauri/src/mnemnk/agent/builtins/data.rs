@@ -4,7 +4,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
 };
 
 // To String
@@ -161,12 +162,74 @@ impl AsAgent for FromJsonAgent {
     }
 }
 
+// Get Property
+struct GetPropertyAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for GetPropertyAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let property = self
+            .config()
+            .context("missing config")?
+            .get(CONFIG_PROPERTY)
+            .context("missing property")?
+            .as_str()
+            .context("failed as_str")?;
+
+        if property.is_empty() {
+            return Ok(());
+        }
+
+        let props = property.split('.').collect::<Vec<_>>();
+
+        if data.value.is_object() {
+            let mut value = data.value.as_object().context("failed as_object")?;
+            for prop in props {
+                if let Some(v) = value.get(prop) {
+                    value = v;
+                } else {
+                    return Ok(());
+                }
+            }
+
+            self.try_output(CH_DATA, AgentData::from_json_value(value.clone()))
+                .context("Failed to output")?;
+        }
+
+        // TODO: support array
+
+        Ok(())
+    }
+}
+
 static CATEGORY: &str = "Core/Data";
 
 static CH_DATA: &str = "data";
 static CH_STRING: &str = "string";
 static CH_TEXT: &str = "text";
 static CH_JSON: &str = "json";
+
+static CONFIG_PROPERTY: &str = "property";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
@@ -219,5 +282,22 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_category(CATEGORY)
         .with_inputs(vec![CH_JSON])
         .with_outputs(vec![CH_DATA]),
+    );
+
+    defs.insert(
+        "$get_property".to_string(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$geet_property",
+            Some(new_boxed::<GetPropertyAgent>),
+        )
+        .with_title("Get Property")
+        .with_category(CATEGORY)
+        .with_inputs(vec![CH_DATA])
+        .with_outputs(vec![CH_DATA])
+        .with_default_config(vec![(
+            CONFIG_PROPERTY.into(),
+            AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+        )]),
     );
 }
