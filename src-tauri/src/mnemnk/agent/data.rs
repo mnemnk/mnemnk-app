@@ -86,34 +86,13 @@ impl AgentData {
         Self { kind, value }
     }
 
-    // pub fn from_json_value(value: Value) -> Self {
-    //     match value {
-    //         Value::Null => AgentData {
-    //             kind: "unit".to_string(),
-    //             value: AgentValue::Null,
-    //         },
-    //         Value::Bool(b) => AgentData::new_boolean(b),
-    //         Value::Number(_) => {
-    //             if let Some(i) = value.as_i64() {
-    //                 AgentData::new_integer(i)
-    //             } else if let Some(f) = value.as_f64() {
-    //                 AgentData::new_number(f)
-    //             } else {
-    //                 AgentData::new_object(value)
-    //             }
-    //         }
-    //         Value::String(s) => AgentData::new_string(s),
-    //         Value::Array(arr) => AgentData {
-    //             kind: "array".to_string(), // Set kind to "array" for JSON arrays for now
-    //             value: AgentValue::new_array(
-    //                 arr.into_iter()
-    //                     .map(|v| AgentValue::from_json_value(v))
-    //                     .collect(),
-    //             ),
-    //         },
-    //         _ => AgentData::new_object(value),
-    //     }
-    // }
+    pub fn from_json_value(json_value: Value) -> Self {
+        let value = AgentValue::from_json_value(json_value);
+        AgentData {
+            kind: value.kind(),
+            value,
+        }
+    }
 
     #[allow(unused)]
     pub fn as_bool(&self) -> Option<bool> {
