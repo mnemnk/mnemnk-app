@@ -115,12 +115,32 @@ impl AgentData {
     //     }
     // }
 
+    #[allow(unused)]
+    pub fn as_bool(&self) -> Option<bool> {
+        self.value.as_bool()
+    }
+
+    #[allow(unused)]
+    pub fn as_i64(&self) -> Option<i64> {
+        self.value.as_i64()
+    }
+
+    #[allow(unused)]
+    pub fn as_f64(&self) -> Option<f64> {
+        self.value.as_f64()
+    }
+
     pub fn as_str(&self) -> Option<&str> {
         self.value.as_str()
     }
 
     pub fn as_object(&self) -> Option<&Value> {
         self.value.as_object()
+    }
+
+    #[allow(unused)]
+    pub fn as_array(&self) -> Option<&Vec<AgentValue>> {
+        self.value.as_array()
     }
 }
 
@@ -324,45 +344,45 @@ impl AgentValue {
         }
     }
 
-    // #[allow(unused)]
-    // pub fn is_null(&self) -> bool {
-    //     matches!(self, AgentValue::Null)
-    // }
+    #[allow(unused)]
+    pub fn is_unit(&self) -> bool {
+        matches!(self, AgentValue::Null)
+    }
 
-    // #[allow(unused)]
-    // pub fn is_boolean(&self) -> bool {
-    //     matches!(self, AgentValue::Boolean(_))
-    // }
+    #[allow(unused)]
+    pub fn is_boolean(&self) -> bool {
+        matches!(self, AgentValue::Boolean(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_integer(&self) -> bool {
-    //     matches!(self, AgentValue::Integer(_))
-    // }
+    #[allow(unused)]
+    pub fn is_integer(&self) -> bool {
+        matches!(self, AgentValue::Integer(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_number(&self) -> bool {
-    //     matches!(self, AgentValue::Number(_))
-    // }
+    #[allow(unused)]
+    pub fn is_number(&self) -> bool {
+        matches!(self, AgentValue::Number(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_string(&self) -> bool {
-    //     matches!(self, AgentValue::String(_))
-    // }
+    #[allow(unused)]
+    pub fn is_string(&self) -> bool {
+        matches!(self, AgentValue::String(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_text(&self) -> bool {
-    //     matches!(self, AgentValue::Text(_))
-    // }
+    #[allow(unused)]
+    pub fn is_text(&self) -> bool {
+        matches!(self, AgentValue::Text(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_array(&self) -> bool {
-    //     matches!(self, AgentValue::Array(_))
-    // }
+    #[allow(unused)]
+    pub fn is_array(&self) -> bool {
+        matches!(self, AgentValue::Array(_))
+    }
 
-    // #[allow(unused)]
-    // pub fn is_object(&self) -> bool {
-    //     matches!(self, AgentValue::Object(_))
-    // }
+    #[allow(unused)]
+    pub fn is_object(&self) -> bool {
+        matches!(self, AgentValue::Object(_))
+    }
 
     pub fn as_bool(&self) -> Option<bool> {
         match self {
@@ -406,6 +426,25 @@ impl AgentValue {
         match self {
             AgentValue::Array(a) => Some(a),
             _ => None,
+        }
+    }
+
+    pub fn kind(&self) -> String {
+        match self {
+            AgentValue::Null => "unit".to_string(),
+            AgentValue::Boolean(_) => "boolean".to_string(),
+            AgentValue::Integer(_) => "integer".to_string(),
+            AgentValue::Number(_) => "number".to_string(),
+            AgentValue::String(_) => "string".to_string(),
+            AgentValue::Text(_) => "text".to_string(),
+            AgentValue::Object(_) => "object".to_string(),
+            AgentValue::Array(arr) => {
+                if arr.is_empty() {
+                    "".to_string()
+                } else {
+                    arr[0].kind()
+                }
+            }
         }
     }
 }
@@ -1325,6 +1364,91 @@ mod tests {
         // array_array
 
         // object_array
+    }
+
+    #[test]
+    fn test_agent_value_test_methods() {
+        // Test test methods on AgentValue
+        let unit = AgentValue::new_unit();
+        assert_eq!(unit.is_unit(), true);
+        assert_eq!(unit.is_boolean(), false);
+        assert_eq!(unit.is_integer(), false);
+        assert_eq!(unit.is_number(), false);
+        assert_eq!(unit.is_string(), false);
+        assert_eq!(unit.is_text(), false);
+        assert_eq!(unit.is_array(), false);
+        assert_eq!(unit.is_object(), false);
+
+        let boolean = AgentValue::new_boolean(true);
+        assert_eq!(boolean.is_unit(), false);
+        assert_eq!(boolean.is_boolean(), true);
+        assert_eq!(boolean.is_integer(), false);
+        assert_eq!(boolean.is_number(), false);
+        assert_eq!(boolean.is_string(), false);
+        assert_eq!(boolean.is_text(), false);
+        assert_eq!(boolean.is_array(), false);
+        assert_eq!(boolean.is_object(), false);
+
+        let integer = AgentValue::new_integer(42);
+        assert_eq!(integer.is_unit(), false);
+        assert_eq!(integer.is_boolean(), false);
+        assert_eq!(integer.is_integer(), true);
+        assert_eq!(integer.is_number(), false);
+        assert_eq!(integer.is_string(), false);
+        assert_eq!(integer.is_text(), false);
+        assert_eq!(integer.is_array(), false);
+        assert_eq!(integer.is_object(), false);
+
+        let number = AgentValue::new_number(3.14);
+        assert_eq!(number.is_unit(), false);
+        assert_eq!(number.is_boolean(), false);
+        assert_eq!(number.is_integer(), false);
+        assert_eq!(number.is_number(), true);
+        assert_eq!(number.is_string(), false);
+        assert_eq!(number.is_text(), false);
+        assert_eq!(number.is_array(), false);
+        assert_eq!(number.is_object(), false);
+
+        let string = AgentValue::new_string("hello");
+        assert_eq!(string.is_unit(), false);
+        assert_eq!(string.is_boolean(), false);
+        assert_eq!(string.is_integer(), false);
+        assert_eq!(string.is_number(), false);
+        assert_eq!(string.is_string(), true);
+        assert_eq!(string.is_text(), false);
+        assert_eq!(string.is_array(), false);
+        assert_eq!(string.is_object(), false);
+
+        let text = AgentValue::new_text("multiline\ntext");
+        assert_eq!(text.is_unit(), false);
+        assert_eq!(text.is_boolean(), false);
+        assert_eq!(text.is_integer(), false);
+        assert_eq!(text.is_number(), false);
+        assert_eq!(text.is_string(), false);
+        assert_eq!(text.is_text(), true);
+        assert_eq!(text.is_array(), false);
+        assert_eq!(text.is_object(), false);
+
+        let array =
+            AgentValue::new_array(vec![AgentValue::new_integer(1), AgentValue::new_integer(2)]);
+        assert_eq!(array.is_unit(), false);
+        assert_eq!(array.is_boolean(), false);
+        assert_eq!(array.is_integer(), false);
+        assert_eq!(array.is_number(), false);
+        assert_eq!(array.is_string(), false);
+        assert_eq!(array.is_text(), false);
+        assert_eq!(array.is_array(), true);
+        assert_eq!(array.is_object(), false);
+
+        let obj = AgentValue::new_object(json!({"name": "test", "age": 30}));
+        assert_eq!(obj.is_unit(), false);
+        assert_eq!(obj.is_boolean(), false);
+        assert_eq!(obj.is_integer(), false);
+        assert_eq!(obj.is_number(), false);
+        assert_eq!(obj.is_string(), false);
+        assert_eq!(obj.is_text(), false);
+        assert_eq!(obj.is_array(), false);
+        assert_eq!(obj.is_object(), true);
     }
 
     #[test]
