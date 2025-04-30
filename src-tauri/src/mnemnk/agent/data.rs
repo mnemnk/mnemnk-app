@@ -95,6 +95,55 @@ impl AgentData {
     }
 
     #[allow(unused)]
+    pub fn is_unit(&self) -> bool {
+        self.kind == "unit"
+    }
+
+    #[allow(unused)]
+    pub fn is_boolean(&self) -> bool {
+        self.kind == "boolean"
+    }
+
+    #[allow(unused)]
+    pub fn is_integer(&self) -> bool {
+        self.kind == "integer"
+    }
+
+    #[allow(unused)]
+    pub fn is_number(&self) -> bool {
+        self.kind == "number"
+    }
+
+    #[allow(unused)]
+    pub fn is_string(&self) -> bool {
+        self.kind == "string"
+    }
+
+    #[allow(unused)]
+    pub fn is_text(&self) -> bool {
+        self.kind == "text"
+    }
+
+    #[allow(unused)]
+    pub fn is_object(&self) -> bool {
+        !self.is_unit()
+            && !self.is_boolean()
+            && !self.is_integer()
+            && !self.is_number()
+            && !self.is_string()
+            && !self.is_text()
+    }
+
+    #[allow(unused)]
+    pub fn is_array(&self) -> bool {
+        if let AgentValue::Array(_) = &self.value {
+            true
+        } else {
+            false
+        }
+    }
+
+    #[allow(unused)]
     pub fn as_bool(&self) -> Option<bool> {
         self.value.as_bool()
     }

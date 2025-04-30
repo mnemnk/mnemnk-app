@@ -81,6 +81,12 @@ enum StoreEvent {
         value: serde_json::Value,
         response: std::sync::mpsc::Sender<Result<()>>,
     },
+    Query {
+        database: String,
+        query: String,
+        bindings: Option<serde_json::Value>,
+        response: std::sync::mpsc::Sender<Result<Vec<serde_json::Value>>>,
+    },
     ReindexText {
         response: oneshot::Sender<Result<()>>,
     },
@@ -245,6 +251,17 @@ pub async fn init(app: &AppHandle) -> Result<()> {
                     let result = process_insert(&app_clone, database, table, key, value).await;
                     response.send(result).unwrap_or_else(|e| {
                         log::error!("Failed to send insert result: {}", e);
+                    });
+                }
+                StoreEvent::Query {
+                    database,
+                    query,
+                    bindings,
+                    response,
+                } => {
+                    let result = process_query(&app_clone, database, query, bindings).await;
+                    response.send(result).unwrap_or_else(|e| {
+                        log::error!("Failed to send query result: {}", e);
                     });
                 }
                 StoreEvent::ReindexText { response } => {
@@ -468,6 +485,60 @@ async fn process_insert(
     db.use_db(database).await?;
     let _: Option<Record> = db.insert((table, key)).content(value).await?;
     Ok(())
+}
+
+pub fn query(
+    app: &AppHandle,
+    database: String,
+    query: String,
+    bindings: Option<serde_json::Value>,
+) -> Result<Vec<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let event = StoreEvent::Query {
+        database,
+        query,
+        bindings,
+        response: tx,
+    };
+
+    state.event_tx.try_send(event)?;
+
+    rx.recv().context("Failed to receive query result")?
+}
+
+async fn process_query(
+    app: &AppHandle,
+    database: String,
+    query: String,
+    bindings: Option<serde_json::Value>,
+) -> Result<Vec<serde_json::Value>> {
+    let state = app.state::<MnemnkDatabase>();
+
+    // use the database
+    let db = &state.db;
+    db.use_db(database).await?;
+
+    // build a query
+    let mut query = db.query(query);
+    if let Some(bindings) = bindings {
+        for (key, value) in bindings.as_object().context("bindings is not an object")? {
+            query = query.bind((key.clone(), value.clone()));
+        }
+    }
+
+    // execute the query
+    let mut groups = query.await?;
+
+    let mut result = Vec::with_capacity(groups.num_statements());
+    for i in 0..groups.num_statements() {
+        let value: surrealdb::Value = groups.take(i)?;
+        let value = value.into_inner().into_json();
+        result.push(value);
+    }
+
+    Ok(result)
 }
 
 pub fn select(

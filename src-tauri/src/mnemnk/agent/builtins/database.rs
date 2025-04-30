@@ -1,5 +1,3 @@
-use std::vec;
-
 use anyhow::{bail, Context as _, Ok, Result};
 use serde_json::json;
 use tauri::AppHandle;
@@ -130,6 +128,75 @@ impl AsAgent for DatabaseInsertAgent {
         store::insert(self.app(), db, table, key, value)?;
 
         self.try_output(ch, data)
+    }
+}
+
+// Database Query
+struct DatabaseQueryAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for DatabaseQueryAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let config = self.config().context("Missing config")?;
+        let db = get_db(config)?;
+
+        let query;
+        let mut bindings: Option<serde_json::Value> = None;
+        if data.is_string() || data.is_text() {
+            query = data.as_str().context("Failed as_str")?.to_string();
+            if query.is_empty() {
+                return Ok(());
+            }
+        } else if data.is_object() {
+            let obj = data.as_object().context("Failed as_object")?;
+            let Some(q) = obj.get("query") else {
+                bail!("query not found");
+            };
+            query = q.as_str().context("query is not a string")?.to_string();
+            if query.is_empty() {
+                return Ok(());
+            }
+            if let Some(b) = obj.get("bindings") {
+                if b.is_object() {
+                    bindings = Some(b.clone());
+                } else {
+                    bail!("bindings is not an object");
+                }
+            };
+        } else {
+            // TODO: add support for array
+            bail!("data is not a string or object");
+        }
+
+        let result = store::query(self.app(), db, query, bindings)?;
+        let mut arr = Vec::with_capacity(result.len());
+        for r in result.into_iter() {
+            let value = AgentValue::from_json_value(r);
+            arr.push(value);
+        }
+        let data = AgentData::new_array("object", arr);
+        self.try_output(CH_DATA, data)?;
+        Ok(())
     }
 }
 
@@ -369,11 +436,16 @@ impl AsAgent for DatabaseUpsertMergeAgent {
     }
 }
 
-fn get_db_table(config: &AgentConfig) -> Result<(String, String)> {
+fn get_db(config: &AgentConfig) -> Result<String> {
     let db = config.get_string_or_default(CONFIG_DB);
     if db.is_empty() {
         bail!("db is not set");
     }
+    Ok(db)
+}
+
+fn get_db_table(config: &AgentConfig) -> Result<(String, String)> {
+    let db = get_db(config)?;
 
     let table = config.get_string_or_default(CONFIG_TABLE);
     if table.is_empty() {
@@ -406,6 +478,8 @@ fn get_kv(data: &AgentData) -> Result<(String, serde_json::Value)> {
 
 static CH_KEY: &str = "key";
 static CH_KV: &str = "kv";
+static CH_QUERY: &str = "query";
+static CH_DATA: &str = "data";
 
 static CONFIG_DB: &str = "db";
 static CONFIG_TABLE: &str = "table";
@@ -606,5 +680,23 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                 AgentConfigEntry::new(AgentValue::new_boolean(false), "boolean"),
             ),
         ]),
+    );
+
+    // Database Query
+    defs.insert(
+        "$database_query".into(),
+        AgentDefinition::new(
+            AGENT_KIND_DATABASE,
+            "$database_query",
+            Some(new_boxed::<DatabaseQueryAgent>),
+        )
+        .with_title("Database Query")
+        .with_category(CATEGORY)
+        .with_inputs(vec![CH_QUERY])
+        .with_outputs(vec![CH_DATA])
+        .with_default_config(vec![(
+            CONFIG_DB.into(),
+            AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+        )]),
     );
 }
