@@ -505,7 +505,7 @@ pub fn query(
 
     state.event_tx.try_send(event)?;
 
-    rx.recv().context("Failed to receive select result")?
+    rx.recv().context("Failed to receive query result")?
 }
 
 async fn process_query(
@@ -515,8 +515,12 @@ async fn process_query(
     bindings: Option<serde_json::Value>,
 ) -> Result<Vec<serde_json::Value>> {
     let state = app.state::<MnemnkDatabase>();
+
+    // use the database
     let db = &state.db;
     db.use_db(database).await?;
+
+    // build a query
     let mut query = db.query(query);
     if let Some(bindings) = bindings {
         for (key, value) in bindings.as_object().context("bindings is not an object")? {
@@ -524,6 +528,7 @@ async fn process_query(
         }
     }
 
+    // execute the query
     let mut groups = query.await?;
 
     let mut result = Vec::with_capacity(groups.num_statements());
