@@ -15,148 +15,6 @@ struct RhaiExprAgent {
     ast: Option<AST>,
 }
 
-impl RhaiExprAgent {
-    fn compile_expr(env: &AgentEnv, config: &AgentConfig) -> Result<Option<AST>> {
-        let Some(expr) = config.get_string(CONFIG_EXPR).map(|s| s.trim().to_string()) else {
-            return Ok(None);
-        };
-        if expr.is_empty() {
-            return Ok(None);
-        }
-        let ast = env
-            .rhai_engine
-            .compile_expression(expr)
-            .context("Failed to compile Rhai expression")?;
-        Ok(Some(ast))
-    }
-
-    fn to_dynamic(data: &AgentData) -> Result<Dynamic> {
-        Self::from_kind_value_to_dynamic(&data.kind, &data.value)
-    }
-
-    fn from_kind_value_to_dynamic(kind: &str, value: &AgentValue) -> Result<Dynamic> {
-        if let Some(arr) = value.as_array() {
-            let mut rhai_array: Vec<Dynamic> = Vec::with_capacity(arr.len());
-            for v in arr.iter() {
-                let d = Self::from_kind_value_to_dynamic(kind, v)?;
-                rhai_array.push(d);
-            }
-            return Ok(rhai_array.into());
-        }
-
-        let rhai_value = match kind {
-            "unit" => ().into(),
-            "boolean" => value.as_bool().context("wrong boolean value")?.into(),
-            "integer" => value.as_i64().context("wrong integer value")?.into(),
-            "number" => value.as_f64().context("wrong number value")?.into(),
-            "string" => value.as_str().context("wrong string value")?.into(),
-            "text" => value.as_str().context("wrong text value")?.into(),
-            _ => {
-                let obj = value.as_object().context("wrong object value")?;
-                rhai::serde::to_dynamic(obj)?
-            }
-        };
-        Ok(rhai_value)
-    }
-
-    fn from_dynamic(data: &Dynamic) -> Result<AgentData> {
-        if data.is_unit() {
-            return Ok(AgentData::new_unit());
-        }
-        if data.is_bool() {
-            let value = data
-                .as_bool()
-                .map_err(|e| anyhow!("Failed as_bool: {}", e))?;
-            return Ok(AgentData::new_boolean(value));
-        }
-        if data.is_int() {
-            let value = data.as_int().map_err(|e| anyhow!("Failed as_int: {}", e))?;
-            return Ok(AgentData::new_integer(value));
-        }
-        if data.is_float() {
-            let value = data
-                .as_float()
-                .map_err(|e| anyhow!("Failed as_float: {}", e))?;
-            return Ok(AgentData::new_number(value));
-        }
-        if data.is_string() {
-            let value = data
-                .clone()
-                .into_string()
-                .map_err(|e| anyhow!("Failed into_string: {}", e))?;
-            return Ok(AgentData::new_string(value));
-        }
-        if data.is_map() {
-            let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
-            return Ok(AgentData::new_object(value));
-        }
-        if data.is_array() {
-            let arr = data
-                .as_array_ref()
-                .map_err(|e| anyhow!("Failed as_array_ref: {}", e))?;
-            let mut value_array: Vec<AgentValue> = Vec::with_capacity(arr.len());
-            for v in arr.iter() {
-                let d = Self::from_dynamic_to_value(v)?;
-                value_array.push(d);
-            }
-            let kind = if value_array.is_empty() {
-                "object".to_string() // for now
-            } else {
-                value_array[0].kind()
-            };
-            return Ok(AgentData::new_array(kind, value_array));
-        }
-
-        bail!("Unsupported Rhai data type: {}", data.type_name());
-    }
-
-    fn from_dynamic_to_value(data: &Dynamic) -> Result<AgentValue> {
-        if data.is_unit() {
-            return Ok(AgentValue::new_unit());
-        }
-        if data.is_bool() {
-            let value = data
-                .as_bool()
-                .map_err(|e| anyhow!("Failed as_bool: {}", e))?;
-            return Ok(AgentValue::new_boolean(value));
-        }
-        if data.is_int() {
-            let value = data.as_int().map_err(|e| anyhow!("Failed as_int: {}", e))?;
-            return Ok(AgentValue::new_integer(value));
-        }
-        if data.is_float() {
-            let value = data
-                .as_float()
-                .map_err(|e| anyhow!("Failed as_float: {}", e))?;
-            return Ok(AgentValue::new_number(value));
-        }
-        if data.is_string() {
-            let value = data
-                .clone()
-                .into_string()
-                .map_err(|e| anyhow!("Failed into_string: {}", e))?;
-            return Ok(AgentValue::new_string(value));
-        }
-        if data.is_map() {
-            let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
-            return Ok(AgentValue::new_object(value));
-        }
-        if data.is_array() {
-            let arr = data
-                .as_array_ref()
-                .map_err(|e| anyhow!("Failed as_array_ref: {}", e))?;
-            let mut value_array: Vec<AgentValue> = Vec::with_capacity(arr.len());
-            for v in arr.iter() {
-                let d = Self::from_dynamic_to_value(v)?;
-                value_array.push(d);
-            }
-            return Ok(AgentValue::new_array(value_array));
-        }
-
-        bail!("Unsupported Rhai data type: {}", data.type_name());
-    }
-}
-
 impl AsAgent for RhaiExprAgent {
     fn new(
         app: AppHandle,
@@ -166,7 +24,7 @@ impl AsAgent for RhaiExprAgent {
     ) -> Result<Self> {
         let env = app.state::<AgentEnv>();
         let ast = match &config {
-            Some(c) => Self::compile_expr(&env, c)?,
+            Some(c) => compile_expr(&env, c)?,
             None => None,
         };
         Ok(Self {
@@ -184,7 +42,7 @@ impl AsAgent for RhaiExprAgent {
     }
 
     fn set_config(&mut self, config: AgentConfig) -> Result<()> {
-        self.ast = Self::compile_expr(&self.env(), &config)?;
+        self.ast = compile_expr(&self.env(), &config)?;
         Ok(())
     }
 
@@ -196,7 +54,7 @@ impl AsAgent for RhaiExprAgent {
         let mut scope = Scope::new();
         scope.push("ch", ch);
 
-        let rhai_value: Dynamic = Self::to_dynamic(&data)?;
+        let rhai_value: Dynamic = to_dynamic(&data)?;
         scope.push("kind", data.kind);
         scope.push("value", rhai_value);
 
@@ -206,11 +64,151 @@ impl AsAgent for RhaiExprAgent {
             .eval_ast_with_scope(&mut scope, ast)
             .context("Failed to evaluate Rhai expression")?;
 
-        let out_data: AgentData = Self::from_dynamic(&result)?;
+        let out_data: AgentData = from_dynamic(&result)?;
 
         self.try_output(CH_DATA, out_data)
             .context("Failed to output template")
     }
+}
+
+fn compile_expr(env: &AgentEnv, config: &AgentConfig) -> Result<Option<AST>> {
+    let Some(expr) = config.get_string(CONFIG_EXPR).map(|s| s.trim().to_string()) else {
+        return Ok(None);
+    };
+    if expr.is_empty() {
+        return Ok(None);
+    }
+    let ast = env
+        .rhai_engine
+        .compile_expression(expr)
+        .context("Failed to compile Rhai expression")?;
+    Ok(Some(ast))
+}
+
+fn to_dynamic(data: &AgentData) -> Result<Dynamic> {
+    from_kind_value_to_dynamic(&data.kind, &data.value)
+}
+
+fn from_kind_value_to_dynamic(kind: &str, value: &AgentValue) -> Result<Dynamic> {
+    if let Some(arr) = value.as_array() {
+        let mut rhai_array: Vec<Dynamic> = Vec::with_capacity(arr.len());
+        for v in arr.iter() {
+            let d = from_kind_value_to_dynamic(kind, v)?;
+            rhai_array.push(d);
+        }
+        return Ok(rhai_array.into());
+    }
+
+    let rhai_value = match kind {
+        "unit" => ().into(),
+        "boolean" => value.as_bool().context("wrong boolean value")?.into(),
+        "integer" => value.as_i64().context("wrong integer value")?.into(),
+        "number" => value.as_f64().context("wrong number value")?.into(),
+        "string" => value.as_str().context("wrong string value")?.into(),
+        "text" => value.as_str().context("wrong text value")?.into(),
+        _ => {
+            let obj = value.as_object().context("wrong object value")?;
+            rhai::serde::to_dynamic(obj)?
+        }
+    };
+    Ok(rhai_value)
+}
+
+fn from_dynamic(data: &Dynamic) -> Result<AgentData> {
+    if data.is_unit() {
+        return Ok(AgentData::new_unit());
+    }
+    if data.is_bool() {
+        let value = data
+            .as_bool()
+            .map_err(|e| anyhow!("Failed as_bool: {}", e))?;
+        return Ok(AgentData::new_boolean(value));
+    }
+    if data.is_int() {
+        let value = data.as_int().map_err(|e| anyhow!("Failed as_int: {}", e))?;
+        return Ok(AgentData::new_integer(value));
+    }
+    if data.is_float() {
+        let value = data
+            .as_float()
+            .map_err(|e| anyhow!("Failed as_float: {}", e))?;
+        return Ok(AgentData::new_number(value));
+    }
+    if data.is_string() {
+        let value = data
+            .clone()
+            .into_string()
+            .map_err(|e| anyhow!("Failed into_string: {}", e))?;
+        return Ok(AgentData::new_string(value));
+    }
+    if data.is_map() {
+        let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
+        return Ok(AgentData::new_object(value));
+    }
+    if data.is_array() {
+        let arr = data
+            .as_array_ref()
+            .map_err(|e| anyhow!("Failed as_array_ref: {}", e))?;
+        let mut value_array: Vec<AgentValue> = Vec::with_capacity(arr.len());
+        for v in arr.iter() {
+            let d = from_dynamic_to_value(v)?;
+            value_array.push(d);
+        }
+        let kind = if value_array.is_empty() {
+            "object".to_string() // for now
+        } else {
+            value_array[0].kind()
+        };
+        return Ok(AgentData::new_array(kind, value_array));
+    }
+
+    bail!("Unsupported Rhai data type: {}", data.type_name());
+}
+
+fn from_dynamic_to_value(data: &Dynamic) -> Result<AgentValue> {
+    if data.is_unit() {
+        return Ok(AgentValue::new_unit());
+    }
+    if data.is_bool() {
+        let value = data
+            .as_bool()
+            .map_err(|e| anyhow!("Failed as_bool: {}", e))?;
+        return Ok(AgentValue::new_boolean(value));
+    }
+    if data.is_int() {
+        let value = data.as_int().map_err(|e| anyhow!("Failed as_int: {}", e))?;
+        return Ok(AgentValue::new_integer(value));
+    }
+    if data.is_float() {
+        let value = data
+            .as_float()
+            .map_err(|e| anyhow!("Failed as_float: {}", e))?;
+        return Ok(AgentValue::new_number(value));
+    }
+    if data.is_string() {
+        let value = data
+            .clone()
+            .into_string()
+            .map_err(|e| anyhow!("Failed into_string: {}", e))?;
+        return Ok(AgentValue::new_string(value));
+    }
+    if data.is_map() {
+        let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
+        return Ok(AgentValue::new_object(value));
+    }
+    if data.is_array() {
+        let arr = data
+            .as_array_ref()
+            .map_err(|e| anyhow!("Failed as_array_ref: {}", e))?;
+        let mut value_array: Vec<AgentValue> = Vec::with_capacity(arr.len());
+        for v in arr.iter() {
+            let d = from_dynamic_to_value(v)?;
+            value_array.push(d);
+        }
+        return Ok(AgentValue::new_array(value_array));
+    }
+
+    bail!("Unsupported Rhai data type: {}", data.type_name());
 }
 
 static CH_STAR: &str = "*";
@@ -244,31 +242,31 @@ mod tests {
     #[test]
     fn test_to_dynamic() {
         let data = AgentData::new_unit();
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_unit());
 
         let data = AgentData::new_boolean(true);
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_bool());
         assert_eq!(dynamic.as_bool().unwrap(), true);
 
         let data = AgentData::new_integer(42);
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_int());
         assert_eq!(dynamic.as_int().unwrap(), 42);
 
         let data = AgentData::new_number(3.14);
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_float());
         assert_eq!(dynamic.as_float().unwrap(), 3.14);
 
         let data = AgentData::new_string("Hello");
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_string());
         assert_eq!(dynamic.into_string().unwrap(), "Hello");
 
         let data = AgentData::new_text("Hello\nWorld!\n\n");
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_string());
         assert_eq!(dynamic.into_string().unwrap(), "Hello\nWorld!\n\n");
 
@@ -276,7 +274,7 @@ mod tests {
             "key1": "value1",
             "key2": 42,
         }));
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_map());
         let map = dynamic.as_map_ref().unwrap();
         assert_eq!(map.len(), 2);
@@ -293,7 +291,7 @@ mod tests {
                 "key2": 42,
             }),
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_map());
         let map = dynamic.as_map_ref().unwrap();
         assert_eq!(map.len(), 2);
@@ -306,7 +304,7 @@ mod tests {
         // test array
         let data =
             AgentData::new_array("unit", vec![AgentValue::new_unit(), AgentValue::new_unit()]);
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 2);
@@ -320,7 +318,7 @@ mod tests {
                 AgentValue::new_boolean(false),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 2);
@@ -337,7 +335,7 @@ mod tests {
                 AgentValue::new_integer(3),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -356,7 +354,7 @@ mod tests {
                 AgentValue::new_number(3.2),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -375,7 +373,7 @@ mod tests {
                 AgentValue::new_string(""),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -394,7 +392,7 @@ mod tests {
                 AgentValue::new_text(""),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -423,7 +421,7 @@ mod tests {
                 AgentValue::new_object(json!({})),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -474,7 +472,7 @@ mod tests {
                 AgentValue::new_object(json!({})),
             ],
         );
-        let dynamic = RhaiExprAgent::to_dynamic(&data).unwrap();
+        let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_array());
         let arr = dynamic.as_array_ref().unwrap();
         assert_eq!(arr.len(), 3);
@@ -511,26 +509,26 @@ mod tests {
     #[test]
     fn test_from_dynamic() {
         let dynamic = Dynamic::from(());
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "unit");
 
         let dynamic = Dynamic::from(true);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "boolean");
         assert_eq!(data.value.as_bool().unwrap(), true);
 
         let dynamic = Dynamic::from(1_i64);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "integer");
         assert_eq!(data.value.as_i64().unwrap(), 1);
 
         let dynamic = Dynamic::from(3.14_f64);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "number");
         assert_eq!(data.value.as_f64().unwrap(), 3.14);
 
         let dynamic = Dynamic::from("hello");
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "string");
         assert_eq!(data.value.as_str().unwrap(), "hello");
 
@@ -539,7 +537,7 @@ mod tests {
             "key2": 42,
         }))
         .unwrap();
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "object");
         let obj = data.value.as_object().unwrap();
         assert_eq!(obj["key1"].as_str().unwrap(), "value1");
@@ -547,7 +545,7 @@ mod tests {
 
         // test array
         let dynamic = Dynamic::from(vec![Dynamic::from(()), Dynamic::from(())]);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "unit");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 2);
@@ -555,7 +553,7 @@ mod tests {
         assert!(arr[1].is_unit());
 
         let dynamic = Dynamic::from(vec![Dynamic::from(true), Dynamic::from(false)]);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "boolean");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 2);
@@ -567,7 +565,7 @@ mod tests {
             Dynamic::from(2_i64),
             Dynamic::from(3_i64),
         ]);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "integer");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 3);
@@ -580,7 +578,7 @@ mod tests {
             Dynamic::from(2.1_f64),
             Dynamic::from(3.2_f64),
         ]);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "number");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 3);
@@ -593,7 +591,7 @@ mod tests {
             Dynamic::from("s2\ns3\n\n"),
             Dynamic::from(""),
         ]);
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "string");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 3);
@@ -618,7 +616,7 @@ mod tests {
             ]
         ))
         .unwrap();
-        let data = RhaiExprAgent::from_dynamic(&dynamic).unwrap();
+        let data = from_dynamic(&dynamic).unwrap();
         assert_eq!(data.kind, "object");
         let arr = data.value.as_array().unwrap();
         assert_eq!(arr.len(), 3);
