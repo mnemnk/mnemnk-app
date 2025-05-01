@@ -179,7 +179,7 @@
       class="nodrag nowheel flex-none text-wrap"
       {value}
       onkeydown={(evt) => {
-        if (evt.ctrlKey && evt.key === "c") {
+        if (evt.ctrlKey && (evt.key === "a" || evt.key === "c")) {
           return;
         }
         evt.preventDefault();
@@ -190,7 +190,7 @@
       class="nodrag nowheel flex-1 text-wrap"
       {value}
       onkeydown={(evt) => {
-        if (evt.ctrlKey && evt.key === "c") {
+        if (evt.ctrlKey && (evt.key === "a" || evt.key === "c")) {
           return;
         }
         evt.preventDefault();
@@ -201,7 +201,7 @@
       class="nodrag nowheel flex-1 text-wrap"
       value={JSON.stringify(value, null, 2)}
       onkeydown={(evt) => {
-        if (evt.ctrlKey && evt.key === "c") {
+        if (evt.ctrlKey && (evt.key === "a" || evt.key === "c")) {
           return;
         }
         evt.preventDefault();
@@ -214,7 +214,7 @@
       class="nodrag nowheel flex-1 text-wrap"
       value={JSON.stringify(value, null, 2)}
       onkeydown={(evt) => {
-        if (evt.ctrlKey && evt.key === "c") {
+        if (evt.ctrlKey && (evt.key === "a" || evt.key === "c")) {
           return;
         }
         evt.preventDefault();
