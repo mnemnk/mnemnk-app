@@ -124,15 +124,22 @@ impl AsAgent for CommandAgent {
                             ".OUT" => match parse_out_args(args) {
                                 Ok(data) => {
                                     let env = app_handle.state::<AgentEnv>();
-                                    env.send_agent_out(
-                                        agent_id.clone(),
-                                        data.ch,
-                                        AgentData::from_kind_value(data.kind, data.value),
-                                    )
-                                    .await
-                                    .unwrap_or_else(|e| {
-                                        log::error!("Failed to send agent out: {}", e);
-                                    });
+                                    match AgentData::from_kind_json_value(data.kind, data.value) {
+                                        Ok(agent_data) => {
+                                            env.send_agent_out(
+                                                agent_id.clone(),
+                                                data.ch,
+                                                agent_data,
+                                            )
+                                            .await
+                                            .unwrap_or_else(|e| {
+                                                log::error!("Failed to send agent out: {}", e);
+                                            });
+                                        }
+                                        Err(e) => {
+                                            log::error!("Failed to parse agent data: {}", e);
+                                        }
+                                    }
                                 }
                                 Err(e) => {
                                     log::error!("Failed to parse OUT command: {}", e);

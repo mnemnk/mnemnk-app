@@ -134,7 +134,8 @@ mod implementation {
             return Err("Kind is empty".to_string());
         }
 
-        let agent_data = AgentData::from_kind_value(out_data.kind, out_data.value);
+        let agent_data = AgentData::from_kind_json_value(out_data.kind, out_data.value)
+            .map_err(|e| format!("Failed to create AgentData: {}", e))?;
 
         // Get the environment and try to send the output
         let env = state.app_handle.state::<crate::mnemnk::agent::AgentEnv>();

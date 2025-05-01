@@ -50,22 +50,7 @@ fn is_truthy(data: &AgentData) -> bool {
         AgentValue::String(s) => !s.is_empty(),
         AgentValue::Text(s) => !s.is_empty(),
         AgentValue::Array(a) => !a.is_empty(),
-        AgentValue::Object(v) => match &**v {
-            serde_json::Value::Bool(b) => *b,
-            serde_json::Value::Number(n) => {
-                if let Some(i) = n.as_i64() {
-                    i != 0
-                } else if let Some(f) = n.as_f64() {
-                    f != 0.0
-                } else {
-                    false
-                }
-            }
-            serde_json::Value::String(s) => !s.is_empty(),
-            serde_json::Value::Array(a) => !a.is_empty(),
-            serde_json::Value::Object(o) => !o.is_empty(),
-            _ => false,
-        },
+        AgentValue::Object(v) => !v.is_empty(),
         _ => false,
     }
 }

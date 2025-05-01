@@ -6,7 +6,7 @@ use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
-    AgentDefinitions, AgentEnv, AgentValue, AsAgent, AsAgentData,
+    AgentDefinitions, AgentEnv, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Rhai Expr Agent
@@ -142,8 +142,15 @@ fn from_dynamic(data: &Dynamic) -> Result<AgentData> {
         return Ok(AgentData::new_string(value));
     }
     if data.is_map() {
-        let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
-        return Ok(AgentData::new_object(value));
+        let map = data
+            .as_map_ref()
+            .map_err(|e| anyhow!("Failed as_map_ref: {}", e))?;
+        let mut value_map = AgentValueMap::new();
+        for (k, v) in map.iter() {
+            let av = from_dynamic_to_value(v)?;
+            value_map.insert(k.to_string(), av);
+        }
+        return Ok(AgentData::new_object(value_map));
     }
     if data.is_array() {
         let arr = data
@@ -193,8 +200,15 @@ fn from_dynamic_to_value(data: &Dynamic) -> Result<AgentValue> {
         return Ok(AgentValue::new_string(value));
     }
     if data.is_map() {
-        let value: serde_json::Value = rhai::serde::from_dynamic(data)?;
-        return Ok(AgentValue::new_object(value));
+        let map = data
+            .as_map_ref()
+            .map_err(|e| anyhow!("Failed as_map_ref: {}", e))?;
+        let mut value_map = AgentValueMap::new();
+        for (k, v) in map.iter() {
+            let av = from_dynamic_to_value(v)?;
+            value_map.insert(k.to_string(), av);
+        }
+        return Ok(AgentValue::new_object(value_map));
     }
     if data.is_array() {
         let arr = data
@@ -270,10 +284,10 @@ mod tests {
         assert!(dynamic.is_string());
         assert_eq!(dynamic.into_string().unwrap(), "Hello\nWorld!\n\n");
 
-        let data = AgentData::new_object(json!({
-            "key1": "value1",
-            "key2": 42,
-        }));
+        let data = AgentData::new_object(AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("value1")),
+            ("key2".to_string(), AgentValue::new_integer(42)),
+        ]));
         let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_map());
         let map = dynamic.as_map_ref().unwrap();
@@ -286,10 +300,10 @@ mod tests {
 
         let data = AgentData::new_custom_object(
             "custom",
-            json!({
-                "key1": "value1",
-                "key2": 42,
-            }),
+            AgentValueMap::from([
+                ("key1".to_string(), AgentValue::new_string("value1")),
+                ("key2".to_string(), AgentValue::new_integer(42)),
+            ]),
         );
         let dynamic = to_dynamic(&data).unwrap();
         assert!(dynamic.is_map());
@@ -407,18 +421,21 @@ mod tests {
         let data = AgentData::new_array(
             "object",
             vec![
-                AgentValue::new_object(json!({
-                    "key1": "value1",
-                    "key2": 2,
-                })),
-                AgentValue::new_object(json!({
-                    "key3": "value3",
-                    "key4": {
-                        "key4_1": "value4_1",
-                        "key4_2": 42,
-                    },
-                })),
-                AgentValue::new_object(json!({})),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("value1")),
+                    ("key2".to_string(), AgentValue::new_integer(2)),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key3".to_string(), AgentValue::new_string("value3")),
+                    (
+                        "key4".to_string(),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key4_1".to_string(), AgentValue::new_string("value4_1")),
+                            ("key4_2".to_string(), AgentValue::new_integer(42)),
+                        ])),
+                    ),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([])),
             ],
         );
         let dynamic = to_dynamic(&data).unwrap();
@@ -458,18 +475,21 @@ mod tests {
         let data = AgentData::new_array(
             "custom",
             vec![
-                AgentValue::new_object(json!({
-                    "key1": "value1",
-                    "key2": 2,
-                })),
-                AgentValue::new_object(json!({
-                    "key3": "value3",
-                    "key4": {
-                        "key4_1": "value4_1",
-                        "key4_2": 42,
-                    },
-                })),
-                AgentValue::new_object(json!({})),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("value1")),
+                    ("key2".to_string(), AgentValue::new_integer(2)),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key3".to_string(), AgentValue::new_string("value3")),
+                    (
+                        "key4".to_string(),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key4_1".to_string(), AgentValue::new_string("value4_1")),
+                            ("key4_2".to_string(), AgentValue::new_integer(42)),
+                        ])),
+                    ),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([])),
             ],
         );
         let dynamic = to_dynamic(&data).unwrap();
@@ -632,6 +652,6 @@ mod tests {
         assert_eq!(obj4["key4_2"].as_i64().unwrap(), 42);
 
         let obj = arr[2].as_object().unwrap();
-        assert_eq!(obj.to_string(), "{}");
+        assert!(obj.is_empty());
     }
 }

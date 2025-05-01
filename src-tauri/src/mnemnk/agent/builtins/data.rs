@@ -156,7 +156,7 @@ impl AsAgent for FromJsonAgent {
         let json_value: serde_json::Value =
             serde_json::from_str(data.value.as_str().context("wrong json")?)
                 .context("failed to parse")?;
-        let data = AgentData::from_json_value(json_value);
+        let data = AgentData::from_json_value(json_value)?;
         self.try_output(CH_DATA, data).context("Failed to output")?;
         Ok(())
     }
@@ -203,16 +203,17 @@ impl AsAgent for GetPropertyAgent {
         let props = property.split('.').collect::<Vec<_>>();
 
         if data.value.is_object() {
-            let mut value = data.value.as_object().context("failed as_object")?;
+            let mut value = data.value;
             for prop in props {
-                if let Some(v) = value.get(prop) {
-                    value = v;
+                let obj = value.as_object().context("failed as_object")?;
+                if let Some(v) = obj.get(prop) {
+                    value = v.clone();
                 } else {
                     return Ok(());
                 }
             }
 
-            self.try_output(CH_DATA, AgentData::from_json_value(value.clone()))
+            self.try_output(CH_DATA, AgentData::from_value(value))
                 .context("Failed to output")?;
         }
 

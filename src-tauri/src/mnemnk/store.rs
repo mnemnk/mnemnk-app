@@ -797,14 +797,14 @@ async fn process_upsert_merge(
 
 pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     let kind = data.kind;
-    let Some(mut json_value) = data.value.as_object().cloned() else {
+    let Some(mut map) = data.value.as_object().cloned() else {
         return Err(anyhow::anyhow!("store: data is not an object"));
     };
 
     // extract timestamp from the value if it exists
-    let timestamp = if let Some(t) = json_value.get("t").cloned() {
+    let timestamp = if let Some(t) = map.get("t").cloned() {
         // remove timestamp from the value
-        json_value.as_object_mut().unwrap().remove("t");
+        map.remove("t");
         t.as_i64().unwrap()
     } else {
         Utc::now().timestamp_millis()
@@ -824,9 +824,9 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     let (local_y, local_ym, local_ymd) = adjust_local_ymd(local_dt, day_start_hour);
 
     // extract text from the value if it exists
-    let text = if let Some(t) = json_value.get("text").cloned() {
+    let text = if let Some(t) = map.get("text").cloned() {
         // remove the text from the value
-        json_value.as_object_mut().unwrap().remove("text");
+        map.remove("text");
         t.as_str().map(|s| s.to_string())
     } else {
         None
@@ -834,12 +834,12 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     let text_tokens = text.as_ref().map(|t| tokenize_text(t));
 
     // extract image from the value if it exists
-    if let Some(image) = json_value.get("image").cloned() {
+    if let Some(image) = map.get("image").cloned() {
         // remove image from the value. it's too big to store into the database.
-        json_value.as_object_mut().unwrap().remove("image");
+        map.remove("image");
         let image = image.as_str().unwrap().to_string();
 
-        if let Some(image_id) = json_value.get("image_id").cloned() {
+        if let Some(image_id) = map.get("image_id").cloned() {
             let image_id = image_id.as_str().unwrap().to_string();
 
             let app = app.clone();
@@ -854,6 +854,8 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
         }
     };
 
+    let value = serde_json::to_value(map).context("Failed to convert value to JSON")?;
+
     let event = Event {
         kind,
         time: utc_dt.into(),
@@ -862,7 +864,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
         local_y,
         local_ym,
         local_ymd,
-        value: json_value,
+        value,
         text,
         text_tokens,
     };
