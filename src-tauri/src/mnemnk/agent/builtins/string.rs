@@ -9,57 +9,21 @@ use crate::mnemnk::agent::{
     AgentDefinitions, AgentValue, AsAgent, AsAgentData,
 };
 
-// Text Join Agent
-struct TextJoinAgent {
-    data: AsAgentData,
-}
-
-impl AsAgent for TextJoinAgent {
-    fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData::new(app, id, def_name, config),
-        })
-    }
-
-    fn data(&self) -> &AsAgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AsAgentData {
-        &mut self.data
-    }
-
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let config = self.config().context("missing config")?;
-
-        let sep = config.get_string_or_default(CONFIG_SEP);
-
-        if data.is_array() {
-            let mut out = Vec::new();
-            for v in data.as_array().context("failed as_array")? {
-                out.push(v.as_str().unwrap_or_default());
-            }
-            let mut out = out.join(&sep);
-            out = out.replace("\\n", "\n");
-            out = out.replace("\\t", "\t");
-            out = out.replace("\\r", "\r");
-            out = out.replace("\\\\", "\\");
-            let out_data = AgentData::new_text(out);
-            self.try_output(CH_TEXT, out_data)
-                .context("Failed to output")
-        } else {
-            self.try_output(CH_TEXT, data)
-                .context("Failed to output template")
-        }
-    }
-}
-
-// String Join Agent
+/// The `StringJoinAgent` is responsible for joining an array of strings into a single string
+/// using a specified separator. It processes input data, applies transformations to handle
+/// escape sequences (e.g., `\n`, `\t`), and outputs the resulting string.
+///
+/// # Configuration
+/// - `CONFIG_SEP`: Specifies the separator to use when joining strings. Defaults to an empty string.
+///
+/// # Input
+/// - Expects an array of strings as input data.
+///
+/// # Output
+/// - Produces a single joined string as output.
+///
+/// # Example
+/// Given the input `["Hello", "World"]` and `CONFIG_SEP` set to `" "`, the output will be `"Hello World"`.
 struct StringJoinAgent {
     data: AsAgentData,
 }
@@ -104,6 +68,70 @@ impl AsAgent for StringJoinAgent {
                 .context("Failed to output")
         } else {
             self.try_output(CH_STRING, data)
+                .context("Failed to output template")
+        }
+    }
+}
+
+/// The `TextJoinAgent` is responsible for joining an array of texts into a single text
+/// using a specified separator. It processes input data, applies transformations to handle
+/// escape sequences (e.g., `\n`, `\t`), and outputs the resulting text.
+///
+/// # Configuration
+/// - `CONFIG_SEP`: Specifies the separator to use when joining texts. Defaults to an empty string.
+///
+/// # Input
+/// - Expects an array of texts as input data.
+///
+/// # Output
+/// - Produces a single joined text as output.
+///
+/// # Example
+/// Given the input `["Hello", "World"]` and `CONFIG_SEP` set to `"\\n"`, the output will be `"Hello\nWorld"`.
+struct TextJoinAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for TextJoinAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let config = self.config().context("missing config")?;
+
+        let sep = config.get_string_or_default(CONFIG_SEP);
+
+        if data.is_array() {
+            let mut out = Vec::new();
+            for v in data.as_array().context("failed as_array")? {
+                out.push(v.as_str().unwrap_or_default());
+            }
+            let mut out = out.join(&sep);
+            out = out.replace("\\n", "\n");
+            out = out.replace("\\t", "\t");
+            out = out.replace("\\r", "\r");
+            out = out.replace("\\\\", "\\");
+            let out_data = AgentData::new_text(out);
+            self.try_output(CH_TEXT, out_data)
+                .context("Failed to output")
+        } else {
+            self.try_output(CH_TEXT, data)
                 .context("Failed to output template")
         }
     }
