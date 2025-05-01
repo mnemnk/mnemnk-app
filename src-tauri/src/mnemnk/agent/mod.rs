@@ -15,7 +15,7 @@ mod message;
 pub use agent::{Agent, AgentStatus, AsAgent, AsAgentData};
 pub use config::{AgentConfig, AgentConfigs};
 pub use context::AgentContext;
-pub use data::{AgentData, AgentValue};
+pub use data::{AgentData, AgentValue, AgentValueMap};
 pub use definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitionError, AgentDefinitions,
     AgentDisplayConfigEntry,

@@ -1,8 +1,10 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
-use anyhow::Result;
-use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
+use anyhow::{bail, Result};
+use serde::{
+    ser::{SerializeMap, SerializeSeq},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct AgentData {
@@ -57,7 +59,7 @@ impl AgentData {
     }
 
     #[allow(unused)]
-    pub fn new_object(value: Value) -> Self {
+    pub fn new_object(value: AgentValueMap<String, AgentValue>) -> Self {
         AgentData {
             kind: "object".to_string(),
             value: AgentValue::new_object(value),
@@ -65,7 +67,10 @@ impl AgentData {
     }
 
     #[allow(unused)]
-    pub fn new_custom_object(kind: impl Into<String>, value: Value) -> Self {
+    pub fn new_custom_object(
+        kind: impl Into<String>,
+        value: AgentValueMap<String, AgentValue>,
+    ) -> Self {
         AgentData {
             kind: kind.into(),
             value: AgentValue::new_object(value),
@@ -80,18 +85,23 @@ impl AgentData {
         }
     }
 
-    pub fn from_kind_value(kind: impl Into<String>, value: Value) -> Self {
-        let kind = kind.into();
-        let value = AgentValue::from_kind_value(&kind, value);
-        Self { kind, value }
+    pub fn from_value(value: AgentValue) -> Self {
+        let kind = value.kind();
+        AgentData { kind, value }
     }
 
-    pub fn from_json_value(json_value: Value) -> Self {
-        let value = AgentValue::from_json_value(json_value);
-        AgentData {
+    pub fn from_kind_json_value(kind: impl Into<String>, value: serde_json::Value) -> Result<Self> {
+        let kind = kind.into();
+        let value = AgentValue::from_kind_value(&kind, value)?;
+        Ok(Self { kind, value })
+    }
+
+    pub fn from_json_value(json_value: serde_json::Value) -> Result<Self> {
+        let value = AgentValue::from_json_value(json_value)?;
+        Ok(AgentData {
             kind: value.kind(),
             value,
-        }
+        })
     }
 
     #[allow(unused)]
@@ -162,7 +172,7 @@ impl AgentData {
         self.value.as_str()
     }
 
-    pub fn as_object(&self) -> Option<&Value> {
+    pub fn as_object(&self) -> Option<&AgentValueMap<String, AgentValue>> {
         self.value.as_object()
     }
 
@@ -177,8 +187,8 @@ impl<'de> Deserialize<'de> for AgentData {
     where
         D: Deserializer<'de>,
     {
-        let json_value = Value::deserialize(deserializer)?;
-        let Value::Object(obj) = json_value else {
+        let json_value = serde_json::Value::deserialize(deserializer)?;
+        let serde_json::Value::Object(obj) = json_value else {
             return Err(serde::de::Error::custom("not a JSON object"));
         };
         let Some(kind) = obj.get("kind").and_then(|k| k.as_str()) else {
@@ -187,8 +197,9 @@ impl<'de> Deserialize<'de> for AgentData {
         let Some(value) = obj.get("value") else {
             return Err(serde::de::Error::custom("Missing value"));
         };
-        let obj = AgentData::from_kind_value(kind, value.to_owned());
-        Ok(obj)
+        AgentData::from_kind_json_value(kind, value.to_owned()).map_err(|e| {
+            serde::de::Error::custom(format!("Failed to deserialize AgentData: {}", e))
+        })
     }
 }
 
@@ -203,10 +214,13 @@ pub enum AgentValue {
     // Larger data structures use reference counting
     String(Arc<String>),
     Text(Arc<String>),
-    Object(Arc<Value>),
 
+    // Recursive data structures
     Array(Arc<Vec<AgentValue>>),
+    Object(Arc<AgentValueMap<String, AgentValue>>),
 }
+
+pub type AgentValueMap<S, T> = BTreeMap<S, T>;
 
 impl AgentValue {
     pub fn new_unit() -> Self {
@@ -233,7 +247,7 @@ impl AgentValue {
         AgentValue::Text(Arc::new(value.into()))
     }
 
-    pub fn new_object(value: Value) -> Self {
+    pub fn new_object(value: AgentValueMap<String, AgentValue>) -> Self {
         AgentValue::Object(Arc::new(value))
     }
 
@@ -241,134 +255,223 @@ impl AgentValue {
         AgentValue::Array(Arc::new(value))
     }
 
-    pub fn from_json_value(value: Value) -> Self {
+    pub fn default_boolean() -> Self {
+        AgentValue::Boolean(false)
+    }
+
+    pub fn default_integer() -> Self {
+        AgentValue::Integer(0)
+    }
+
+    pub fn default_number() -> Self {
+        AgentValue::Number(0.0)
+    }
+
+    pub fn default_string() -> Self {
+        AgentValue::String(Arc::new(String::new()))
+    }
+
+    pub fn default_text() -> Self {
+        AgentValue::Text(Arc::new(String::new()))
+    }
+
+    pub fn default_array() -> Self {
+        AgentValue::Array(Arc::new(Vec::new()))
+    }
+
+    pub fn default_object() -> Self {
+        AgentValue::Object(Arc::new(AgentValueMap::new()))
+    }
+
+    pub fn from_json_value(value: serde_json::Value) -> Result<Self> {
         match value {
-            Value::Null => AgentValue::Null,
-            Value::Bool(b) => AgentValue::Boolean(b),
-            Value::Number(_) => {
-                if let Some(i) = value.as_i64() {
-                    AgentValue::Integer(i)
-                } else if let Some(f) = value.as_f64() {
-                    AgentValue::Number(f)
+            serde_json::Value::Null => Ok(AgentValue::Null),
+            serde_json::Value::Bool(b) => Ok(AgentValue::Boolean(b)),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    Ok(AgentValue::Integer(i))
+                } else if let Some(f) = n.as_f64() {
+                    Ok(AgentValue::Number(f))
                 } else {
-                    AgentValue::Object(Arc::new(value))
+                    // This case should not happen, but handle it gracefully
+                    Ok(AgentValue::Integer(0))
                 }
             }
-            Value::String(s) => AgentValue::new_string(s),
-            Value::Array(arr) => AgentValue::new_array(
-                arr.into_iter()
-                    .map(|v| AgentValue::from_json_value(v))
-                    .collect(),
-            ),
-            _ => AgentValue::Object(Arc::new(value)),
+            serde_json::Value::String(s) => Ok(AgentValue::new_string(s)),
+            serde_json::Value::Array(arr) => {
+                let mut agent_arr = Vec::new();
+                for v in arr {
+                    agent_arr.push(AgentValue::from_json_value(v)?);
+                }
+                Ok(AgentValue::new_array(agent_arr))
+            }
+            serde_json::Value::Object(obj) => {
+                let mut map = AgentValueMap::new();
+                for (k, v) in obj {
+                    map.insert(k, AgentValue::from_json_value(v)?);
+                }
+                Ok(AgentValue::new_object(map))
+            }
         }
     }
 
-    pub fn from_kind_value(kind: &str, value: Value) -> Self {
+    pub fn from_kind_value(kind: &str, value: serde_json::Value) -> Result<Self> {
         match kind {
             "unit" => {
-                if let Value::Array(a) = value {
-                    AgentValue::Array(Arc::new(a.into_iter().map(|_| AgentValue::Null).collect()))
+                if let serde_json::Value::Array(a) = value {
+                    Ok(AgentValue::Array(Arc::new(
+                        a.into_iter().map(|_| AgentValue::Null).collect(),
+                    )))
                 } else {
-                    AgentValue::Null
+                    Ok(AgentValue::Null)
                 }
             }
             "boolean" => match value {
-                Value::Bool(b) => AgentValue::Boolean(b),
-                Value::Array(a) => AgentValue::Array(Arc::new(
-                    a.into_iter()
-                        .map(|v| {
-                            if let Some(b) = v.as_bool() {
-                                AgentValue::Boolean(b)
-                            } else {
-                                AgentValue::Null
-                            }
-                        })
-                        .collect(),
-                )),
-                _ => AgentValue::Null,
+                serde_json::Value::Bool(b) => Ok(AgentValue::Boolean(b)),
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for v in a {
+                        if let serde_json::Value::Bool(b) = v {
+                            agent_arr.push(AgentValue::Boolean(b));
+                        } else {
+                            bail!("Invalid boolean value in array");
+                        }
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                _ => bail!("Invalid boolean value"),
             },
             "integer" => match value {
-                Value::Number(n) => {
+                serde_json::Value::Number(n) => {
                     if let Some(i) = n.as_i64() {
-                        AgentValue::Integer(i)
+                        Ok(AgentValue::Integer(i))
                     } else if let Some(f) = n.as_f64() {
-                        AgentValue::Integer(f as i64)
+                        Ok(AgentValue::Integer(f as i64))
                     } else {
-                        AgentValue::Null
+                        bail!("Invalid integer value")
                     }
                 }
-                Value::Array(a) => AgentValue::Array(Arc::new(
-                    a.into_iter()
-                        .map(|n| {
-                            if let Some(i) = n.as_i64() {
-                                AgentValue::Integer(i)
-                            } else if let Some(f) = n.as_f64() {
-                                AgentValue::Integer(f as i64)
-                            } else {
-                                AgentValue::Null
-                            }
-                        })
-                        .collect(),
-                )),
-                _ => AgentValue::Null,
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for n in a {
+                        if let Some(i) = n.as_i64() {
+                            agent_arr.push(AgentValue::Integer(i));
+                        } else if let Some(f) = n.as_f64() {
+                            agent_arr.push(AgentValue::Integer(f as i64));
+                        } else {
+                            bail!("Invalid integer value in array");
+                        }
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                _ => bail!("Invalid integer value"),
             },
             "number" => match value {
-                Value::Number(n) => {
+                serde_json::Value::Number(n) => {
                     if let Some(f) = n.as_f64() {
-                        AgentValue::Number(f)
+                        Ok(AgentValue::Number(f))
                     } else if let Some(i) = n.as_i64() {
-                        AgentValue::Number(i as f64)
+                        Ok(AgentValue::Number(i as f64))
                     } else {
-                        AgentValue::Null
+                        bail!("Invalid number value")
                     }
                 }
-                Value::Array(a) => AgentValue::Array(Arc::new(
-                    a.into_iter()
-                        .map(|n| {
-                            if let Some(f) = n.as_f64() {
-                                AgentValue::Number(f)
-                            } else if let Some(i) = n.as_i64() {
-                                AgentValue::Number(i as f64)
-                            } else {
-                                AgentValue::Null
-                            }
-                        })
-                        .collect(),
-                )),
-                _ => AgentValue::Null,
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for n in a {
+                        if let Some(f) = n.as_f64() {
+                            agent_arr.push(AgentValue::Number(f));
+                        } else if let Some(i) = n.as_i64() {
+                            agent_arr.push(AgentValue::Number(i as f64));
+                        } else {
+                            bail!("Invalid number value in array");
+                        }
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                _ => bail!("Invalid number value"),
             },
             "string" => match value {
-                Value::String(s) => AgentValue::String(Arc::new(s)),
-                Value::Array(a) => AgentValue::Array(Arc::new(
-                    a.into_iter()
-                        .map(|v| {
-                            if let Value::String(s) = v {
-                                AgentValue::String(Arc::new(s))
-                            } else {
-                                AgentValue::Null
-                            }
-                        })
-                        .collect(),
-                )),
-                _ => AgentValue::Null,
+                serde_json::Value::String(s) => Ok(AgentValue::new_string(s)),
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for v in a {
+                        if let serde_json::Value::String(s) = v {
+                            agent_arr.push(AgentValue::new_string(s));
+                        } else {
+                            bail!("Invalid string value in array");
+                        }
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                _ => bail!("Invalid string value"),
             },
             "text" => match value {
-                Value::String(s) => AgentValue::Text(Arc::new(s)),
-                Value::Array(a) => AgentValue::Array(Arc::new(
-                    a.into_iter()
-                        .map(|v| {
-                            if let Value::String(s) = v {
-                                AgentValue::Text(Arc::new(s))
-                            } else {
-                                AgentValue::Null
-                            }
-                        })
-                        .collect(),
-                )),
-                _ => AgentValue::Null,
+                serde_json::Value::String(s) => Ok(AgentValue::new_text(s)),
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for v in a {
+                        if let serde_json::Value::String(s) = v {
+                            agent_arr.push(AgentValue::new_text(s));
+                        } else {
+                            bail!("Invalid text value in array");
+                        }
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                _ => bail!("Invalid text value"),
             },
-            _ => AgentValue::from_json_value(value),
+            _ => match value {
+                serde_json::Value::Null => Ok(AgentValue::Null),
+                serde_json::Value::Bool(b) => Ok(AgentValue::Boolean(b)),
+                serde_json::Value::Number(n) => {
+                    if let Some(i) = n.as_i64() {
+                        Ok(AgentValue::Integer(i))
+                    } else if let Some(f) = n.as_f64() {
+                        Ok(AgentValue::Number(f))
+                    } else {
+                        bail!("Invalid number value")
+                    }
+                }
+                serde_json::Value::String(s) => Ok(AgentValue::new_string(s)),
+                serde_json::Value::Array(a) => {
+                    let mut agent_arr = Vec::new();
+                    for v in a {
+                        let agent_v = AgentValue::from_kind_value(kind, v)?;
+                        agent_arr.push(agent_v);
+                    }
+                    Ok(AgentValue::Array(Arc::new(agent_arr)))
+                }
+                serde_json::Value::Object(obj) => {
+                    let mut map = AgentValueMap::new();
+                    for (k, v) in obj {
+                        map.insert(k.clone(), AgentValue::from_json_value(v)?);
+                    }
+                    Ok(AgentValue::new_object(map))
+                }
+            },
+        }
+    }
+
+    pub fn to_json_value(&self) -> serde_json::Value {
+        match self {
+            AgentValue::Null => serde_json::Value::Null,
+            AgentValue::Boolean(b) => (*b).into(),
+            AgentValue::Integer(i) => (*i).into(),
+            AgentValue::Number(n) => (*n).into(),
+            AgentValue::String(s) => s.as_str().into(),
+            AgentValue::Text(t) => t.as_str().into(),
+            AgentValue::Object(o) => {
+                let mut map = serde_json::Map::new();
+                for (k, v) in o.iter() {
+                    map.insert(k.clone(), v.to_json_value());
+                }
+                serde_json::Value::Object(map)
+            }
+            AgentValue::Array(a) => {
+                let arr: Vec<serde_json::Value> = a.iter().map(|v| v.to_json_value()).collect();
+                serde_json::Value::Array(arr)
+            }
         }
     }
 
@@ -443,7 +546,7 @@ impl AgentValue {
         }
     }
 
-    pub fn as_object(&self) -> Option<&Value> {
+    pub fn as_object(&self) -> Option<&AgentValueMap<String, AgentValue>> {
         match self {
             AgentValue::Object(o) => Some(o),
             _ => None,
@@ -468,7 +571,7 @@ impl AgentValue {
             AgentValue::Object(_) => "object".to_string(),
             AgentValue::Array(arr) => {
                 if arr.is_empty() {
-                    "".to_string()
+                    "array".to_string()
                 } else {
                     arr[0].kind()
                 }
@@ -495,7 +598,13 @@ impl Serialize for AgentValue {
             AgentValue::Number(n) => serializer.serialize_f64(*n),
             AgentValue::String(s) => serializer.serialize_str(s),
             AgentValue::Text(t) => serializer.serialize_str(t),
-            AgentValue::Object(o) => o.serialize(serializer),
+            AgentValue::Object(o) => {
+                let mut map = serializer.serialize_map(Some(o.len()))?;
+                for (k, v) in o.iter() {
+                    map.serialize_entry(k, v)?;
+                }
+                map.end()
+            }
             AgentValue::Array(a) => {
                 let mut seq = serializer.serialize_seq(Some(a.len()))?;
                 for e in a.iter() {
@@ -512,8 +621,10 @@ impl<'de> Deserialize<'de> for AgentValue {
     where
         D: Deserializer<'de>,
     {
-        let value = Value::deserialize(deserializer)?;
-        Ok(AgentValue::from_json_value(value))
+        let value = serde_json::Value::deserialize(deserializer)?;
+        AgentValue::from_json_value(value).map_err(|e| {
+            serde::de::Error::custom(format!("Failed to deserialize AgentValue: {}", e))
+        })
     }
 }
 
@@ -554,7 +665,10 @@ mod tests {
         assert!(matches!(text_data.value, AgentValue::Text(_)));
         assert_eq!(text_data.as_str().unwrap(), "multiline\ntext\n\n");
 
-        let obj_val = json!({"name": "test", "age": 30});
+        let obj_val = AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("string1")),
+            ("key2".to_string(), AgentValue::new_integer(2)),
+        ]);
         let obj_data = AgentData::new_object(obj_val.clone());
         assert_eq!(obj_data.kind, "object");
         assert!(matches!(obj_data.value, AgentValue::Object(_)));
@@ -563,72 +677,84 @@ mod tests {
 
     #[test]
     fn test_agent_data_from_kind_value() {
-        // Test creating AgentData from kind and value
-        let unit_data = AgentData::from_kind_value("unit", json!(null));
+        // Test creating AgentData from kind and JSON value
+        let unit_data = AgentData::from_kind_json_value("unit", json!(null)).unwrap();
         assert_eq!(unit_data.kind, "unit");
         assert_eq!(unit_data.value, AgentValue::Null);
 
-        let bool_data = AgentData::from_kind_value("boolean", json!(true));
+        let bool_data = AgentData::from_kind_json_value("boolean", json!(true)).unwrap();
         assert_eq!(bool_data.kind, "boolean");
         assert_eq!(bool_data.value, AgentValue::Boolean(true));
 
-        let int_data = AgentData::from_kind_value("integer", json!(42));
+        let int_data = AgentData::from_kind_json_value("integer", json!(42)).unwrap();
         assert_eq!(int_data.kind, "integer");
         assert_eq!(int_data.value, AgentValue::Integer(42));
 
-        let int_data = AgentData::from_kind_value("integer", json!(3.14));
+        let int_data = AgentData::from_kind_json_value("integer", json!(3.14)).unwrap();
         assert_eq!(int_data.kind, "integer");
         assert_eq!(int_data.value, AgentValue::Integer(3));
 
-        let num_data = AgentData::from_kind_value("number", json!(3.14));
+        let num_data = AgentData::from_kind_json_value("number", json!(3.14)).unwrap();
         assert_eq!(num_data.kind, "number");
         assert_eq!(num_data.value, AgentValue::new_number(3.14));
 
-        let num_data = AgentData::from_kind_value("number", json!(3));
+        let num_data = AgentData::from_kind_json_value("number", json!(3)).unwrap();
         assert_eq!(num_data.kind, "number");
         assert_eq!(num_data.value, AgentValue::new_number(3.0));
 
-        let str_data = AgentData::from_kind_value("string", json!("hello"));
+        let str_data = AgentData::from_kind_json_value("string", json!("hello")).unwrap();
         assert_eq!(str_data.kind, "string");
         assert_eq!(str_data.value, AgentValue::new_string("hello"));
 
-        let str_data = AgentData::from_kind_value("string", json!("hello\nworld\n\n"));
+        let str_data =
+            AgentData::from_kind_json_value("string", json!("hello\nworld\n\n")).unwrap();
         assert_eq!(str_data.kind, "string");
         assert_eq!(str_data.value, AgentValue::new_string("hello\nworld\n\n"));
 
-        let text_data = AgentData::from_kind_value("text", json!("hello"));
+        let text_data = AgentData::from_kind_json_value("text", json!("hello")).unwrap();
         assert_eq!(text_data.kind, "text");
         assert_eq!(text_data.value, AgentValue::new_text("hello"));
 
-        let text_data = AgentData::from_kind_value("text", json!("hello\nworld\n\n"));
+        let text_data = AgentData::from_kind_json_value("text", json!("hello\nworld\n\n")).unwrap();
         assert_eq!(text_data.kind, "text");
         assert_eq!(text_data.value, AgentValue::new_text("hello\nworld\n\n"));
 
-        let obj_data = AgentData::from_kind_value("object", json!({"name": "test", "age": 30}));
+        let obj_data =
+            AgentData::from_kind_json_value("object", json!({"key1": "string1", "key2": 2}))
+                .unwrap();
         assert_eq!(obj_data.kind, "object");
         assert_eq!(
             obj_data.value,
-            AgentValue::new_object(json!({"name": "test", "age": 30}))
+            AgentValue::new_object(AgentValueMap::from([
+                ("key1".to_string(), AgentValue::new_string("string1")),
+                ("key2".to_string(), AgentValue::new_integer(2)),
+            ]))
         );
 
         // Test custom object kind
-        let obj_data =
-            AgentData::from_kind_value("custom_type".to_string(), json!({"foo": "hi", "bar": 3}));
+        let obj_data = AgentData::from_kind_json_value(
+            "custom_type".to_string(),
+            json!({"foo": "hi", "bar": 3}),
+        )
+        .unwrap();
         assert_eq!(obj_data.kind, "custom_type");
         assert_eq!(
             obj_data.value,
-            AgentValue::new_object(json!({"foo": "hi", "bar": 3}))
+            AgentValue::new_object(AgentValueMap::from([
+                ("foo".to_string(), AgentValue::new_string("hi")),
+                ("bar".to_string(), AgentValue::new_integer(3)),
+            ]))
         );
 
         // Test array values
-        let array_data = AgentData::from_kind_value("unit", json!([null, null]));
+        let array_data = AgentData::from_kind_json_value("unit", json!([null, null])).unwrap();
         assert_eq!(array_data.kind, "unit");
         assert_eq!(
             array_data.value,
             AgentValue::new_array(vec![AgentValue::new_unit(), AgentValue::new_unit(),])
         );
 
-        let array_data = AgentData::from_kind_value("boolean", json!([true, false]));
+        let array_data = AgentData::from_kind_json_value("boolean", json!([true, false])).unwrap();
         assert_eq!(array_data.kind, "boolean");
         assert_eq!(
             array_data.value,
@@ -638,7 +764,7 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_value("integer", json!([1, 2.1, 3.0]));
+        let array_data = AgentData::from_kind_json_value("integer", json!([1, 2.1, 3.0])).unwrap();
         assert_eq!(array_data.kind, "integer");
         assert_eq!(
             array_data.value,
@@ -649,7 +775,7 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_value("number", json!([1.0, 2.1, 3]));
+        let array_data = AgentData::from_kind_json_value("number", json!([1.0, 2.1, 3])).unwrap();
         assert_eq!(array_data.kind, "number");
         assert_eq!(
             array_data.value,
@@ -661,7 +787,8 @@ mod tests {
         );
 
         let array_data =
-            AgentData::from_kind_value("string", json!(["test", "hello\nworld\n", ""]));
+            AgentData::from_kind_json_value("string", json!(["test", "hello\nworld\n", ""]))
+                .unwrap();
         assert_eq!(array_data.kind, "string");
         assert_eq!(
             array_data.value,
@@ -672,7 +799,8 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_value("text", json!(["test", "hello\nworld\n", ""]));
+        let array_data =
+            AgentData::from_kind_json_value("text", json!(["test", "hello\nworld\n", ""])).unwrap();
         assert_eq!(array_data.kind, "text");
         assert_eq!(
             array_data.value,
@@ -683,88 +811,157 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_value(
+        let array_data = AgentData::from_kind_json_value(
             "object",
-            json!([{"name":"test","value":1}, {"name":"test2","value":"hi"}, {}]),
-        );
+            json!([{"key1":"test","key2":1}, {"key1":"test2","key2":"hi"}, {}]),
+        )
+        .unwrap();
         assert_eq!(array_data.kind, "object");
         assert_eq!(
             array_data.value,
             AgentValue::new_array(vec![
-                AgentValue::new_object(json!({"name": "test", "value": 1})),
-                AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                AgentValue::new_object(json!({})),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(1)),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test2")),
+                    ("key2".to_string(), AgentValue::new_string("hi")),
+                ])),
+                AgentValue::new_object(AgentValueMap::default()),
             ])
         );
 
-        let array_data = AgentData::from_kind_value(
+        let array_data = AgentData::from_kind_json_value(
             "custom",
-            json!([{"name":"test","value":1}, {"name":"test2","value":"hi"}, {}]),
-        );
+            json!([{"key1":"test","key2":1}, {"key1":"test2","key2":"hi"}, {}]),
+        )
+        .unwrap();
         assert_eq!(array_data.kind, "custom");
         assert_eq!(
             array_data.value,
             AgentValue::new_array(vec![
-                AgentValue::new_object(json!({"name": "test", "value": 1})),
-                AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                AgentValue::new_object(json!({})),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(1)),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test2")),
+                    ("key2".to_string(), AgentValue::new_string("hi")),
+                ])),
+                AgentValue::new_object(AgentValueMap::default()),
             ])
         );
     }
 
-    // #[test]
-    // fn test_agent_data_from_json_value() {
-    //     // Test automatic kind inference from JSON values
-    //     let null_data = AgentData::from_json_value(json!(null));
-    //     assert_eq!(null_data.kind, "unit");
-    //     assert_eq!(null_data.value, AgentValue::Null);
+    #[test]
+    fn test_agent_data_from_json_value() {
+        // Test automatic kind inference from JSON values
+        let unit_data = AgentData::from_json_value(json!(null)).unwrap();
+        assert_eq!(unit_data.kind, "unit");
+        assert_eq!(unit_data.value, AgentValue::Null);
 
-    //     let bool_data = AgentData::from_json_value(json!(false));
-    //     assert_eq!(bool_data.kind, "boolean");
-    //     assert_eq!(bool_data.value, AgentValue::new_boolean(false));
+        let bool_data = AgentData::from_json_value(json!(true)).unwrap();
+        assert_eq!(bool_data.kind, "boolean");
+        assert_eq!(bool_data.value, AgentValue::Boolean(true));
 
-    //     let bool_data = AgentData::from_json_value(json!(true));
-    //     assert_eq!(bool_data.kind, "boolean");
-    //     assert_eq!(bool_data.value, AgentValue::new_boolean(true));
+        let int_data = AgentData::from_json_value(json!(42)).unwrap();
+        assert_eq!(int_data.kind, "integer");
+        assert_eq!(int_data.value, AgentValue::Integer(42));
 
-    //     let int_data = AgentData::from_json_value(json!(42));
-    //     assert_eq!(int_data.kind, "integer");
-    //     assert_eq!(int_data.value, AgentValue::new_integer(42));
+        let num_data = AgentData::from_json_value(json!(3.14)).unwrap();
+        assert_eq!(num_data.kind, "number");
+        assert_eq!(num_data.value, AgentValue::new_number(3.14));
 
-    //     let num_data = AgentData::from_json_value(json!(3.14));
-    //     assert_eq!(num_data.kind, "number");
-    //     assert_eq!(num_data.value, AgentValue::new_number(3.14));
+        let str_data = AgentData::from_json_value(json!("hello")).unwrap();
+        assert_eq!(str_data.kind, "string");
+        assert_eq!(str_data.value, AgentValue::new_string("hello"));
 
-    //     let num_data = AgentData::from_json_value(json!(3.0));
-    //     assert_eq!(num_data.kind, "number");
-    //     assert_eq!(num_data.value, AgentValue::new_number(3.0));
+        let str_data = AgentData::from_json_value(json!("hello\nworld\n\n")).unwrap();
+        assert_eq!(str_data.kind, "string");
+        assert_eq!(str_data.value, AgentValue::new_string("hello\nworld\n\n"));
 
-    //     let str_data = AgentData::from_json_value(json!("hello"));
-    //     assert_eq!(str_data.kind, "string");
-    //     assert_eq!(str_data.value, AgentValue::new_string("hello"));
+        let obj_data = AgentData::from_json_value(json!({"key1": "string1", "key2": 2})).unwrap();
+        assert_eq!(obj_data.kind, "object");
+        assert_eq!(
+            obj_data.value,
+            AgentValue::new_object(AgentValueMap::from([
+                ("key1".to_string(), AgentValue::new_string("string1")),
+                ("key2".to_string(), AgentValue::new_integer(2)),
+            ]))
+        );
 
-    //     let str_data = AgentData::from_json_value(json!("hello\nworld\n\n"));
-    //     assert_eq!(str_data.kind, "string");
-    //     assert_eq!(str_data.value, AgentValue::new_string("hello\nworld\n\n"));
+        // Test array values
+        let array_data = AgentData::from_json_value(json!([null, null])).unwrap();
+        assert_eq!(array_data.kind, "unit");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![AgentValue::new_unit(), AgentValue::new_unit(),])
+        );
 
-    //     let arr_data = AgentData::from_json_value(json!([1, 2, 3]));
-    //     assert_eq!(arr_data.kind, "array");
-    //     assert_eq!(
-    //         arr_data.value,
-    //         AgentValue::new_array(vec![
-    //             AgentValue::new_integer(1),
-    //             AgentValue::new_integer(2),
-    //             AgentValue::new_integer(3),
-    //         ])
-    //     );
+        let array_data = AgentData::from_json_value(json!([true, false])).unwrap();
+        assert_eq!(array_data.kind, "boolean");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![
+                AgentValue::new_boolean(true),
+                AgentValue::new_boolean(false),
+            ])
+        );
 
-    //     let obj_data = AgentData::from_json_value(json!({"name": "test", "age": 30}));
-    //     assert_eq!(obj_data.kind, "object");
-    //     assert_eq!(
-    //         obj_data.value,
-    //         AgentValue::new_object(json!({"name": "test", "age": 30}))
-    //     );
-    // }
+        let array_data = AgentData::from_json_value(json!([1, 2, 3])).unwrap();
+        assert_eq!(array_data.kind, "integer");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![
+                AgentValue::new_integer(1),
+                AgentValue::new_integer(2),
+                AgentValue::new_integer(3),
+            ])
+        );
+
+        let array_data = AgentData::from_json_value(json!([1.0, 2.1, 3.2])).unwrap();
+        assert_eq!(array_data.kind, "number");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![
+                AgentValue::new_number(1.0),
+                AgentValue::new_number(2.1),
+                AgentValue::new_number(3.2),
+            ])
+        );
+
+        let array_data = AgentData::from_json_value(json!(["test", "hello\nworld\n", ""])).unwrap();
+        assert_eq!(array_data.kind, "string");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![
+                AgentValue::new_string("test"),
+                AgentValue::new_string("hello\nworld\n"),
+                AgentValue::new_string(""),
+            ])
+        );
+
+        let array_data = AgentData::from_json_value(
+            json!([{"key1":"test","key2":1}, {"key1":"test2","key2":"hi"}, {}]),
+        )
+        .unwrap();
+        assert_eq!(array_data.kind, "object");
+        assert_eq!(
+            array_data.value,
+            AgentValue::new_array(vec![
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(1)),
+                ])),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test2")),
+                    ("key2".to_string(), AgentValue::new_string("hi")),
+                ])),
+                AgentValue::new_object(AgentValueMap::default()),
+            ])
+        );
+    }
 
     #[test]
     fn test_agent_data_accessor_methods() {
@@ -773,7 +970,10 @@ mod tests {
         assert_eq!(str_data.as_str().unwrap(), "hello");
         assert!(str_data.as_object().is_none());
 
-        let obj_val = json!({"name": "test", "age": 30});
+        let obj_val = AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("string1")),
+            ("key2".to_string(), AgentValue::new_integer(2)),
+        ]);
         let obj_data = AgentData::new_object(obj_val.clone());
         assert!(obj_data.as_str().is_none());
         assert_eq!(obj_data.as_object().unwrap(), &obj_val);
@@ -861,19 +1061,28 @@ mod tests {
 
         // Test Object serialization
         {
-            let data = AgentData::new_object(json!({"name": "test", "value": 3}));
+            let data = AgentData::new_object(AgentValueMap::from([
+                ("key1".to_string(), AgentValue::new_string("string1")),
+                ("key2".to_string(), AgentValue::new_integer(2)),
+            ]));
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"object","value":{"name":"test","value":3}}"#
+                r#"{"kind":"object","value":{"key1":"string1","key2":2}}"#
             );
         }
 
         // Test custom object serialization
         {
-            let data = AgentData::new_custom_object("custom", json!({"name": "test", "value": 3}));
+            let data = AgentData::new_custom_object(
+                "custom",
+                AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(3)),
+                ]),
+            );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"custom","value":{"name":"test","value":3}}"#
+                r#"{"kind":"custom","value":{"key1":"test","key2":3}}"#
             );
         }
 
@@ -953,27 +1162,39 @@ mod tests {
             let data = AgentData::new_array(
                 "object",
                 vec![
-                    AgentValue::new_object(json!({"name": "test", "value": 1})),
-                    AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                    AgentValue::new_object(json!({})),
+                    AgentValue::new_object(AgentValueMap::from([
+                        ("key1".to_string(), AgentValue::new_string("test")),
+                        ("key2".to_string(), AgentValue::new_integer(1)),
+                    ])),
+                    AgentValue::new_object(AgentValueMap::from([
+                        ("key1".to_string(), AgentValue::new_string("test2")),
+                        ("key2".to_string(), AgentValue::new_string("hi")),
+                    ])),
+                    AgentValue::new_object(AgentValueMap::default()),
                 ],
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"object","value":[{"name":"test","value":1},{"name":"test2","value":"hi"},{}]}"#
+                r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#
             );
 
             let data = AgentData::new_array(
                 "custom",
                 vec![
-                    AgentValue::new_object(json!({"name": "test", "value": 1})),
-                    AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                    AgentValue::new_object(json!({})),
+                    AgentValue::new_object(AgentValueMap::from([
+                        ("key1".to_string(), AgentValue::new_string("test")),
+                        ("key2".to_string(), AgentValue::new_integer(1)),
+                    ])),
+                    AgentValue::new_object(AgentValueMap::from([
+                        ("key1".to_string(), AgentValue::new_string("test2")),
+                        ("key2".to_string(), AgentValue::new_string("hi")),
+                    ])),
+                    AgentValue::new_object(AgentValueMap::default()),
                 ],
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"custom","value":[{"name":"test","value":1},{"name":"test2","value":"hi"},{}]}"#
+                r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#
             );
         }
     }
@@ -1030,11 +1251,14 @@ mod tests {
         // Test Object deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"object","value":{"name":"test","value":3}}"#)
+                serde_json::from_str(r#"{"kind":"object","value":{"key1":"test","key2":3}}"#)
                     .unwrap();
             assert_eq!(
                 deserialized,
-                AgentData::new_object(json!({"name": "test", "value": 3}))
+                AgentData::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(3))
+                ]))
             );
         }
 
@@ -1045,7 +1269,13 @@ mod tests {
                     .unwrap();
             assert_eq!(
                 deserialized,
-                AgentData::new_custom_object("custom", json!({"name": "test", "value": 3}))
+                AgentData::new_custom_object(
+                    "custom",
+                    AgentValueMap::from([
+                        ("name".to_string(), AgentValue::new_string("test")),
+                        ("value".to_string(), AgentValue::new_integer(3))
+                    ])
+                )
             );
         }
 
@@ -1133,31 +1363,43 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"object","value":[{"name":"test","value":1},{"name":"test2","value":"hi"},{}]}"#)
-                    .unwrap();
+                    serde_json::from_str(r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#)
+                        .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
                     "object",
                     vec![
-                        AgentValue::new_object(json!({"name": "test", "value": 1})),
-                        AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                        AgentValue::new_object(json!({})),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key1".to_string(), AgentValue::new_string("test")),
+                            ("key2".to_string(), AgentValue::new_integer(1)),
+                        ])),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key1".to_string(), AgentValue::new_string("test2")),
+                            ("key2".to_string(), AgentValue::new_string("hi")),
+                        ])),
+                        AgentValue::new_object(AgentValueMap::default()),
                     ]
                 )
             );
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"custom","value":[{"name":"test","value":1},{"name":"test2","value":"hi"},{}]}"#)
-                    .unwrap();
+                    serde_json::from_str(r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#)
+                        .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
                     "custom",
                     vec![
-                        AgentValue::new_object(json!({"name": "test", "value": 1})),
-                        AgentValue::new_object(json!({"name": "test2", "value": "hi"})),
-                        AgentValue::new_object(json!({})),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key1".to_string(), AgentValue::new_string("test")),
+                            ("key2".to_string(), AgentValue::new_integer(1)),
+                        ])),
+                        AgentValue::new_object(AgentValueMap::from([
+                            ("key1".to_string(), AgentValue::new_string("test2")),
+                            ("key2".to_string(), AgentValue::new_string("hi")),
+                        ])),
+                        AgentValue::new_object(AgentValueMap::default()),
                     ]
                 )
             );
@@ -1199,11 +1441,14 @@ mod tests {
             assert_eq!(arr[1].as_i64().unwrap(), 2);
         }
 
-        let obj = AgentValue::new_object(json!({"name": "test", "age": 30}));
+        let obj = AgentValue::new_object(AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("string1")),
+            ("key2".to_string(), AgentValue::new_integer(2)),
+        ]));
         assert!(matches!(obj, AgentValue::Object(_)));
         if let AgentValue::Object(obj) = obj {
-            assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("test"));
-            assert_eq!(obj.get("age").and_then(|v| v.as_i64()), Some(30));
+            assert_eq!(obj.get("key1").and_then(|v| v.as_str()), Some("string1"));
+            assert_eq!(obj.get("key2").and_then(|v| v.as_i64()), Some(2));
         } else {
             panic!("Object was not deserialized correctly");
         }
@@ -1212,22 +1457,22 @@ mod tests {
     #[test]
     fn test_agent_value_from_json_value() {
         // Test converting from JSON value to AgentValue
-        let null = AgentValue::from_json_value(json!(null));
+        let null = AgentValue::from_json_value(json!(null)).unwrap();
         assert_eq!(null, AgentValue::Null);
 
-        let boolean = AgentValue::from_json_value(json!(true));
+        let boolean = AgentValue::from_json_value(json!(true)).unwrap();
         assert_eq!(boolean, AgentValue::Boolean(true));
 
-        let integer = AgentValue::from_json_value(json!(42));
+        let integer = AgentValue::from_json_value(json!(42)).unwrap();
         assert_eq!(integer, AgentValue::Integer(42));
 
-        let number = AgentValue::from_json_value(json!(3.14));
+        let number = AgentValue::from_json_value(json!(3.14)).unwrap();
         assert!(matches!(number, AgentValue::Number(_)));
         if let AgentValue::Number(num) = number {
             assert!((num - 3.14).abs() < f64::EPSILON);
         }
 
-        let string = AgentValue::from_json_value(json!("hello"));
+        let string = AgentValue::from_json_value(json!("hello")).unwrap();
         assert!(matches!(string, AgentValue::String(_)));
         if let AgentValue::String(s) = string {
             assert_eq!(*s, "hello");
@@ -1235,7 +1480,7 @@ mod tests {
             panic!("Expected string value");
         }
 
-        let array = AgentValue::from_json_value(json!([1, "test", true]));
+        let array = AgentValue::from_json_value(json!([1, "test", true])).unwrap();
         assert!(matches!(array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = array {
             assert_eq!(arr.len(), 3);
@@ -1249,11 +1494,11 @@ mod tests {
             assert_eq!(arr[2], AgentValue::Boolean(true));
         }
 
-        let object = AgentValue::from_json_value(json!({"name": "test", "age": 30}));
+        let object = AgentValue::from_json_value(json!({"key1": "string1", "key2": 2})).unwrap();
         assert!(matches!(object, AgentValue::Object(_)));
         if let AgentValue::Object(obj) = object {
-            assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("test"));
-            assert_eq!(obj.get("age").and_then(|v| v.as_i64()), Some(30));
+            assert_eq!(obj.get("key1").and_then(|v| v.as_str()), Some("string1"));
+            assert_eq!(obj.get("key2").and_then(|v| v.as_i64()), Some(2));
         } else {
             panic!("Object was not deserialized correctly");
         }
@@ -1262,31 +1507,31 @@ mod tests {
     #[test]
     fn test_agent_value_from_kind_value() {
         // Test AgentValue::from_kind_value with different kinds and values
-        let unit = AgentValue::from_kind_value("unit", json!(null));
+        let unit = AgentValue::from_kind_value("unit", json!(null)).unwrap();
         assert_eq!(unit, AgentValue::Null);
 
-        let boolean = AgentValue::from_kind_value("boolean", json!(true));
+        let boolean = AgentValue::from_kind_value("boolean", json!(true)).unwrap();
         assert_eq!(boolean, AgentValue::Boolean(true));
 
-        let integer = AgentValue::from_kind_value("integer", json!(42));
+        let integer = AgentValue::from_kind_value("integer", json!(42)).unwrap();
         assert_eq!(integer, AgentValue::Integer(42));
 
-        let integer = AgentValue::from_kind_value("integer", json!(42.0));
+        let integer = AgentValue::from_kind_value("integer", json!(42.0)).unwrap();
         assert_eq!(integer, AgentValue::Integer(42));
 
-        let number = AgentValue::from_kind_value("number", json!(3.14));
+        let number = AgentValue::from_kind_value("number", json!(3.14)).unwrap();
         assert!(matches!(number, AgentValue::Number(_)));
         if let AgentValue::Number(num) = number {
             assert!((num - 3.14).abs() < f64::EPSILON);
         }
 
-        let number = AgentValue::from_kind_value("number", json!(3));
+        let number = AgentValue::from_kind_value("number", json!(3)).unwrap();
         assert!(matches!(number, AgentValue::Number(_)));
         if let AgentValue::Number(num) = number {
             assert!((num - 3.0).abs() < f64::EPSILON);
         }
 
-        let string = AgentValue::from_kind_value("string", json!("hello"));
+        let string = AgentValue::from_kind_value("string", json!("hello")).unwrap();
         assert!(matches!(string, AgentValue::String(_)));
         if let AgentValue::String(s) = string {
             assert_eq!(*s, "hello");
@@ -1294,7 +1539,7 @@ mod tests {
             panic!("Expected string value");
         }
 
-        let text = AgentValue::from_kind_value("text", json!("multiline\ntext"));
+        let text = AgentValue::from_kind_value("text", json!("multiline\ntext")).unwrap();
         assert!(matches!(text, AgentValue::Text(_)));
         if let AgentValue::Text(t) = text {
             assert_eq!(*t, "multiline\ntext");
@@ -1302,7 +1547,7 @@ mod tests {
             panic!("Expected text value");
         }
 
-        let array = AgentValue::from_kind_value("array", json!([1, "test", true]));
+        let array = AgentValue::from_kind_value("array", json!([1, "test", true])).unwrap();
         assert!(matches!(array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = array {
             assert_eq!(arr.len(), 3);
@@ -1316,17 +1561,18 @@ mod tests {
             assert_eq!(arr[2], AgentValue::Boolean(true));
         }
 
-        let obj = AgentValue::from_kind_value("object", json!({"name": "test", "age": 30}));
+        let obj =
+            AgentValue::from_kind_value("object", json!({"key1": "test", "key2": 2})).unwrap();
         assert!(matches!(obj, AgentValue::Object(_)));
         if let AgentValue::Object(obj) = obj {
-            assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("test"));
-            assert_eq!(obj.get("age").and_then(|v| v.as_i64()), Some(30));
+            assert_eq!(obj.get("key1").and_then(|v| v.as_str()), Some("test"));
+            assert_eq!(obj.get("key2").and_then(|v| v.as_i64()), Some(2));
         } else {
             panic!("Object was not deserialized correctly");
         }
 
         // Test arrays
-        let unit_array = AgentValue::from_kind_value("unit", json!([null, null]));
+        let unit_array = AgentValue::from_kind_value("unit", json!([null, null])).unwrap();
         assert!(matches!(unit_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = unit_array {
             assert_eq!(arr.len(), 2);
@@ -1335,7 +1581,7 @@ mod tests {
             }
         }
 
-        let bool_array = AgentValue::from_kind_value("boolean", json!([true, false]));
+        let bool_array = AgentValue::from_kind_value("boolean", json!([true, false])).unwrap();
         assert!(matches!(bool_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = bool_array {
             assert_eq!(arr.len(), 2);
@@ -1343,7 +1589,7 @@ mod tests {
             assert_eq!(arr[1], AgentValue::Boolean(false));
         }
 
-        let int_array = AgentValue::from_kind_value("integer", json!([1, 2, 3]));
+        let int_array = AgentValue::from_kind_value("integer", json!([1, 2, 3])).unwrap();
         assert!(matches!(int_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = int_array {
             assert_eq!(arr.len(), 3);
@@ -1352,7 +1598,7 @@ mod tests {
             assert_eq!(arr[2], AgentValue::Integer(3));
         }
 
-        let num_array = AgentValue::from_kind_value("number", json!([1.1, 2.2, 3.3]));
+        let num_array = AgentValue::from_kind_value("number", json!([1.1, 2.2, 3.3])).unwrap();
         assert!(matches!(num_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = num_array {
             assert_eq!(arr.len(), 3);
@@ -1361,7 +1607,8 @@ mod tests {
             assert_eq!(arr[2], AgentValue::Number(3.3));
         }
 
-        let string_array = AgentValue::from_kind_value("string", json!(["hello", "world"]));
+        let string_array =
+            AgentValue::from_kind_value("string", json!(["hello", "world"])).unwrap();
         assert!(matches!(string_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = string_array {
             assert_eq!(arr.len(), 2);
@@ -1375,7 +1622,7 @@ mod tests {
             }
         }
 
-        let text_array = AgentValue::from_kind_value("text", json!(["hello", "world!\n"]));
+        let text_array = AgentValue::from_kind_value("text", json!(["hello", "world!\n"])).unwrap();
         assert!(matches!(text_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = text_array {
             assert_eq!(arr.len(), 2);
@@ -1468,7 +1715,10 @@ mod tests {
         assert_eq!(array.is_array(), true);
         assert_eq!(array.is_object(), false);
 
-        let obj = AgentValue::new_object(json!({"name": "test", "age": 30}));
+        let obj = AgentValue::new_object(AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("string1")),
+            ("key2".to_string(), AgentValue::new_integer(2)),
+        ]));
         assert_eq!(obj.is_unit(), false);
         assert_eq!(obj.is_boolean(), false);
         assert_eq!(obj.is_integer(), false);
@@ -1536,7 +1786,10 @@ mod tests {
         }
         assert_eq!(array.as_object(), None);
 
-        let obj = AgentValue::new_object(json!({"name": "test", "age": 30}));
+        let obj = AgentValue::new_object(AgentValueMap::from([
+            ("key1".to_string(), AgentValue::new_string("string1")),
+            ("key2".to_string(), AgentValue::new_integer(2)),
+        ]));
         assert_eq!(obj.as_bool(), None);
         assert_eq!(obj.as_i64(), None);
         assert_eq!(obj.as_f64(), None);
@@ -1544,8 +1797,8 @@ mod tests {
         assert!(obj.as_array().is_none());
         assert!(obj.as_object().is_some());
         if let Some(value) = obj.as_object() {
-            assert_eq!(value.get("name").and_then(|v| v.as_str()), Some("test"));
-            assert_eq!(value.get("age").and_then(|v| v.as_i64()), Some(30));
+            assert_eq!(value.get("key1").and_then(|v| v.as_str()), Some("string1"));
+            assert_eq!(value.get("key2").and_then(|v| v.as_i64()), Some(2));
         }
     }
 
@@ -1609,20 +1862,26 @@ mod tests {
             let array = AgentValue::new_array(vec![
                 AgentValue::new_integer(1),
                 AgentValue::new_string("test"),
-                AgentValue::new_object(json!({"name": "test", "value": 2})),
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(2)),
+                ])),
             ]);
             assert_eq!(
                 serde_json::to_string(&array).unwrap(),
-                r#"[1,"test",{"name":"test","value":2}]"#
+                r#"[1,"test",{"key1":"test","key2":2}]"#
             );
         }
 
         // Test Object serialization
         {
-            let obj = AgentValue::new_object(json!({"name": "test", "value": 3}));
+            let obj = AgentValue::new_object(AgentValueMap::from([
+                ("key1".to_string(), AgentValue::new_string("test")),
+                ("key2".to_string(), AgentValue::new_integer(3)),
+            ]));
             assert_eq!(
                 serde_json::to_string(&obj).unwrap(),
-                r#"{"name":"test","value":3}"#
+                r#"{"key1":"test","key2":3}"#
             );
         }
     }
@@ -1671,7 +1930,7 @@ mod tests {
         // Test Array deserialization
         {
             let deserialized: AgentValue =
-                serde_json::from_str(r#"[1,"test",{"name":"test","value":2}]"#).unwrap();
+                serde_json::from_str(r#"[1,"test",{"key1":"test","key2":2}]"#).unwrap();
             assert!(matches!(deserialized, AgentValue::Array(_)));
             if let AgentValue::Array(arr) = deserialized {
                 assert_eq!(arr.len(), 3, "Array length mismatch after serialization");
@@ -1679,7 +1938,10 @@ mod tests {
                 assert_eq!(arr[1], AgentValue::new_string("test"));
                 assert_eq!(
                     arr[2],
-                    AgentValue::new_object(json!({"name": "test", "value": 2}))
+                    AgentValue::new_object(AgentValueMap::from([
+                        ("key1".to_string(), AgentValue::new_string("test")),
+                        ("key2".to_string(), AgentValue::new_integer(2)),
+                    ]))
                 );
             }
         }
@@ -1687,10 +1949,13 @@ mod tests {
         // Test Object deserialization
         {
             let deserialized: AgentValue =
-                serde_json::from_str(r#"{"name":"test","value":3}"#).unwrap();
+                serde_json::from_str(r#"{"key1":"test","key2":3}"#).unwrap();
             assert_eq!(
                 deserialized,
-                AgentValue::new_object(json!({"name": "test", "value": 3}))
+                AgentValue::new_object(AgentValueMap::from([
+                    ("key1".to_string(), AgentValue::new_string("test")),
+                    ("key2".to_string(), AgentValue::new_integer(3)),
+                ]))
             );
         }
     }

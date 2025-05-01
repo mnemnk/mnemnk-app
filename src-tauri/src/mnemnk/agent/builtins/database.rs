@@ -1,12 +1,11 @@
 use anyhow::{bail, Context as _, Ok, Result};
-use serde_json::json;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_DATABASE;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
+    AgentDefinitions, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 use crate::mnemnk::store;
 
@@ -77,12 +76,10 @@ impl AsAgent for DatabaseDeleteAgent {
 
         let result = store::delete(self.app(), db, table, key.to_string(), return_before)?;
         if return_before {
-            if let Some(value) = result {
-                let data = AgentData::new_object(json!({
-                    "key": key,
-                    "value": value,
-                }));
-                self.try_output(CH_KV, data)?;
+            if let Some(json_value) = result {
+                let value = AgentValue::from_json_value(json_value)?;
+                let kv_data = new_kv_data(key, value);
+                self.try_output(CH_KV, kv_data)?;
             } else {
                 // value is empty
                 self.try_output(CH_KV, AgentData::new_unit())?;
@@ -125,7 +122,8 @@ impl AsAgent for DatabaseInsertAgent {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
-        store::insert(self.app(), db, table, key, value)?;
+        let json_value = value.to_json_value();
+        store::insert(self.app(), db, table, key, json_value)?;
 
         self.try_output(ch, data)
     }
@@ -178,7 +176,7 @@ impl AsAgent for DatabaseQueryAgent {
             }
             if let Some(b) = obj.get("bindings") {
                 if b.is_object() {
-                    bindings = Some(b.clone());
+                    bindings = Some(b.to_json_value());
                 } else {
                     bail!("bindings is not an object");
                 }
@@ -191,7 +189,7 @@ impl AsAgent for DatabaseQueryAgent {
         let result = store::query(self.app(), db, query, bindings)?;
         let mut arr = Vec::with_capacity(result.len());
         for r in result.into_iter() {
-            let value = AgentValue::from_json_value(r);
+            let value = AgentValue::from_json_value(r)?;
             arr.push(value);
         }
         let data = AgentData::new_array("object", arr);
@@ -235,12 +233,10 @@ impl AsAgent for DatabaseSelectAgent {
         }
 
         let result = store::select(self.app(), db, table, key.to_string())?;
-        if let Some(value) = result {
-            let data = AgentData::new_object(json!({
-                "key": key,
-                "value": value,
-            }));
-            self.try_output(CH_KV, data)?;
+        if let Some(json_value) = result {
+            let value = AgentValue::from_json_value(json_value)?;
+            let kv_data = new_kv_data(key, value);
+            self.try_output(CH_KV, kv_data)?;
         } else {
             self.try_output(CH_KV, AgentData::new_unit())?;
         }
@@ -277,7 +273,8 @@ impl AsAgent for DatabaseUpdateAgent {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
-        store::update(self.app(), db, table, key, value)?;
+        let json_value = value.to_json_value();
+        store::update(self.app(), db, table, key, json_value)?;
 
         self.try_output(ch, data)
     }
@@ -313,28 +310,21 @@ impl AsAgent for DatabaseUpdateMergeAgent {
         let (db, table) = get_db_table(config)?;
         let return_after = config.get_bool_or_default(CONFIG_RETURN_AFTER);
         let (key, value) = get_kv(&data)?;
+        let json_value = value.to_json_value();
 
         if return_after {
-            let result = store::update_merge(
-                self.app(),
-                db,
-                table,
-                key.clone(),
-                value.clone(),
-                return_after,
-            )?;
-            if let Some(value) = result {
-                let data = AgentData::new_object(json!({
-                    "key": key,
-                    "value": value,
-                }));
-                self.try_output(ch, data)?;
+            let result =
+                store::update_merge(self.app(), db, table, key.clone(), json_value, return_after)?;
+            if let Some(json_value) = result {
+                let value = AgentValue::from_json_value(json_value)?;
+                let kv_data = new_kv_data(key, value);
+                self.try_output(ch, kv_data)?;
             } else {
                 self.try_output(ch, AgentData::new_unit())?;
             }
         } else {
             // return_after is false
-            store::update_merge(self.app(), db, table, key, value, return_after)?;
+            store::update_merge(self.app(), db, table, key, json_value, return_after)?;
             self.try_output(ch, AgentData::new_unit())?;
         }
 
@@ -371,7 +361,8 @@ impl AsAgent for DatabaseUpsertAgent {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
-        store::upsert(self.app(), db, table, key, value)?;
+        let json_value = value.to_json_value();
+        store::upsert(self.app(), db, table, key, json_value)?;
 
         self.try_output(ch, data)
     }
@@ -407,28 +398,21 @@ impl AsAgent for DatabaseUpsertMergeAgent {
         let (db, table) = get_db_table(config)?;
         let return_after = config.get_bool_or_default(CONFIG_RETURN_AFTER);
         let (key, value) = get_kv(&data)?;
+        let json_value = value.to_json_value();
 
         if return_after {
-            let result = store::upsert_merge(
-                self.app(),
-                db,
-                table,
-                key.clone(),
-                value.clone(),
-                return_after,
-            )?;
-            if let Some(value) = result {
-                let data = AgentData::new_object(json!({
-                    "key": key,
-                    "value": value,
-                }));
-                self.try_output(ch, data)?;
+            let result =
+                store::upsert_merge(self.app(), db, table, key.clone(), json_value, return_after)?;
+            if let Some(json_value) = result {
+                let value = AgentValue::from_json_value(json_value)?;
+                let kv_data = new_kv_data(key, value);
+                self.try_output(ch, kv_data)?;
             } else {
                 self.try_output(ch, AgentData::new_unit())?;
             }
         } else {
             // return_after is false
-            store::upsert_merge(self.app(), db, table, key, value, return_after)?;
+            store::upsert_merge(self.app(), db, table, key, json_value, return_after)?;
             self.try_output(ch, AgentData::new_unit())?;
         }
 
@@ -455,7 +439,7 @@ fn get_db_table(config: &AgentConfig) -> Result<(String, String)> {
     Ok((db, table))
 }
 
-fn get_kv(data: &AgentData) -> Result<(String, serde_json::Value)> {
+fn get_kv(data: &AgentData) -> Result<(String, AgentValue)> {
     let obj = data.as_object().context("data is not an object")?;
     let key = if let Some(key) = obj.get("key").cloned() {
         key.as_str().context("key is not a string")?.to_string()
@@ -469,11 +453,15 @@ fn get_kv(data: &AgentData) -> Result<(String, serde_json::Value)> {
     let Some(value) = obj.get("value").cloned() else {
         bail!("value not found");
     };
-    if !value.is_object() {
-        bail!("value is not an object");
-    }
 
     Ok((key, value))
+}
+
+fn new_kv_data(key: impl Into<String>, value: AgentValue) -> AgentData {
+    AgentData::new_object(AgentValueMap::from([
+        ("key".to_string(), AgentValue::new_string(key.into())),
+        ("value".to_string(), value),
+    ]))
 }
 
 static CH_KEY: &str = "key";

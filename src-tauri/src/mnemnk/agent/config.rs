@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 
@@ -7,11 +7,11 @@ use super::data::AgentValue;
 pub type AgentConfigs = HashMap<String, AgentConfig>;
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AgentConfig(HashMap<String, AgentValue>);
+pub struct AgentConfig(BTreeMap<String, AgentValue>);
 
 impl AgentConfig {
     pub fn new() -> Self {
-        Self(HashMap::new())
+        Self(BTreeMap::new())
     }
 
     pub fn set(&mut self, key: String, value: AgentValue) {
@@ -89,22 +89,22 @@ impl AgentConfig {
         self.get_array(key).unwrap_or(default)
     }
 
-    pub fn get_object(&self, key: &str) -> Option<&serde_json::Value> {
+    pub fn get_object(&self, key: &str) -> Option<&BTreeMap<String, AgentValue>> {
         self.0.get(key).and_then(|v| v.as_object())
     }
 
-    pub fn get_object_or<'a>(
-        &'a self,
-        key: &str,
-        default: &'a serde_json::Value,
-    ) -> &'a serde_json::Value {
-        self.get_object(key).unwrap_or(default)
-    }
+    // pub fn get_object_or<'a>(
+    //     &'a self,
+    //     key: &str,
+    //     default: &'a BTreeMap<String, AgentValue>,
+    // ) -> &'a BTreeMap<String, AgentValue> {
+    //     self.get_object(key).unwrap_or(default)
+    // }
 }
 
 impl IntoIterator for AgentConfig {
     type Item = (String, AgentValue);
-    type IntoIter = std::collections::hash_map::IntoIter<String, AgentValue>;
+    type IntoIter = std::collections::btree_map::IntoIter<String, AgentValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -113,7 +113,7 @@ impl IntoIterator for AgentConfig {
 
 impl<'a> IntoIterator for &'a AgentConfig {
     type Item = (&'a String, &'a AgentValue);
-    type IntoIter = std::collections::hash_map::Iter<'a, String, AgentValue>;
+    type IntoIter = std::collections::btree_map::Iter<'a, String, AgentValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()

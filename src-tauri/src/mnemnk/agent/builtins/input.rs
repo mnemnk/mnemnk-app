@@ -1,5 +1,4 @@
 use anyhow::{bail, Context as _, Result};
-use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
@@ -428,7 +427,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CONFIG_OBJECT])
         .with_default_config(vec![(
             CONFIG_OBJECT.into(),
-            AgentConfigEntry::new(AgentValue::new_object(Value::Null), "object"),
+            AgentConfigEntry::new(AgentValue::default_object(), "object"),
         )]),
     );
 }

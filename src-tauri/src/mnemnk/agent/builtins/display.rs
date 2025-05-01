@@ -1,12 +1,11 @@
 use anyhow::Result;
-use serde::Serialize;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions,
-    AgentDisplayConfigEntry, AsAgent, AsAgentData,
+    AgentDisplayConfigEntry, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Display Data
@@ -65,14 +64,15 @@ impl AsAgent for DebugDataAgent {
     }
 
     fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
-        #[derive(Serialize)]
-        struct DebugData {
-            ch: String,
-            data: AgentData,
-        }
-        let debug_data = DebugData { ch, data };
-        let data = AgentData::new_object(serde_json::to_value(&debug_data)?);
-        self.emit_display(DISPLAY_DATA, data)
+        let value = AgentValue::new_object(AgentValueMap::from([
+            ("kind".to_string(), AgentValue::new_string(data.kind)),
+            ("value".to_string(), data.value),
+        ]));
+        let debug_data = AgentData::new_object(AgentValueMap::from([
+            ("ch".to_string(), AgentValue::new_string(ch)),
+            ("data".to_string(), value),
+        ]));
+        self.emit_display(DISPLAY_DATA, debug_data)
     }
 }
 
