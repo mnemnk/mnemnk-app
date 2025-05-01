@@ -207,7 +207,10 @@ impl AsAgent for GetPropertyAgent {
             for v in data.as_array().context("failed as_array")? {
                 let mut value = v.clone();
                 for prop in &props {
-                    let obj = value.as_object().context("failed as_object2")?;
+                    let Some(obj) = value.as_object() else {
+                        value = AgentValue::new_unit();
+                        break;
+                    };
                     if let Some(v) = obj.get(*prop) {
                         value = v.clone();
                     } else {
@@ -227,10 +230,14 @@ impl AsAgent for GetPropertyAgent {
         } else if data.is_object() {
             let mut value = data.value;
             for prop in props {
-                let obj = value.as_object().context("failed as_object")?;
+                let Some(obj) = value.as_object() else {
+                    value = AgentValue::new_unit();
+                    break;
+                };
                 if let Some(v) = obj.get(prop) {
                     value = v.clone();
                 } else {
+                    // TODO: Add a config to determine whether to output unit
                     value = AgentValue::new_unit();
                     break;
                 }
