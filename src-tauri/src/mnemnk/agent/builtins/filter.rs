@@ -103,7 +103,7 @@ impl AsAgent for FalsyPassAgent {
     }
 }
 
-// Allow List
+// Pass or Block Regex List
 struct PassOrBlockRegexListAgent {
     data: AsAgentData,
     regex_set: Option<RegexSet>,
