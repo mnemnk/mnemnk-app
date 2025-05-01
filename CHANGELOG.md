@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.9](https://github.com/mnemnk/mnemnk-app/compare/v0.17.8...v0.17.9) (2025-05-01)
+
+
+### Features
+
+* 🎸 Core/Data agents ([#335](https://github.com/mnemnk/mnemnk-app/issues/335)) ([4e1b782](https://github.com/mnemnk/mnemnk-app/commit/4e1b7828998ad8fd299ab9bba55304d12bc3a7be))
+* 🎸 Database Query agent ([#336](https://github.com/mnemnk/mnemnk-app/issues/336)) ([779ccdb](https://github.com/mnemnk/mnemnk-app/commit/779ccdb10af9b8a738fa59a4f669baa21c38e7ac))
+* 🎸 Get Property agent ([#337](https://github.com/mnemnk/mnemnk-app/issues/337)) ([7f7338f](https://github.com/mnemnk/mnemnk-app/commit/7f7338f67f2e0b2a359157e3112d6d602eda66ca))
+* 🎸 Rhai Expr agent ([#334](https://github.com/mnemnk/mnemnk-app/issues/334)) ([00c095e](https://github.com/mnemnk/mnemnk-app/commit/00c095ee160c7f052572bcd079c55e5800eec0b2))
+* 🎸 support markdown messages ([#338](https://github.com/mnemnk/mnemnk-app/issues/338)) ([9b7b4fa](https://github.com/mnemnk/mnemnk-app/commit/9b7b4fa82c3148269bcc43ee53cd1fc0146dda94))
+* 🎸 Truthy Pass and Falsy Pass agent ([#340](https://github.com/mnemnk/mnemnk-app/issues/340)) ([6571275](https://github.com/mnemnk/mnemnk-app/commit/6571275a55a91f1c0f3b3d682223701dd8919c6f))
+* 🎸 Unit Pass agent ([#339](https://github.com/mnemnk/mnemnk-app/issues/339)) ([9e34121](https://github.com/mnemnk/mnemnk-app/commit/9e34121e47bd7a9bf5af0f25d8e936001786dc2a))
+
+
+### Bug Fixes
+
+* 🐛 error on import ([#332](https://github.com/mnemnk/mnemnk-app/issues/332)) ([c027333](https://github.com/mnemnk/mnemnk-app/commit/c027333021d99aa732b03f356e27f45dcfb218ba))
+* 🐛 Object Input should be able to output object array ([#333](https://github.com/mnemnk/mnemnk-app/issues/333)) ([60ef064](https://github.com/mnemnk/mnemnk-app/commit/60ef06462c1f34860ebffe7b1feec6eff297052e))
+
 ## [0.17.8](https://github.com/mnemnk/mnemnk-app/compare/v0.17.7...v0.17.8) (2025-04-28)
 
 

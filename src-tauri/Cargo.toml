@@ -1,6 +1,6 @@
 [package]
 name = "mnemnk-app"
-version = "0.17.8"
+version = "0.17.9"
 description = "Mnemnk App"
 authors = ["Akira Ishino <akira@lumilab.jp>"]
 edition = "2021"
