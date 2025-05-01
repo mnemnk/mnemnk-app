@@ -805,7 +805,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     let timestamp = if let Some(t) = map.get("t").cloned() {
         // remove timestamp from the value
         map.remove("t");
-        t.as_i64().unwrap()
+        t.as_i64().context("wrong timestamp type")?
     } else {
         Utc::now().timestamp_millis()
     };
@@ -837,10 +837,13 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     if let Some(image) = map.get("image").cloned() {
         // remove image from the value. it's too big to store into the database.
         map.remove("image");
-        let image = image.as_str().unwrap().to_string();
+        let image = image.as_str().context("wrong image type")?.to_string();
 
         if let Some(image_id) = map.get("image_id").cloned() {
-            let image_id = image_id.as_str().unwrap().to_string();
+            let image_id = image_id
+                .as_str()
+                .context("wrong image_id type")?
+                .to_string();
 
             let app = app.clone();
             let kind = kind.clone();
