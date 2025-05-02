@@ -207,7 +207,7 @@
         evt.preventDefault();
       }}
     />
-  {:else if ty === "message"}
+  {:else if ty === "message" || ty === "messages"}
     <Messages messages={value} />
   {:else}
     <Textarea
