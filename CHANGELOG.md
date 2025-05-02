@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.10](https://github.com/mnemnk/mnemnk-app/compare/v0.17.9...v0.17.10) (2025-05-02)
+
+
+### Features
+
+* 🎸 allow ctrl-a in text input ([#345](https://github.com/mnemnk/mnemnk-app/issues/345)) ([2465ed1](https://github.com/mnemnk/mnemnk-app/commit/2465ed11a240c5ad4cfb0a82bbe730174262ea8a))
+* 🎸 String/Text Join agents and array support in Template ([#343](https://github.com/mnemnk/mnemnk-app/issues/343)) ([c05c0b7](https://github.com/mnemnk/mnemnk-app/commit/c05c0b764a412287a3022a25ec118bc2cba634a4))
+* 🎸 support array in Get Property agent ([#344](https://github.com/mnemnk/mnemnk-app/issues/344)) ([48da364](https://github.com/mnemnk/mnemnk-app/commit/48da364e5371d77d39714e946354673df2eb7561))
+
+
+### Bug Fixes
+
+* 🐛 display messages ([#346](https://github.com/mnemnk/mnemnk-app/issues/346)) ([1b5e465](https://github.com/mnemnk/mnemnk-app/commit/1b5e4657062f383f0ddbb82dd8003fdd044d50fe))
+
 ## [0.17.9](https://github.com/mnemnk/mnemnk-app/compare/v0.17.8...v0.17.9) (2025-05-01)
 
 
