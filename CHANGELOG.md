@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.17.11](https://github.com/mnemnk/mnemnk-app/compare/v0.17.10...v0.17.11) (2025-05-03)
+
 ## [0.17.10](https://github.com/mnemnk/mnemnk-app/compare/v0.17.9...v0.17.10) (2025-05-02)
 
 
