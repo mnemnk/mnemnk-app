@@ -3,6 +3,7 @@
 <img alt="home" width="40%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/mnemnk_title.png?raw=true">
 
 <br>
+<br>
 
 ![Badge Workflow]
 ![Badge Language] 
@@ -11,10 +12,6 @@
 <br>
 
 Mnemnk is a personal lifelogging platform that records your activities and enhances them through a continuously running multi-agent system.
-
-<br>
-
-<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"><img alt="home" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-home.png?raw=true"></a>
 
 </div>
 
