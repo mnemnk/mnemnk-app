@@ -38,7 +38,7 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 <br>
 <div align="center">
-<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"><img alt="lifelogging agents" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-core-agents.png?raw=true"></a>
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-lifelogging-agents.png?raw=true"><img alt="lifelogging agents" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-lifelogging-agents.png?raw=true"></a>
 </div>
 
 ### Agent-Based Extensibility
@@ -47,6 +47,11 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 - Agents can be developed in any programming language, allowing for flexible system expansion.
 - Using a visual flow-based UI, you can intuitively build a multi-agent system where multiple agents work together.
 - Unlike one-time batch processing systems, Mnemnk's agents operate in parallel, processing events in real-time.
+
+<br>
+<div align="center">
+<a target="_blank" href="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-agents.png?raw=true"><img alt="agent flow" width="60%" src="https://github.com/mnemnk/mnemnk-app/blob/main/docs/img/screenshot-agents.png?raw=true"></a>
+</div>
 
 ## Getting Started
 
