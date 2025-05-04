@@ -243,7 +243,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CH_DATA])
         .with_default_config(vec![(
             CONFIG_EXPR.into(),
-            AgentConfigEntry::new(AgentValue::new_text(""), "text"),
+            AgentConfigEntry::new(AgentValue::new_string(""), "text"),
         )]),
     );
 }
@@ -401,9 +401,9 @@ mod tests {
         let data = AgentData::new_array(
             "text",
             vec![
-                AgentValue::new_text("s1"),
-                AgentValue::new_text("s2\ns3\n\n"),
-                AgentValue::new_text(""),
+                AgentValue::new_string("s1"),
+                AgentValue::new_string("s2\ns3\n\n"),
+                AgentValue::new_string(""),
             ],
         );
         let dynamic = to_dynamic(&data).unwrap();

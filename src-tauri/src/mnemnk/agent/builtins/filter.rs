@@ -48,7 +48,6 @@ fn is_truthy(data: &AgentData) -> bool {
         AgentValue::Integer(n) => *n != 0,
         AgentValue::Number(n) => *n != 0.0,
         AgentValue::String(s) => !s.is_empty(),
-        AgentValue::Text(s) => !s.is_empty(),
         AgentValue::Array(a) => !a.is_empty(),
         AgentValue::Object(v) => !v.is_empty(),
         _ => false,
@@ -245,7 +244,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             ),
             (
                 CONFIG_REGEX_LIST.into(),
-                AgentConfigEntry::new(AgentValue::new_text(""), "text").with_title("regex list"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "text").with_title("regex list"),
             ),
         ]),
     );
@@ -268,7 +267,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             ),
             (
                 CONFIG_REGEX_LIST.into(),
-                AgentConfigEntry::new(AgentValue::new_text(""), "text").with_title("regex list"),
+                AgentConfigEntry::new(AgentValue::new_string(""), "text").with_title("regex list"),
             ),
         ]),
     );

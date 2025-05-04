@@ -54,7 +54,7 @@ impl AgentData {
     pub fn new_text(value: impl Into<String>) -> Self {
         AgentData {
             kind: "text".to_string(),
-            value: AgentValue::new_text(value.into()),
+            value: AgentValue::new_string(value.into()),
         }
     }
 
@@ -213,7 +213,6 @@ pub enum AgentValue {
 
     // Larger data structures use reference counting
     String(Arc<String>),
-    Text(Arc<String>),
 
     // Recursive data structures
     Array(Arc<Vec<AgentValue>>),
@@ -243,10 +242,6 @@ impl AgentValue {
         AgentValue::String(Arc::new(value.into()))
     }
 
-    pub fn new_text(value: impl Into<String>) -> Self {
-        AgentValue::Text(Arc::new(value.into()))
-    }
-
     pub fn new_object(value: AgentValueMap<String, AgentValue>) -> Self {
         AgentValue::Object(Arc::new(value))
     }
@@ -269,10 +264,6 @@ impl AgentValue {
 
     pub fn default_string() -> Self {
         AgentValue::String(Arc::new(String::new()))
-    }
-
-    pub fn default_text() -> Self {
-        AgentValue::Text(Arc::new(String::new()))
     }
 
     pub fn default_array() -> Self {
@@ -391,7 +382,7 @@ impl AgentValue {
                 }
                 _ => bail!("Invalid number value"),
             },
-            "string" => match value {
+            "string" | "text" => match value {
                 serde_json::Value::String(s) => Ok(AgentValue::new_string(s)),
                 serde_json::Value::Array(a) => {
                     let mut agent_arr = Vec::new();
@@ -405,21 +396,6 @@ impl AgentValue {
                     Ok(AgentValue::Array(Arc::new(agent_arr)))
                 }
                 _ => bail!("Invalid string value"),
-            },
-            "text" => match value {
-                serde_json::Value::String(s) => Ok(AgentValue::new_text(s)),
-                serde_json::Value::Array(a) => {
-                    let mut agent_arr = Vec::new();
-                    for v in a {
-                        if let serde_json::Value::String(s) = v {
-                            agent_arr.push(AgentValue::new_text(s));
-                        } else {
-                            bail!("Invalid text value in array");
-                        }
-                    }
-                    Ok(AgentValue::Array(Arc::new(agent_arr)))
-                }
-                _ => bail!("Invalid text value"),
             },
             _ => match value {
                 serde_json::Value::Null => Ok(AgentValue::Null),
@@ -460,7 +436,6 @@ impl AgentValue {
             AgentValue::Integer(i) => (*i).into(),
             AgentValue::Number(n) => (*n).into(),
             AgentValue::String(s) => s.as_str().into(),
-            AgentValue::Text(t) => t.as_str().into(),
             AgentValue::Object(o) => {
                 let mut map = serde_json::Map::new();
                 for (k, v) in o.iter() {
@@ -501,11 +476,6 @@ impl AgentValue {
     }
 
     #[allow(unused)]
-    pub fn is_text(&self) -> bool {
-        matches!(self, AgentValue::Text(_))
-    }
-
-    #[allow(unused)]
     pub fn is_array(&self) -> bool {
         matches!(self, AgentValue::Array(_))
     }
@@ -541,7 +511,6 @@ impl AgentValue {
     pub fn as_str(&self) -> Option<&str> {
         match self {
             AgentValue::String(s) => Some(s),
-            AgentValue::Text(t) => Some(t),
             _ => None,
         }
     }
@@ -567,7 +536,6 @@ impl AgentValue {
             AgentValue::Integer(_) => "integer".to_string(),
             AgentValue::Number(_) => "number".to_string(),
             AgentValue::String(_) => "string".to_string(),
-            AgentValue::Text(_) => "text".to_string(),
             AgentValue::Object(_) => "object".to_string(),
             AgentValue::Array(arr) => {
                 if arr.is_empty() {
@@ -597,7 +565,6 @@ impl Serialize for AgentValue {
             AgentValue::Integer(i) => serializer.serialize_i64(*i),
             AgentValue::Number(n) => serializer.serialize_f64(*n),
             AgentValue::String(s) => serializer.serialize_str(s),
-            AgentValue::Text(t) => serializer.serialize_str(t),
             AgentValue::Object(o) => {
                 let mut map = serializer.serialize_map(Some(o.len()))?;
                 for (k, v) in o.iter() {
@@ -662,7 +629,7 @@ mod tests {
 
         let text_data = AgentData::new_text("multiline\ntext\n\n".to_string());
         assert_eq!(text_data.kind, "text");
-        assert!(matches!(text_data.value, AgentValue::Text(_)));
+        assert!(matches!(text_data.value, AgentValue::String(_)));
         assert_eq!(text_data.as_str().unwrap(), "multiline\ntext\n\n");
 
         let obj_val = AgentValueMap::from([
@@ -713,11 +680,11 @@ mod tests {
 
         let text_data = AgentData::from_kind_json_value("text", json!("hello")).unwrap();
         assert_eq!(text_data.kind, "text");
-        assert_eq!(text_data.value, AgentValue::new_text("hello"));
+        assert_eq!(text_data.value, AgentValue::new_string("hello"));
 
         let text_data = AgentData::from_kind_json_value("text", json!("hello\nworld\n\n")).unwrap();
         assert_eq!(text_data.kind, "text");
-        assert_eq!(text_data.value, AgentValue::new_text("hello\nworld\n\n"));
+        assert_eq!(text_data.value, AgentValue::new_string("hello\nworld\n\n"));
 
         let obj_data =
             AgentData::from_kind_json_value("object", json!({"key1": "string1", "key2": 2}))
@@ -805,9 +772,9 @@ mod tests {
         assert_eq!(
             array_data.value,
             AgentValue::new_array(vec![
-                AgentValue::new_text("test"),
-                AgentValue::new_text("hello\nworld\n"),
-                AgentValue::new_text(""),
+                AgentValue::new_string("test"),
+                AgentValue::new_string("hello\nworld\n"),
+                AgentValue::new_string(""),
             ])
         );
 
@@ -1149,9 +1116,9 @@ mod tests {
             let data = AgentData::new_array(
                 "text",
                 vec![
-                    AgentValue::new_text("test"),
-                    AgentValue::new_text("hello\nworld\n"),
-                    AgentValue::new_text(""),
+                    AgentValue::new_string("test"),
+                    AgentValue::new_string("hello\nworld\n"),
+                    AgentValue::new_string(""),
                 ],
             );
             assert_eq!(
@@ -1355,9 +1322,9 @@ mod tests {
                 AgentData::new_array(
                     "text",
                     vec![
-                        AgentValue::new_text("test"),
-                        AgentValue::new_text("hello\nworld\n"),
-                        AgentValue::new_text(""),
+                        AgentValue::new_string("test"),
+                        AgentValue::new_string("hello\nworld\n"),
+                        AgentValue::new_string(""),
                     ]
                 )
             );
@@ -1428,8 +1395,8 @@ mod tests {
         assert!(matches!(string, AgentValue::String(_)));
         assert_eq!(string.as_str().unwrap(), "hello");
 
-        let text = AgentValue::new_text("multiline\ntext");
-        assert!(matches!(text, AgentValue::Text(_)));
+        let text = AgentValue::new_string("multiline\ntext");
+        assert!(matches!(text, AgentValue::String(_)));
         assert_eq!(text.as_str().unwrap(), "multiline\ntext");
 
         let array =
@@ -1540,8 +1507,8 @@ mod tests {
         }
 
         let text = AgentValue::from_kind_value("text", json!("multiline\ntext")).unwrap();
-        assert!(matches!(text, AgentValue::Text(_)));
-        if let AgentValue::Text(t) = text {
+        assert!(matches!(text, AgentValue::String(_)));
+        if let AgentValue::String(t) = text {
             assert_eq!(*t, "multiline\ntext");
         } else {
             panic!("Expected text value");
@@ -1626,12 +1593,12 @@ mod tests {
         assert!(matches!(text_array, AgentValue::Array(_)));
         if let AgentValue::Array(arr) = text_array {
             assert_eq!(arr.len(), 2);
-            assert!(matches!(&arr[0], AgentValue::Text(_)));
-            if let AgentValue::Text(s) = &arr[0] {
+            assert!(matches!(&arr[0], AgentValue::String(_)));
+            if let AgentValue::String(s) = &arr[0] {
                 assert_eq!(**s, "hello".to_string());
             }
-            assert!(matches!(&arr[1], AgentValue::Text(_)));
-            if let AgentValue::Text(s) = &arr[1] {
+            assert!(matches!(&arr[1], AgentValue::String(_)));
+            if let AgentValue::String(s) = &arr[1] {
                 assert_eq!(**s, "world!\n".to_string());
             }
         }
@@ -1650,7 +1617,6 @@ mod tests {
         assert_eq!(unit.is_integer(), false);
         assert_eq!(unit.is_number(), false);
         assert_eq!(unit.is_string(), false);
-        assert_eq!(unit.is_text(), false);
         assert_eq!(unit.is_array(), false);
         assert_eq!(unit.is_object(), false);
 
@@ -1660,7 +1626,6 @@ mod tests {
         assert_eq!(boolean.is_integer(), false);
         assert_eq!(boolean.is_number(), false);
         assert_eq!(boolean.is_string(), false);
-        assert_eq!(boolean.is_text(), false);
         assert_eq!(boolean.is_array(), false);
         assert_eq!(boolean.is_object(), false);
 
@@ -1670,7 +1635,6 @@ mod tests {
         assert_eq!(integer.is_integer(), true);
         assert_eq!(integer.is_number(), false);
         assert_eq!(integer.is_string(), false);
-        assert_eq!(integer.is_text(), false);
         assert_eq!(integer.is_array(), false);
         assert_eq!(integer.is_object(), false);
 
@@ -1680,7 +1644,6 @@ mod tests {
         assert_eq!(number.is_integer(), false);
         assert_eq!(number.is_number(), true);
         assert_eq!(number.is_string(), false);
-        assert_eq!(number.is_text(), false);
         assert_eq!(number.is_array(), false);
         assert_eq!(number.is_object(), false);
 
@@ -1690,19 +1653,8 @@ mod tests {
         assert_eq!(string.is_integer(), false);
         assert_eq!(string.is_number(), false);
         assert_eq!(string.is_string(), true);
-        assert_eq!(string.is_text(), false);
         assert_eq!(string.is_array(), false);
         assert_eq!(string.is_object(), false);
-
-        let text = AgentValue::new_text("multiline\ntext");
-        assert_eq!(text.is_unit(), false);
-        assert_eq!(text.is_boolean(), false);
-        assert_eq!(text.is_integer(), false);
-        assert_eq!(text.is_number(), false);
-        assert_eq!(text.is_string(), false);
-        assert_eq!(text.is_text(), true);
-        assert_eq!(text.is_array(), false);
-        assert_eq!(text.is_object(), false);
 
         let array =
             AgentValue::new_array(vec![AgentValue::new_integer(1), AgentValue::new_integer(2)]);
@@ -1711,7 +1663,6 @@ mod tests {
         assert_eq!(array.is_integer(), false);
         assert_eq!(array.is_number(), false);
         assert_eq!(array.is_string(), false);
-        assert_eq!(array.is_text(), false);
         assert_eq!(array.is_array(), true);
         assert_eq!(array.is_object(), false);
 
@@ -1724,7 +1675,6 @@ mod tests {
         assert_eq!(obj.is_integer(), false);
         assert_eq!(obj.is_number(), false);
         assert_eq!(obj.is_string(), false);
-        assert_eq!(obj.is_text(), false);
         assert_eq!(obj.is_array(), false);
         assert_eq!(obj.is_object(), true);
     }
@@ -1763,14 +1713,6 @@ mod tests {
         assert_eq!(string.as_str(), Some("hello"));
         assert!(string.as_array().is_none());
         assert_eq!(string.as_object(), None);
-
-        let text = AgentValue::new_text("multiline\ntext");
-        assert_eq!(text.as_bool(), None);
-        assert_eq!(text.as_i64(), None);
-        assert_eq!(text.as_f64(), None);
-        assert_eq!(text.as_str(), Some("multiline\ntext"));
-        assert!(text.as_array().is_none());
-        assert_eq!(text.as_object(), None);
 
         let array =
             AgentValue::new_array(vec![AgentValue::new_integer(1), AgentValue::new_integer(2)]);
@@ -1846,15 +1788,6 @@ mod tests {
 
             let s = AgentValue::new_string("hello\nworld\n\n");
             assert_eq!(serde_json::to_string(&s).unwrap(), r#""hello\nworld\n\n""#);
-        }
-
-        // Test Text serialization
-        {
-            let t = AgentValue::new_text("Hello, world!");
-            assert_eq!(serde_json::to_string(&t).unwrap(), "\"Hello, world!\"");
-
-            let t = AgentValue::new_text("hello\nworld\n\n");
-            assert_eq!(serde_json::to_string(&t).unwrap(), r#""hello\nworld\n\n""#);
         }
 
         // Test Array serialization

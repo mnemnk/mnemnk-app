@@ -238,7 +238,7 @@ impl AsAgent for TemplateTextAgent {
                     value: v.clone(),
                 };
                 let rendered_string = reg.render_template(&template, &d)?;
-                out_arr.push(AgentValue::new_text(rendered_string));
+                out_arr.push(AgentValue::new_string(rendered_string));
             }
             self.try_output(CH_TEXT, AgentData::new_array("text", out_arr))
                 .context("Failed to output template")
@@ -360,7 +360,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CH_TEXT])
         .with_default_config(vec![(
             CONFIG_TEMPLATE.into(),
-            AgentConfigEntry::new(AgentValue::new_text("{{value}}"), "text"),
+            AgentConfigEntry::new(AgentValue::new_string("{{value}}"), "text"),
         )]),
     );
 
@@ -394,7 +394,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CH_TEXT])
         .with_default_config(vec![(
             CONFIG_TEMPLATE.into(),
-            AgentConfigEntry::new(AgentValue::new_text("{{value}}"), "text"),
+            AgentConfigEntry::new(AgentValue::new_string("{{value}}"), "text"),
         )]),
     );
 }
