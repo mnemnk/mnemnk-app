@@ -410,7 +410,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CONFIG_TEXT])
         .with_default_config(vec![(
             CONFIG_TEXT.into(),
-            AgentConfigEntry::new(AgentValue::new_text(""), "text"),
+            AgentConfigEntry::new(AgentValue::new_string(""), "text"),
         )]),
     );
 
