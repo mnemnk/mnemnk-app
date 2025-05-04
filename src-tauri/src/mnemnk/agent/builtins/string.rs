@@ -251,6 +251,56 @@ impl AsAgent for TemplateTextAgent {
     }
 }
 
+// Template Array Agent
+struct TemplateArrayAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for TemplateArrayAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+        let config = self.config().context("missing config")?;
+
+        let template = config.get_string_or_default(CONFIG_TEMPLATE);
+        if template.is_empty() {
+            bail!("template is not set");
+        }
+
+        let reg = Handlebars::new();
+
+        if data.is_array() {
+            let rendered_string = reg.render_template(&template, &data)?;
+            self.try_output(CH_TEXT, AgentData::new_text(rendered_string))
+                .context("Failed to output template")
+        } else {
+            let kind = &data.kind;
+            let d = AgentData::new_array(kind, vec![data.value.clone()]);
+            let rendered_string = reg.render_template(&template, &d)?;
+            let out_data = AgentData::new_text(rendered_string);
+            self.try_output(CH_TEXT, out_data)
+                .context("Failed to output template")
+        }
+    }
+}
+
 static CATEGORY: &str = "Core/String";
 
 static CH_DATA: &str = "data";
@@ -294,6 +344,23 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![(
             CONFIG_SEP.into(),
             AgentConfigEntry::new(AgentValue::new_string("\\n"), "string"),
+        )]),
+    );
+
+    defs.insert(
+        "$template_array".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$template_array",
+            Some(new_boxed::<TemplateArrayAgent>),
+        )
+        .with_title("Template Array")
+        .with_category(CATEGORY)
+        .with_inputs(vec![CH_DATA])
+        .with_outputs(vec![CH_TEXT])
+        .with_default_config(vec![(
+            CONFIG_TEMPLATE.into(),
+            AgentConfigEntry::new(AgentValue::new_text("{{value}}"), "text"),
         )]),
     );
 
