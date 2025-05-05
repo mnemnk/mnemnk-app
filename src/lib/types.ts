@@ -25,6 +25,7 @@ export type SAgentConfigEntry = {
   type: SAgentConfigValueType | null;
   title?: string | null;
   description?: string | null;
+  hidden?: boolean | null;
 };
 
 export type SAgentConfigValueType =

@@ -68,6 +68,8 @@ pub struct AgentConfigEntry {
     pub title: Option<String>,
 
     pub description: Option<String>,
+
+    pub hidden: Option<bool>,
 }
 
 pub type AgentDisplayConfig = Vec<(String, AgentDisplayConfigEntry)>;
@@ -169,6 +171,11 @@ impl AgentConfigEntry {
 
     pub fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = Some(hidden);
         self
     }
 }
