@@ -69,6 +69,8 @@ pub struct AgentConfigEntry {
 
     pub description: Option<String>,
 
+    /// Indicates whether this configuration entry should be hidden from the user interface.
+    /// If set to `Some(true)`, the entry will be hidden. If `None`, the default behavior is to show the entry.
     pub hidden: Option<bool>,
 }
 
