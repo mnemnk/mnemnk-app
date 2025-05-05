@@ -68,9 +68,11 @@ impl AsAgent for DebugDataAgent {
             ("kind".to_string(), AgentValue::new_string(data.kind)),
             ("value".to_string(), data.value),
         ]));
+        let metadata = AgentValue::from_json_value(serde_json::to_value(&data.metadata)?)?;
         let debug_data = AgentData::new_object(AgentValueMap::from([
             ("ch".to_string(), AgentValue::new_string(ch)),
             ("data".to_string(), value),
+            ("metadata".to_string(), metadata),
         ]));
         self.emit_display(DISPLAY_DATA, debug_data)
     }

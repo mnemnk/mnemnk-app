@@ -124,7 +124,11 @@ impl AsAgent for CommandAgent {
                             ".OUT" => match parse_out_args(args) {
                                 Ok(data) => {
                                     let env = app_handle.state::<AgentEnv>();
-                                    match AgentData::from_kind_json_value(data.kind, data.value) {
+                                    match AgentData::from_json_data(
+                                        data.kind,
+                                        data.value,
+                                        data.metadata.as_ref(),
+                                    ) {
                                         Ok(agent_data) => {
                                             env.send_agent_out(
                                                 agent_id.clone(),
@@ -316,6 +320,7 @@ struct OutData {
     ch: String,
     kind: String,
     value: Value,
+    metadata: Option<Value>,
 }
 
 fn parse_out_args(args: &str) -> Result<OutData> {

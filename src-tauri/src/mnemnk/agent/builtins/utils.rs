@@ -43,13 +43,16 @@ impl AsAgent for CounterAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
         if ch == CH_RESET {
             self.count = 0;
         } else if ch == CH_IN {
             self.count += 1;
         }
-        self.try_output(CH_COUNT, AgentData::new_integer(self.count))?;
+        self.try_output(
+            CH_COUNT,
+            AgentData::new_integer(self.count).from_meta(&data.metadata),
+        )?;
         self.emit_display(DISPLAY_COUNT, AgentData::new_integer(self.count))
     }
 }
@@ -89,7 +92,7 @@ impl AsAgent for MemoryAgent {
             // Reset command empties the memory
             self.memory.clear();
 
-            self.try_output(CH_RESET, AgentData::new_unit())?;
+            self.try_output(CH_RESET, AgentData::new_unit().from_meta(&data.metadata))?;
         } else if ch == CH_IN {
             // Add new data to memory
             self.memory.push(data.clone());
@@ -109,14 +112,13 @@ impl AsAgent for MemoryAgent {
             }
 
             // Output the memory array
-            let memory_array =
-                AgentValue::new_array(self.memory.iter().map(|data| data.value.clone()).collect());
             self.try_output(
                 CH_MEMORY,
-                AgentData {
-                    kind: self.memory[0].kind.clone(),
-                    value: memory_array,
-                },
+                AgentData::new_array(
+                    self.memory[0].kind.clone(),
+                    self.memory.iter().map(|data| data.value.clone()).collect(),
+                )
+                .from_meta(&data.metadata),
             )?;
         }
 

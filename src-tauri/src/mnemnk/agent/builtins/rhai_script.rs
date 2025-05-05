@@ -66,7 +66,7 @@ impl AsAgent for RhaiExprAgent {
 
         let out_data: AgentData = from_dynamic(&result)?;
 
-        self.try_output(CH_DATA, out_data)
+        self.try_output(CH_DATA, out_data.from_meta(&data.metadata))
             .context("Failed to output template")
     }
 }
