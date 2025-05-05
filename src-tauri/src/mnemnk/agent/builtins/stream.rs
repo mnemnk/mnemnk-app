@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
@@ -70,9 +70,11 @@ impl AsAgent for StreamAgent {
 // Stream Zip agent
 struct StreamZipAgent {
     data: AsAgentData,
+    n: usize,
+    in_channels: Vec<String>,
+    keys: Vec<String>,
+    input_value: Vec<Option<AgentValue>>,
     current_id: i64,
-    in1: Option<AgentData>,
-    in2: Option<AgentData>,
 }
 
 impl AsAgent for StreamZipAgent {
@@ -82,12 +84,20 @@ impl AsAgent for StreamZipAgent {
         def_name: String,
         config: Option<AgentConfig>,
     ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData::new(app, id, def_name, config),
+        let mut this = Self {
+            data: AsAgentData::new(app, id, def_name, config.clone()),
+            n: 0,
+            in_channels: Vec::new(),
+            keys: Vec::new(),
+            input_value: Vec::new(),
             current_id: -1,
-            in1: None,
-            in2: None,
-        })
+        };
+        if let Some(c) = config {
+            AsAgent::set_config(&mut this, c)?;
+        } else {
+            bail!("missing config");
+        }
+        Ok(this)
     }
 
     fn data(&self) -> &AsAgentData {
@@ -98,7 +108,39 @@ impl AsAgent for StreamZipAgent {
         &mut self.data
     }
 
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        let n = config
+            .get(CONFIG_N)
+            .context("missing n")?
+            .as_i64()
+            .context("failed as_i64")?;
+        if n <= 1 {
+            bail!("n must be greater than 1");
+        }
+        let n = n as usize;
+        if self.n == n {
+            self.keys = (0..self.n)
+                .map(|i| config.get_string_or_default(&format!("key{}", i + 1)))
+                .collect();
+        } else {
+            self.n = n;
+            self.in_channels = (0..self.n).map(|i| format!("in{}", i + 1)).collect();
+            self.keys = (0..self.n)
+                .map(|i| config.get_string_or_default(&format!("key{}", i + 1)))
+                .collect();
+            self.input_value = vec![None; self.n];
+            self.current_id = -1;
+        }
+        Ok(())
+    }
+
     fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+        for i in 0..self.n {
+            if self.keys[i].is_empty() {
+                bail!("key{} is not set", i + 1);
+            }
+        }
+
         let stream = self
             .config()
             .context("missing config")?
@@ -120,51 +162,33 @@ impl AsAgent for StreamZipAgent {
             };
             if stream_id != self.current_id {
                 self.current_id = stream_id;
-                self.in1 = None;
-                self.in2 = None;
+                for i in 0..self.n {
+                    self.input_value[i] = None;
+                }
             }
         }
 
-        if ch == CH_IN1 {
-            self.in1 = Some(data.clone());
-        } else if ch == CH_IN2 {
-            self.in2 = Some(data.clone());
-        } else {
-            return Ok(());
+        for i in 0..self.n {
+            if ch == self.in_channels[i] {
+                self.input_value[i] = Some(data.value.clone());
+            }
         }
 
-        if self.in1.is_none() || self.in2.is_none() {
-            return Ok(());
+        // Check if all inputs are present
+        for i in 0..self.n {
+            if self.input_value[i].is_none() {
+                return Ok(());
+            }
         }
 
-        let in1 = self.in1.take().unwrap();
-        let in2 = self.in2.take().unwrap();
-
-        let key1 = self
-            .config()
-            .context("missing config")?
-            .get(CONFIG_KEY1)
-            .context("missing key1")?
-            .as_str()
-            .context("failed as_str")?
-            .to_string();
-
-        let key2 = self
-            .config()
-            .context("missing config")?
-            .get(CONFIG_KEY2)
-            .context("missing key2")?
-            .as_str()
-            .context("failed as_str")?
-            .to_string();
-
-        if key1.is_empty() || key2.is_empty() {
-            return Ok(());
+        // All inputs are present, create the output
+        let mut map = AgentValueMap::new();
+        for i in 0..self.n {
+            let key = self.keys[i].clone();
+            let value = self.input_value[i].take().unwrap();
+            map.insert(key, value);
         }
-
-        let out_data =
-            AgentData::new_object(AgentValueMap::from([(key1, in1.value), (key2, in2.value)]))
-                .from_meta(&data.metadata);
+        let out_data = AgentData::new_object(map).from_meta(&data.metadata);
 
         self.try_output(CH_DATA, out_data)
             .context("Failed to output")?;
@@ -178,10 +202,15 @@ static CATEGORY: &str = "Core/Stream";
 static CH_DATA: &str = "data";
 static CH_IN1: &str = "in1";
 static CH_IN2: &str = "in2";
+static CH_IN3: &str = "in3";
+static CH_IN4: &str = "in4";
 
 static CONFIG_STREAM: &str = "stream";
 static CONFIG_KEY1: &str = "key1";
 static CONFIG_KEY2: &str = "key2";
+static CONFIG_KEY3: &str = "key3";
+static CONFIG_KEY4: &str = "key4";
+static CONFIG_N: &str = "n";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
@@ -214,6 +243,10 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_outputs(vec![CH_DATA])
         .with_default_config(vec![
             (
+                CONFIG_N.into(),
+                AgentConfigEntry::new(AgentValue::new_integer(2), "integer").with_hidden(true),
+            ),
+            (
                 CONFIG_STREAM.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
@@ -223,6 +256,80 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             ),
             (
                 CONFIG_KEY2.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+        ]),
+    );
+
+    defs.insert(
+        "$stream_zip3".to_string(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$stream_zip4",
+            Some(new_boxed::<StreamZipAgent>),
+        )
+        .with_title("Zip3")
+        .with_category(CATEGORY)
+        .with_inputs(vec![CH_IN1, CH_IN2, CH_IN3])
+        .with_outputs(vec![CH_DATA])
+        .with_default_config(vec![
+            (
+                CONFIG_N.into(),
+                AgentConfigEntry::new(AgentValue::new_integer(3), "integer").with_hidden(true),
+            ),
+            (
+                CONFIG_STREAM.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY1.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY2.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY3.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+        ]),
+    );
+
+    defs.insert(
+        "$stream_zip4".to_string(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$stream_zip4",
+            Some(new_boxed::<StreamZipAgent>),
+        )
+        .with_title("Zip4")
+        .with_category(CATEGORY)
+        .with_inputs(vec![CH_IN1, CH_IN2, CH_IN3, CH_IN4])
+        .with_outputs(vec![CH_DATA])
+        .with_default_config(vec![
+            (
+                CONFIG_N.into(),
+                AgentConfigEntry::new(AgentValue::new_integer(4), "integer").with_hidden(true),
+            ),
+            (
+                CONFIG_STREAM.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY1.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY2.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY3.into(),
+                AgentConfigEntry::new(AgentValue::new_string(""), "string"),
+            ),
+            (
+                CONFIG_KEY4.into(),
                 AgentConfigEntry::new(AgentValue::new_string(""), "string"),
             ),
         ]),
