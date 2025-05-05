@@ -265,7 +265,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         "$stream_zip3".to_string(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$stream_zip4",
+            "$stream_zip3",
             Some(new_boxed::<StreamZipAgent>),
         )
         .with_title("Zip3")
