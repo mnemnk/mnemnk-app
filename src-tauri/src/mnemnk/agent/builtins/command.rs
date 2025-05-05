@@ -8,8 +8,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv, AgentValue,
-    AsAgent, AsAgentData,
+    data::AgentMetadata, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError,
+    AgentEnv, AgentValue, AsAgent, AsAgentData,
 };
 
 pub struct CommandAgent {
@@ -239,15 +239,14 @@ impl AsAgent for CommandAgent {
             ch: String,
             kind: String,
             value: AgentValue,
-            metadata: Value,
+            metadata: AgentMetadata,
         }
 
-        let metadata = serde_json::to_value(&data.metadata)?;
         let data = InData {
             ch: ch.clone(),
             kind: data.kind,
             value: data.value,
-            metadata,
+            metadata: data.metadata,
         };
         let data_json = serde_json::to_string(&data).context("Failed to serialize input data")?;
 
