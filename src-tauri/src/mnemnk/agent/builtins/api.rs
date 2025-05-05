@@ -55,6 +55,7 @@ mod implementation {
         ch: String,
         kind: String,
         value: Value,
+        metadata: Option<Value>,
     }
 
     impl ApiAgent {
@@ -134,8 +135,9 @@ mod implementation {
             return Err("Kind is empty".to_string());
         }
 
-        let agent_data = AgentData::from_kind_json_value(out_data.kind, out_data.value)
-            .map_err(|e| format!("Failed to create AgentData: {}", e))?;
+        let agent_data =
+            AgentData::from_json_data(out_data.kind, out_data.value, out_data.metadata.as_ref())
+                .map_err(|e| format!("Failed to create AgentData: {}", e))?;
 
         // Get the environment and try to send the output
         let env = state.app_handle.state::<crate::mnemnk::agent::AgentEnv>();

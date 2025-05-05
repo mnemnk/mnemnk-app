@@ -10,13 +10,17 @@ use serde::{
 pub struct AgentData {
     pub kind: String,
     pub value: AgentValue,
+    pub metadata: Arc<BTreeMap<String, AgentValue>>,
 }
+
+pub type AgentMetadata = Arc<BTreeMap<String, AgentValue>>;
 
 impl AgentData {
     pub fn new_unit() -> Self {
         Self {
             kind: "unit".to_string(),
             value: AgentValue::new_unit(),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -24,6 +28,7 @@ impl AgentData {
         AgentData {
             kind: "boolean".to_string(),
             value: AgentValue::new_boolean(value),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -31,6 +36,7 @@ impl AgentData {
         AgentData {
             kind: "integer".to_string(),
             value: AgentValue::new_integer(value),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -39,6 +45,7 @@ impl AgentData {
         AgentData {
             kind: "number".to_string(),
             value: AgentValue::new_number(value),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -47,6 +54,7 @@ impl AgentData {
         AgentData {
             kind: "string".to_string(),
             value: AgentValue::new_string(value.into()),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -55,6 +63,7 @@ impl AgentData {
         AgentData {
             kind: "text".to_string(),
             value: AgentValue::new_string(value.into()),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -63,6 +72,7 @@ impl AgentData {
         AgentData {
             kind: "object".to_string(),
             value: AgentValue::new_object(value),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -74,6 +84,7 @@ impl AgentData {
         AgentData {
             kind: kind.into(),
             value: AgentValue::new_object(value),
+            metadata: AgentMetadata::default(),
         }
     }
 
@@ -82,18 +93,50 @@ impl AgentData {
         AgentData {
             kind: kind.into(),
             value: AgentValue::new_array(value),
+            metadata: AgentMetadata::default(),
         }
+    }
+
+    pub fn with_meta(mut self, metadata: AgentMetadata) -> Self {
+        self.metadata = metadata;
+        self
+    }
+
+    pub fn from_meta(mut self, metadata: &AgentMetadata) -> Self {
+        self.metadata = metadata.clone();
+        self
     }
 
     pub fn from_value(value: AgentValue) -> Self {
         let kind = value.kind();
-        AgentData { kind, value }
+        AgentData {
+            kind,
+            value,
+            metadata: AgentMetadata::default(),
+        }
     }
 
-    pub fn from_kind_json_value(kind: impl Into<String>, value: serde_json::Value) -> Result<Self> {
+    pub fn from_json_data(
+        kind: impl Into<String>,
+        value: serde_json::Value,
+        metadata: Option<&serde_json::Value>,
+    ) -> Result<Self> {
         let kind = kind.into();
         let value = AgentValue::from_kind_value(&kind, value)?;
-        Ok(Self { kind, value })
+        let mut new_map = BTreeMap::new();
+        if let Some(serde_json::Value::Object(map)) = metadata {
+            for (key, value) in map {
+                new_map.insert(
+                    key.to_string(),
+                    AgentValue::from_json_value(value.to_owned())?,
+                );
+            }
+        }
+        Ok(Self {
+            kind,
+            value,
+            metadata: Arc::new(new_map),
+        })
     }
 
     pub fn from_json_value(json_value: serde_json::Value) -> Result<Self> {
@@ -101,6 +144,7 @@ impl AgentData {
         Ok(AgentData {
             kind: value.kind(),
             value,
+            metadata: AgentMetadata::default(),
         })
     }
 
@@ -197,7 +241,7 @@ impl<'de> Deserialize<'de> for AgentData {
         let Some(value) = obj.get("value") else {
             return Err(serde::de::Error::custom("Missing value"));
         };
-        AgentData::from_kind_json_value(kind, value.to_owned()).map_err(|e| {
+        AgentData::from_json_data(kind, value.to_owned(), obj.get("metadata")).map_err(|e| {
             serde::de::Error::custom(format!("Failed to deserialize AgentData: {}", e))
         })
     }
@@ -645,49 +689,50 @@ mod tests {
     #[test]
     fn test_agent_data_from_kind_value() {
         // Test creating AgentData from kind and JSON value
-        let unit_data = AgentData::from_kind_json_value("unit", json!(null)).unwrap();
+        let unit_data = AgentData::from_json_data("unit", json!(null), None).unwrap();
         assert_eq!(unit_data.kind, "unit");
         assert_eq!(unit_data.value, AgentValue::Null);
+        assert_eq!(unit_data.metadata, AgentMetadata::default());
 
-        let bool_data = AgentData::from_kind_json_value("boolean", json!(true)).unwrap();
+        let bool_data = AgentData::from_json_data("boolean", json!(true), None).unwrap();
         assert_eq!(bool_data.kind, "boolean");
         assert_eq!(bool_data.value, AgentValue::Boolean(true));
 
-        let int_data = AgentData::from_kind_json_value("integer", json!(42)).unwrap();
+        let int_data = AgentData::from_json_data("integer", json!(42), None).unwrap();
         assert_eq!(int_data.kind, "integer");
         assert_eq!(int_data.value, AgentValue::Integer(42));
 
-        let int_data = AgentData::from_kind_json_value("integer", json!(3.14)).unwrap();
+        let int_data = AgentData::from_json_data("integer", json!(3.14), None).unwrap();
         assert_eq!(int_data.kind, "integer");
         assert_eq!(int_data.value, AgentValue::Integer(3));
 
-        let num_data = AgentData::from_kind_json_value("number", json!(3.14)).unwrap();
+        let num_data = AgentData::from_json_data("number", json!(3.14), None).unwrap();
         assert_eq!(num_data.kind, "number");
         assert_eq!(num_data.value, AgentValue::new_number(3.14));
 
-        let num_data = AgentData::from_kind_json_value("number", json!(3)).unwrap();
+        let num_data = AgentData::from_json_data("number", json!(3), None).unwrap();
         assert_eq!(num_data.kind, "number");
         assert_eq!(num_data.value, AgentValue::new_number(3.0));
 
-        let str_data = AgentData::from_kind_json_value("string", json!("hello")).unwrap();
+        let str_data = AgentData::from_json_data("string", json!("hello"), None).unwrap();
         assert_eq!(str_data.kind, "string");
         assert_eq!(str_data.value, AgentValue::new_string("hello"));
 
         let str_data =
-            AgentData::from_kind_json_value("string", json!("hello\nworld\n\n")).unwrap();
+            AgentData::from_json_data("string", json!("hello\nworld\n\n"), None).unwrap();
         assert_eq!(str_data.kind, "string");
         assert_eq!(str_data.value, AgentValue::new_string("hello\nworld\n\n"));
 
-        let text_data = AgentData::from_kind_json_value("text", json!("hello")).unwrap();
+        let text_data = AgentData::from_json_data("text", json!("hello"), None).unwrap();
         assert_eq!(text_data.kind, "text");
         assert_eq!(text_data.value, AgentValue::new_string("hello"));
 
-        let text_data = AgentData::from_kind_json_value("text", json!("hello\nworld\n\n")).unwrap();
+        let text_data = AgentData::from_json_data("text", json!("hello\nworld\n\n"), None).unwrap();
         assert_eq!(text_data.kind, "text");
         assert_eq!(text_data.value, AgentValue::new_string("hello\nworld\n\n"));
 
         let obj_data =
-            AgentData::from_kind_json_value("object", json!({"key1": "string1", "key2": 2}))
+            AgentData::from_json_data("object", json!({"key1": "string1", "key2": 2}), None)
                 .unwrap();
         assert_eq!(obj_data.kind, "object");
         assert_eq!(
@@ -699,9 +744,10 @@ mod tests {
         );
 
         // Test custom object kind
-        let obj_data = AgentData::from_kind_json_value(
+        let obj_data = AgentData::from_json_data(
             "custom_type".to_string(),
             json!({"foo": "hi", "bar": 3}),
+            None,
         )
         .unwrap();
         assert_eq!(obj_data.kind, "custom_type");
@@ -714,14 +760,15 @@ mod tests {
         );
 
         // Test array values
-        let array_data = AgentData::from_kind_json_value("unit", json!([null, null])).unwrap();
+        let array_data = AgentData::from_json_data("unit", json!([null, null]), None).unwrap();
         assert_eq!(array_data.kind, "unit");
         assert_eq!(
             array_data.value,
             AgentValue::new_array(vec![AgentValue::new_unit(), AgentValue::new_unit(),])
         );
+        assert_eq!(array_data.metadata, AgentMetadata::default());
 
-        let array_data = AgentData::from_kind_json_value("boolean", json!([true, false])).unwrap();
+        let array_data = AgentData::from_json_data("boolean", json!([true, false]), None).unwrap();
         assert_eq!(array_data.kind, "boolean");
         assert_eq!(
             array_data.value,
@@ -731,7 +778,7 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_json_value("integer", json!([1, 2.1, 3.0])).unwrap();
+        let array_data = AgentData::from_json_data("integer", json!([1, 2.1, 3.0]), None).unwrap();
         assert_eq!(array_data.kind, "integer");
         assert_eq!(
             array_data.value,
@@ -742,7 +789,7 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_json_value("number", json!([1.0, 2.1, 3])).unwrap();
+        let array_data = AgentData::from_json_data("number", json!([1.0, 2.1, 3]), None).unwrap();
         assert_eq!(array_data.kind, "number");
         assert_eq!(
             array_data.value,
@@ -754,7 +801,7 @@ mod tests {
         );
 
         let array_data =
-            AgentData::from_kind_json_value("string", json!(["test", "hello\nworld\n", ""]))
+            AgentData::from_json_data("string", json!(["test", "hello\nworld\n", ""]), None)
                 .unwrap();
         assert_eq!(array_data.kind, "string");
         assert_eq!(
@@ -767,7 +814,7 @@ mod tests {
         );
 
         let array_data =
-            AgentData::from_kind_json_value("text", json!(["test", "hello\nworld\n", ""])).unwrap();
+            AgentData::from_json_data("text", json!(["test", "hello\nworld\n", ""]), None).unwrap();
         assert_eq!(array_data.kind, "text");
         assert_eq!(
             array_data.value,
@@ -778,9 +825,10 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_json_value(
+        let array_data = AgentData::from_json_data(
             "object",
             json!([{"key1":"test","key2":1}, {"key1":"test2","key2":"hi"}, {}]),
+            None,
         )
         .unwrap();
         assert_eq!(array_data.kind, "object");
@@ -799,9 +847,10 @@ mod tests {
             ])
         );
 
-        let array_data = AgentData::from_kind_json_value(
+        let array_data = AgentData::from_json_data(
             "custom",
             json!([{"key1":"test","key2":1}, {"key1":"test2","key2":"hi"}, {}]),
+            None,
         )
         .unwrap();
         assert_eq!(array_data.kind, "custom");
@@ -953,7 +1002,7 @@ mod tests {
             let data = AgentData::new_unit();
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"unit","value":null}"#
+                r#"{"kind":"unit","value":null,"metadata":{}}"#
             );
         }
 
@@ -962,13 +1011,13 @@ mod tests {
             let data = AgentData::new_boolean(true);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"boolean","value":true}"#
+                r#"{"kind":"boolean","value":true,"metadata":{}}"#
             );
 
             let data = AgentData::new_boolean(false);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"boolean","value":false}"#
+                r#"{"kind":"boolean","value":false,"metadata":{}}"#
             );
         }
 
@@ -977,7 +1026,7 @@ mod tests {
             let data = AgentData::new_integer(42);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"integer","value":42}"#
+                r#"{"kind":"integer","value":42,"metadata":{}}"#
             );
         }
 
@@ -986,13 +1035,13 @@ mod tests {
             let data = AgentData::new_number(3.14);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"number","value":3.14}"#
+                r#"{"kind":"number","value":3.14,"metadata":{}}"#
             );
 
             let data = AgentData::new_number(3.0);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"number","value":3.0}"#
+                r#"{"kind":"number","value":3.0,"metadata":{}}"#
             );
         }
 
@@ -1001,13 +1050,13 @@ mod tests {
             let data = AgentData::new_string("Hello, world!");
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"string","value":"Hello, world!"}"#
+                r#"{"kind":"string","value":"Hello, world!","metadata":{}}"#
             );
 
             let data = AgentData::new_string("hello\nworld\n\n");
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"string","value":"hello\nworld\n\n"}"#
+                r#"{"kind":"string","value":"hello\nworld\n\n","metadata":{}}"#
             );
         }
 
@@ -1016,13 +1065,13 @@ mod tests {
             let data = AgentData::new_text("Hello, world!");
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"text","value":"Hello, world!"}"#
+                r#"{"kind":"text","value":"Hello, world!","metadata":{}}"#
             );
 
             let data = AgentData::new_text("hello\nworld\n\n");
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"text","value":"hello\nworld\n\n"}"#
+                r#"{"kind":"text","value":"hello\nworld\n\n","metadata":{}}"#
             );
         }
 
@@ -1034,7 +1083,7 @@ mod tests {
             ]));
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"object","value":{"key1":"string1","key2":2}}"#
+                r#"{"kind":"object","value":{"key1":"string1","key2":2},"metadata":{}}"#
             );
         }
 
@@ -1049,7 +1098,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"custom","value":{"key1":"test","key2":3}}"#
+                r#"{"kind":"custom","value":{"key1":"test","key2":3},"metadata":{}}"#
             );
         }
 
@@ -1059,7 +1108,7 @@ mod tests {
                 AgentData::new_array("unit", vec![AgentValue::new_unit(), AgentValue::new_unit()]);
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"unit","value":[null,null]}"#
+                r#"{"kind":"unit","value":[null,null],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1071,7 +1120,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"boolean","value":[false,true]}"#
+                r#"{"kind":"boolean","value":[false,true],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1084,7 +1133,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"integer","value":[1,2,3]}"#
+                r#"{"kind":"integer","value":[1,2,3],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1097,7 +1146,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"number","value":[1.0,2.1,3.2]}"#
+                r#"{"kind":"number","value":[1.0,2.1,3.2],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1110,7 +1159,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"string","value":["test","hello\nworld\n",""]}"#
+                r#"{"kind":"string","value":["test","hello\nworld\n",""],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1123,7 +1172,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"text","value":["test","hello\nworld\n",""]}"#
+                r#"{"kind":"text","value":["test","hello\nworld\n",""],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1142,7 +1191,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#
+                r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}],"metadata":{}}"#
             );
 
             let data = AgentData::new_array(
@@ -1161,7 +1210,7 @@ mod tests {
             );
             assert_eq!(
                 serde_json::to_string(&data).unwrap(),
-                r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#
+                r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}],"metadata":{}}"#
             );
         }
     }
@@ -1171,55 +1220,59 @@ mod tests {
         // Test unit deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"unit","value":null}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"unit","value":null,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_unit());
         }
 
         // Test Boolean deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"boolean","value":false}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"boolean","value":false,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_boolean(false));
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"boolean","value":true}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"boolean","value":true,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_boolean(true));
         }
 
         // Test Integer deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"integer","value":123}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"integer","value":123,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_integer(123));
         }
 
         // Test Number deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"number","value":3.14}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"number","value":3.14,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_number(3.14));
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"number","value":3.0}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"number","value":3.0,"metadata":{}}"#).unwrap();
             assert_eq!(deserialized, AgentData::new_number(3.0));
         }
 
         // Test String deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"string","value":"Hello, world!"}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"string","value":"Hello, world!","metadata":{}}"#)
+                    .unwrap();
             assert_eq!(deserialized, AgentData::new_string("Hello, world!"));
 
-            let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"string","value":"hello\nworld\n\n"}"#).unwrap();
+            let deserialized: AgentData = serde_json::from_str(
+                r#"{"kind":"string","value":"hello\nworld\n\n","metadata":{}}"#,
+            )
+            .unwrap();
             assert_eq!(deserialized, AgentData::new_string("hello\nworld\n\n"));
         }
 
         // Test Object deserialization
         {
-            let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"object","value":{"key1":"test","key2":3}}"#)
-                    .unwrap();
+            let deserialized: AgentData = serde_json::from_str(
+                r#"{"kind":"object","value":{"key1":"test","key2":3},"metadata":{}}"#,
+            )
+            .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_object(AgentValueMap::from([
@@ -1231,9 +1284,10 @@ mod tests {
 
         // Test custom object deserialization
         {
-            let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"custom","value":{"name":"test","value":3}}"#)
-                    .unwrap();
+            let deserialized: AgentData = serde_json::from_str(
+                r#"{"kind":"custom","value":{"name":"test","value":3},"metadata":{}}"#,
+            )
+            .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_custom_object(
@@ -1249,7 +1303,8 @@ mod tests {
         // Test Array deserialization
         {
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"unit","value":[null,null]}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"unit","value":[null,null],"metadata":{}}"#)
+                    .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1259,7 +1314,8 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"boolean","value":[true,false]}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"boolean","value":[true,false],"metadata":{}}"#)
+                    .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1272,7 +1328,8 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"integer","value":[1,2,3]}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"integer","value":[1,2,3],"metadata":{}}"#)
+                    .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1286,7 +1343,8 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"number","value":[1.0,2.1,3]}"#).unwrap();
+                serde_json::from_str(r#"{"kind":"number","value":[1.0,2.1,3],"metadata":{}}"#)
+                    .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1299,9 +1357,10 @@ mod tests {
                 )
             );
 
-            let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"string","value":["test","hello\nworld\n",""]}"#)
-                    .unwrap();
+            let deserialized: AgentData = serde_json::from_str(
+                r#"{"kind":"string","value":["test","hello\nworld\n",""],"metadata":{}}"#,
+            )
+            .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1314,9 +1373,10 @@ mod tests {
                 )
             );
 
-            let deserialized: AgentData =
-                serde_json::from_str(r#"{"kind":"text","value":["test","hello\nworld\n",""]}"#)
-                    .unwrap();
+            let deserialized: AgentData = serde_json::from_str(
+                r#"{"kind":"text","value":["test","hello\nworld\n",""],"metadata":{}}"#,
+            )
+            .unwrap();
             assert_eq!(
                 deserialized,
                 AgentData::new_array(
@@ -1330,7 +1390,7 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                    serde_json::from_str(r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#)
+                    serde_json::from_str(r#"{"kind":"object","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}],"metadata":{}}"#)
                         .unwrap();
             assert_eq!(
                 deserialized,
@@ -1351,7 +1411,7 @@ mod tests {
             );
 
             let deserialized: AgentData =
-                    serde_json::from_str(r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}]}"#)
+                    serde_json::from_str(r#"{"kind":"custom","value":[{"key1":"test","key2":1},{"key1":"test2","key2":"hi"},{}],"metadata":{}}"#)
                         .unwrap();
             assert_eq!(
                 deserialized,

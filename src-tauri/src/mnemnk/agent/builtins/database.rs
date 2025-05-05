@@ -78,15 +78,15 @@ impl AsAgent for DatabaseDeleteAgent {
         if return_before {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
-                let kv_data = new_kv_data(key, value);
+                let kv_data = new_kv_data(key, value).from_meta(&data.metadata);
                 self.try_output(CH_KV, kv_data)?;
             } else {
                 // value is empty
-                self.try_output(CH_KV, AgentData::new_unit())?;
+                self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
             }
         } else {
             // return_before is false
-            self.try_output(CH_KV, AgentData::new_unit())?;
+            self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
         }
 
         Ok(())
@@ -192,8 +192,8 @@ impl AsAgent for DatabaseQueryAgent {
             let value = AgentValue::from_json_value(r)?;
             arr.push(value);
         }
-        let data = AgentData::new_array("object", arr);
-        self.try_output(CH_DATA, data)?;
+        let out_data = AgentData::new_array("object", arr).from_meta(&data.metadata);
+        self.try_output(CH_DATA, out_data)?;
         Ok(())
     }
 }
@@ -236,9 +236,9 @@ impl AsAgent for DatabaseSelectAgent {
         if let Some(json_value) = result {
             let value = AgentValue::from_json_value(json_value)?;
             let kv_data = new_kv_data(key, value);
-            self.try_output(CH_KV, kv_data)?;
+            self.try_output(CH_KV, kv_data.from_meta(&data.metadata))?;
         } else {
-            self.try_output(CH_KV, AgentData::new_unit())?;
+            self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
         }
         Ok(())
     }
@@ -318,14 +318,14 @@ impl AsAgent for DatabaseUpdateMergeAgent {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
                 let kv_data = new_kv_data(key, value);
-                self.try_output(ch, kv_data)?;
+                self.try_output(ch, kv_data.from_meta(&data.metadata))?;
             } else {
-                self.try_output(ch, AgentData::new_unit())?;
+                self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
             }
         } else {
             // return_after is false
             store::update_merge(self.app(), db, table, key, json_value, return_after)?;
-            self.try_output(ch, AgentData::new_unit())?;
+            self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
         }
 
         Ok(())
@@ -406,14 +406,14 @@ impl AsAgent for DatabaseUpsertMergeAgent {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
                 let kv_data = new_kv_data(key, value);
-                self.try_output(ch, kv_data)?;
+                self.try_output(ch, kv_data.from_meta(&data.metadata))?;
             } else {
-                self.try_output(ch, AgentData::new_unit())?;
+                self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
             }
         } else {
             // return_after is false
             store::upsert_merge(self.app(), db, table, key, json_value, return_after)?;
-            self.try_output(ch, AgentData::new_unit())?;
+            self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
         }
 
         Ok(())
