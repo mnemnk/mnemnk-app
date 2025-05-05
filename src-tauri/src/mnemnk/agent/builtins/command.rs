@@ -239,12 +239,15 @@ impl AsAgent for CommandAgent {
             ch: String,
             kind: String,
             value: AgentValue,
+            metadata: Value,
         }
 
+        let metadata = serde_json::to_value(&data.metadata)?;
         let data = InData {
             ch: ch.clone(),
             kind: data.kind,
             value: data.value,
+            metadata,
         };
         let data_json = serde_json::to_string(&data).context("Failed to serialize input data")?;
 
