@@ -68,6 +68,10 @@ pub struct AgentConfigEntry {
     pub title: Option<String>,
 
     pub description: Option<String>,
+
+    /// Indicates whether this configuration entry should be hidden from the user interface.
+    /// If set to `Some(true)`, the entry will be hidden. If `None`, the default behavior is to show the entry.
+    pub hidden: Option<bool>,
 }
 
 pub type AgentDisplayConfig = Vec<(String, AgentDisplayConfigEntry)>;
@@ -169,6 +173,11 @@ impl AgentConfigEntry {
 
     pub fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_hidden(mut self, hidden: bool) -> Self {
+        self.hidden = Some(hidden);
         self
     }
 }
