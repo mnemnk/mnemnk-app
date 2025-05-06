@@ -5,16 +5,15 @@ use tauri::{AppHandle, Manager, State};
 mod agent;
 mod builtins;
 mod config;
-mod context;
 mod data;
 mod definition;
 mod env;
 mod flow;
 mod message;
+mod output;
 
 pub use agent::{Agent, AgentStatus, AsAgent, AsAgentData};
 pub use config::{AgentConfig, AgentConfigs};
-pub use context::AgentContext;
 pub use data::{AgentData, AgentValue, AgentValueMap};
 pub use definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitionError, AgentDefinitions,
@@ -22,6 +21,7 @@ pub use definition::{
 };
 pub use env::AgentEnv;
 pub use flow::{AgentFlow, AgentFlowEdge, AgentFlowNode};
+pub use output::AgentOutput;
 
 pub fn init(app: &AppHandle) -> Result<()> {
     AgentEnv::init(app)?;
