@@ -6,8 +6,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AgentValueMap, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
+    AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Stream agent

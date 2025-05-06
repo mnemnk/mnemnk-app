@@ -3,7 +3,7 @@ use anyhow::Result;
 use super::agent::Agent;
 use super::data::AgentData;
 
-pub trait AgentContext {
+pub trait AgentOutput {
     fn try_output_raw(&self, ch: String, data: AgentData) -> Result<()>;
 
     fn try_output<S: Into<String>>(&self, ch: S, data: AgentData) -> Result<()> {
@@ -24,7 +24,7 @@ pub trait AgentContext {
     }
 }
 
-impl<T: Agent> AgentContext for T {
+impl<T: Agent> AgentOutput for T {
     fn try_output_raw(&self, ch: String, data: AgentData) -> Result<()> {
         self.env()
             .try_send_agent_out(self.id().to_string(), ch, data)

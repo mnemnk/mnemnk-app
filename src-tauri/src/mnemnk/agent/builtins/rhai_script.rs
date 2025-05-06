@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager};
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
     AgentDefinitions, AgentEnv, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
