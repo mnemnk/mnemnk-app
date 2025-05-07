@@ -21,6 +21,12 @@ const EMIT_DISPLAY: &str = "mnemnk:display";
 const EMIT_ERROR: &str = "mnemnk:error";
 const EMIT_INPUT: &str = "mnemnk:input";
 
+#[derive(Clone)]
+pub enum AgentMessageSender {
+    Sync(std::sync::mpsc::Sender<AgentMessage>),
+    Async(mpsc::Sender<AgentMessage>),
+}
+
 pub struct AgentEnv {
     // AppHandle
     app: AppHandle,
@@ -35,7 +41,7 @@ pub struct AgentEnv {
     pub agents: Mutex<HashMap<String, Arc<Mutex<Box<dyn AsyncAgent>>>>>,
 
     // agent id -> sender
-    pub agent_txs: Mutex<HashMap<String, mpsc::Sender<AgentMessage>>>,
+    pub agent_txs: Mutex<HashMap<String, AgentMessageSender>>,
 
     // sourece agent id -> [target agent id / source handle / target handle]
     pub edges: Mutex<HashMap<String, Vec<(String, String, String)>>>,
@@ -320,6 +326,17 @@ impl AgentEnv {
             };
             a.clone()
         };
+        let def_name = {
+            let agent = agent.lock().unwrap();
+            agent.def_name().to_string()
+        };
+        let uses_native_thread = {
+            let defs = self.defs.lock().unwrap();
+            let Some(def) = defs.get(&def_name) else {
+                bail!("Agent {} definition not found", agent_id);
+            };
+            def.native_thread.unwrap_or(false)
+        };
         let agent_status = {
             let agent = agent.lock().unwrap();
             agent.status().clone()
@@ -327,48 +344,89 @@ impl AgentEnv {
         if agent_status == agent::AgentStatus::Init {
             log::info!("Starting agent {}", agent_id);
 
-            let (tx, mut rx) = mpsc::channel(32);
+            if uses_native_thread {
+                let (tx, rx) = std::sync::mpsc::channel();
 
-            {
-                let mut agent_txs = self.agent_txs.lock().unwrap();
-                agent_txs.insert(agent_id.to_string(), tx.clone());
-            };
+                {
+                    let mut agent_txs = self.agent_txs.lock().unwrap();
+                    agent_txs.insert(agent_id.to_string(), AgentMessageSender::Sync(tx.clone()));
+                };
 
-            let agent_id = agent_id.to_string();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = agent.lock().unwrap().start() {
-                    log::error!("Failed to start agent {}: {}", agent_id, e);
-                }
+                let agent_id = agent_id.to_string();
+                std::thread::spawn(move || {
+                    if let Err(e) = agent.lock().unwrap().start() {
+                        log::error!("Failed to start agent {}: {}", agent_id, e);
+                    }
 
-                while let Some(message) = rx.recv().await {
-                    match message {
-                        AgentMessage::Input { ctx, data } => {
-                            agent
-                                .lock()
-                                .unwrap()
-                                .process(ctx, data)
-                                .unwrap_or_else(|e| {
-                                    log::error!("Process Error {}: {}", agent_id, e);
-                                });
-                        }
-                        AgentMessage::Config { config } => {
-                            agent
-                                .lock()
-                                .unwrap()
-                                .set_config(config)
-                                .unwrap_or_else(|e| {
-                                    log::error!("Config Error {}: {}", agent_id, e);
-                                });
-                        }
-                        AgentMessage::Stop => {
-                            rx.close();
-                            return;
+                    while let Ok(message) = rx.recv() {
+                        match message {
+                            AgentMessage::Input { ctx, data } => {
+                                agent
+                                    .lock()
+                                    .unwrap()
+                                    .process(ctx, data)
+                                    .unwrap_or_else(|e| {
+                                        log::error!("Process Error {}: {}", agent_id, e);
+                                    });
+                            }
+                            AgentMessage::Config { config } => {
+                                agent
+                                    .lock()
+                                    .unwrap()
+                                    .set_config(config)
+                                    .unwrap_or_else(|e| {
+                                        log::error!("Config Error {}: {}", agent_id, e);
+                                    });
+                            }
+                            AgentMessage::Stop => {
+                                break;
+                            }
                         }
                     }
-                }
-            });
-        }
+                });
+            } else {
+                let (tx, mut rx) = mpsc::channel(32);
 
+                {
+                    let mut agent_txs = self.agent_txs.lock().unwrap();
+                    agent_txs.insert(agent_id.to_string(), AgentMessageSender::Async(tx.clone()));
+                };
+
+                let agent_id = agent_id.to_string();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = agent.lock().unwrap().start() {
+                        log::error!("Failed to start agent {}: {}", agent_id, e);
+                    }
+
+                    while let Some(message) = rx.recv().await {
+                        match message {
+                            AgentMessage::Input { ctx, data } => {
+                                agent
+                                    .lock()
+                                    .unwrap()
+                                    .process(ctx, data)
+                                    .unwrap_or_else(|e| {
+                                        log::error!("Process Error {}: {}", agent_id, e);
+                                    });
+                            }
+                            AgentMessage::Config { config } => {
+                                agent
+                                    .lock()
+                                    .unwrap()
+                                    .set_config(config)
+                                    .unwrap_or_else(|e| {
+                                        log::error!("Config Error {}: {}", agent_id, e);
+                                    });
+                            }
+                            AgentMessage::Stop => {
+                                rx.close();
+                                return;
+                            }
+                        }
+                    }
+                });
+            }
+        }
         Ok(())
     }
 
@@ -391,9 +449,26 @@ impl AgentEnv {
             {
                 let mut agent_txs = self.agent_txs.lock().unwrap();
                 if let Some(tx) = agent_txs.remove(agent_id) {
-                    tx.try_send(AgentMessage::Stop).unwrap_or_else(|e| {
-                        log::error!("Failed to send stop message to agent {}: {}", agent_id, e);
-                    });
+                    match tx {
+                        AgentMessageSender::Sync(tx) => {
+                            tx.send(AgentMessage::Stop).unwrap_or_else(|e| {
+                                log::error!(
+                                    "Failed to send stop message to agent {}: {}",
+                                    agent_id,
+                                    e
+                                );
+                            });
+                        }
+                        AgentMessageSender::Async(tx) => {
+                            tx.try_send(AgentMessage::Stop).unwrap_or_else(|e| {
+                                log::error!(
+                                    "Failed to send stop message to agent {}: {}",
+                                    agent_id,
+                                    e
+                                );
+                            });
+                        }
+                    }
                 }
             }
 
@@ -426,7 +501,17 @@ impl AgentEnv {
                 };
                 tx.clone()
             };
-            tx.send(AgentMessage::Config { config }).await?;
+            let message = AgentMessage::Config { config };
+            match tx {
+                AgentMessageSender::Sync(tx) => {
+                    tx.send(message).context("Failed to send config message")?;
+                }
+                AgentMessageSender::Async(tx) => {
+                    tx.send(message)
+                        .await
+                        .context("Failed to send config message")?;
+                }
+            }
         }
         Ok(())
     }
@@ -450,15 +535,27 @@ impl AgentEnv {
             agent.status().clone()
         };
         if agent_status == agent::AgentStatus::Start {
+            let ch = ctx.ch().to_string();
+            let message = AgentMessage::Input { ctx, data };
+
             let tx = {
                 let agent_txs = self.agent_txs.lock().unwrap();
                 let Some(tx) = agent_txs.get(agent_id) else {
                     bail!("Agent tx for {} not found", agent_id);
                 };
-                tx.clone()
+                (*tx).clone()
             };
-            let ch = ctx.ch().to_string();
-            tx.send(AgentMessage::Input { ctx, data }).await?;
+            match tx {
+                AgentMessageSender::Sync(tx) => {
+                    tx.send(message).context("Failed to send input message")?;
+                }
+                AgentMessageSender::Async(tx) => {
+                    tx.send(message)
+                        .await
+                        .context("Failed to send input message")?;
+                }
+            }
+
             self.emit_input(agent_id.to_string(), ch)
                 .unwrap_or_else(|e| {
                     log::error!("Failed to emit input message: {}", e);

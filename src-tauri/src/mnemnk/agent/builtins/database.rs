@@ -485,6 +485,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$event_database",
             Some(new_boxed::<EventDatabaseAgent>),
         )
+        .use_native_thread()
         .with_title("Event Database")
         .with_category(CATEGORY)
         .with_inputs(vec!["event"]),
@@ -498,6 +499,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_delete",
             Some(new_boxed::<DatabaseDeleteAgent>),
         )
+        .use_native_thread()
         .with_title("Database Delete")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KEY])
@@ -526,6 +528,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_insert",
             Some(new_boxed::<DatabaseInsertAgent>),
         )
+        .use_native_thread()
         .with_title("Database Insert")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KV])
@@ -550,6 +553,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_select",
             Some(new_boxed::<DatabaseSelectAgent>),
         )
+        .use_native_thread()
         .with_title("Database Select")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KEY])
@@ -574,6 +578,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_update",
             Some(new_boxed::<DatabaseUpdateAgent>),
         )
+        .use_native_thread()
         .with_title("Database Update")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KV])
@@ -598,6 +603,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_update_merge",
             Some(new_boxed::<DatabaseUpdateMergeAgent>),
         )
+        .use_native_thread()
         .with_title("Database Update Merge")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KV])
@@ -626,6 +632,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_upsert",
             Some(new_boxed::<DatabaseUpsertAgent>),
         )
+        .use_native_thread()
         .with_title("Database Upsert")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KV])
@@ -650,6 +657,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_upsert_merge",
             Some(new_boxed::<DatabaseUpsertMergeAgent>),
         )
+        .use_native_thread()
         .with_title("Database Upsert Merge")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_KV])
@@ -678,6 +686,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             "$database_query",
             Some(new_boxed::<DatabaseQueryAgent>),
         )
+        .use_native_thread()
         .with_title("Database Query")
         .with_category(CATEGORY)
         .with_inputs(vec![CH_QUERY])
