@@ -11,7 +11,7 @@ use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
     Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
-    AgentDefinitions, AgentEnv, AgentStatus, AgentValue, AsAgent, AsAgentData,
+    AgentDefinitions, AgentEnv, AgentOutput, AgentStatus, AgentValue, AsAgent, AsAgentData,
 };
 
 // Delay Agent
@@ -186,6 +186,103 @@ impl AsAgent for IntervalTimerAgent {
     }
 }
 
+// Throttle agent
+struct ThrottleTimeAgent {
+    data: AsAgentData,
+    timer_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
+    time_ms: u64,
+}
+
+impl ThrottleTimeAgent {
+    fn start_timer(&mut self) -> Result<()> {
+        let timer_handle = self.timer_handle.clone();
+        let time_ms = self.time_ms;
+
+        let handle = tauri::async_runtime::spawn(async move {
+            // Sleep for the configured interval
+            tokio::time::sleep(tokio::time::Duration::from_millis(time_ms)).await;
+
+            // reset the timer handle
+            timer_handle.lock().unwrap().take();
+        });
+
+        // Store the task handle
+        if let Ok(mut timer_handle) = self.timer_handle.lock() {
+            *timer_handle = Some(handle);
+        }
+
+        Ok(())
+    }
+
+    fn stop_timer(&mut self) -> Result<()> {
+        // Cancel the timer task
+        if let Ok(mut timer_handle) = self.timer_handle.lock() {
+            if let Some(handle) = timer_handle.take() {
+                handle.abort();
+            }
+        }
+        Ok(())
+    }
+}
+
+impl AsAgent for ThrottleTimeAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        let time = config
+            .as_ref()
+            .and_then(|c| c.get_string(CONFIG_TIME))
+            .unwrap_or_else(|| TIME_DEFAULT.to_string());
+        let time_ms = parse_duration_to_ms(&time)?;
+
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+            timer_handle: Default::default(),
+            time_ms,
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        self.stop_timer()
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        // Check if interval has changed
+        if let Some(time) = config.get_string(CONFIG_TIME) {
+            let new_time = parse_duration_to_ms(&time)?;
+            if new_time != self.time_ms {
+                self.time_ms = new_time;
+            }
+        }
+        Ok(())
+    }
+
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+        if self.timer_handle.lock().unwrap().is_some() {
+            // If the timer is running, we ignore the input
+            return Ok(());
+        }
+
+        // Start the timer
+        self.start_timer()?;
+
+        // Output the data
+        let ch = ctx.ch().to_string();
+        self.try_output(ctx, ch, data)
+    }
+}
+
 // Parse time duration strings like "2s", "10m", "200ms"
 fn parse_duration_to_ms(duration_str: &str) -> Result<u64> {
     const MIN_DURATION: u64 = 10;
@@ -228,10 +325,12 @@ static CH_UNIT: &str = "unit";
 static CONFIG_DELAY: &str = "delay";
 static CONFIG_MAX_TASKS: &str = "max_tasks";
 static CONFIG_INTERVAL: &str = "interval";
+static CONFIG_TIME: &str = "time";
 
 const DELAY_MS_DEFAULT: i64 = 1000; // 1 second in milliseconds
 const MAX_TASKS_DEFAULT: i64 = 10;
 static INTERVAL_DEFAULT: &str = "10s";
+static TIME_DEFAULT: &str = "1s";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Delay Agent
@@ -272,6 +371,25 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_default_config(vec![(
             CONFIG_INTERVAL.into(),
             AgentConfigEntry::new(AgentValue::new_string(INTERVAL_DEFAULT), "string")
+                .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
+        )]),
+    );
+
+    // Throttle Time Agent
+    defs.insert(
+        "$throttle_time".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$throttle_time",
+            Some(new_boxed::<ThrottleTimeAgent>),
+        )
+        .with_title("Throttle Time")
+        .with_category(CATEGORY)
+        .with_inputs(vec!["*"])
+        .with_outputs(vec!["*"])
+        .with_default_config(vec![(
+            CONFIG_TIME.into(),
+            AgentConfigEntry::new(AgentValue::new_string(TIME_DEFAULT), "string")
                 .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
         )]),
     );
