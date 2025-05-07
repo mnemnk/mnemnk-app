@@ -51,6 +51,9 @@ pub struct AgentDefinition {
     // CommandAgent
     pub command: Option<CommandConfig>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub native_thread: Option<bool>,
+
     #[serde(skip)]
     pub new_boxed: Option<AgentNewBoxedFn>,
 }
@@ -153,6 +156,11 @@ impl AgentDefinition {
 
     pub fn with_display_config(mut self, config: AgentDisplayConfig) -> Self {
         self.display_config = Some(config);
+        self
+    }
+
+    pub fn use_native_thread(mut self) -> Self {
+        self.native_thread = Some(true);
         self
     }
 }
