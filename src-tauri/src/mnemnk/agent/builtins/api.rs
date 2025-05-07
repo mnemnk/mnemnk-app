@@ -11,7 +11,7 @@ mod implementation {
     use tokio::time::Duration;
     use tower_http::timeout::TimeoutLayer;
 
-    use crate::mnemnk::agent::{Agent, AgentConfig, AgentData, AsAgent, AsAgentData};
+    use crate::mnemnk::agent::{Agent, AgentConfig, AgentContext, AgentData, AsAgent, AsAgentData};
 
     pub struct ApiAgent {
         data: AsAgentData,
@@ -135,13 +135,16 @@ mod implementation {
             return Err("Kind is empty".to_string());
         }
 
-        let agent_data =
-            AgentData::from_json_data(out_data.kind, out_data.value, out_data.metadata.as_ref())
-                .map_err(|e| format!("Failed to create AgentData: {}", e))?;
+        let agent_data = AgentData::from_json_data(out_data.kind, out_data.value)
+            .map_err(|e| format!("Failed to create AgentData: {}", e))?;
 
         // Get the environment and try to send the output
         let env = state.app_handle.state::<crate::mnemnk::agent::AgentEnv>();
-        if let Err(e) = env.try_send_agent_out(state.agent_id, out_data.ch, agent_data) {
+        if let Err(e) = env.try_send_agent_out(
+            state.agent_id,
+            AgentContext::new_with_ch(out_data.ch),
+            agent_data,
+        ) {
             log::error!("Failed to send agent out: {}", e);
             return Err(format!("Failed to process request: {}", e));
         }

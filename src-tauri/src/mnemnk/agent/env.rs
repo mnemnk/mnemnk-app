@@ -15,6 +15,7 @@ use super::data::AgentData;
 use super::definition::{init_agent_defs, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, EnvAgentMessage};
+use super::AgentContext;
 
 const EMIT_DISPLAY: &str = "mnemnk:display";
 const EMIT_ERROR: &str = "mnemnk:error";
@@ -101,11 +102,11 @@ impl AgentEnv {
                 use EnvAgentMessage::*;
 
                 match message {
-                    AgentOut { agent, ch, data } => {
-                        message::agent_out(&app_handle, agent, ch, data).await;
+                    AgentOut { agent, ctx, data } => {
+                        message::agent_out(&app_handle, agent, ctx, data).await;
                     }
-                    BoardOut { name, data } => {
-                        message::board_out(&app_handle, name, data).await;
+                    BoardOut { name, ctx, data } => {
+                        message::board_out(&app_handle, name, ctx, data).await;
                     }
                 }
             }
@@ -341,10 +342,14 @@ impl AgentEnv {
 
                 while let Some(message) = rx.recv().await {
                     match message {
-                        AgentMessage::Input { ch, data } => {
-                            agent.lock().unwrap().process(ch, data).unwrap_or_else(|e| {
-                                log::error!("Process Error {}: {}", agent_id, e);
-                            });
+                        AgentMessage::Input { ctx, data } => {
+                            agent
+                                .lock()
+                                .unwrap()
+                                .process(ctx, data)
+                                .unwrap_or_else(|e| {
+                                    log::error!("Process Error {}: {}", agent_id, e);
+                                });
                         }
                         AgentMessage::Config { config } => {
                             agent
@@ -426,7 +431,12 @@ impl AgentEnv {
         Ok(())
     }
 
-    pub async fn agent_input(&self, agent_id: &str, ch: String, data: AgentData) -> Result<()> {
+    pub async fn agent_input(
+        &self,
+        agent_id: &str,
+        ctx: AgentContext,
+        data: AgentData,
+    ) -> Result<()> {
         let agent = {
             let agents = self.agents.lock().unwrap();
             let Some(a) = agents.get(agent_id) else {
@@ -447,11 +457,8 @@ impl AgentEnv {
                 };
                 tx.clone()
             };
-            tx.send(AgentMessage::Input {
-                ch: ch.clone(),
-                data,
-            })
-            .await?;
+            let ch = ctx.ch().to_string();
+            tx.send(AgentMessage::Input { ctx, data }).await?;
             self.emit_input(agent_id.to_string(), ch)
                 .unwrap_or_else(|e| {
                     log::error!("Failed to emit input message: {}", e);
@@ -463,18 +470,28 @@ impl AgentEnv {
     pub async fn send_agent_out(
         &self,
         agent_id: String,
-        ch: String,
+        ctx: AgentContext,
         data: AgentData,
     ) -> Result<()> {
-        message::send_agent_out(self, agent_id, ch, data).await
+        message::send_agent_out(self, agent_id, ctx, data).await
     }
 
-    pub fn try_send_agent_out(&self, agent_id: String, ch: String, data: AgentData) -> Result<()> {
-        message::try_send_agent_out(self, agent_id, ch, data)
+    pub fn try_send_agent_out(
+        &self,
+        agent_id: String,
+        ctx: AgentContext,
+        data: AgentData,
+    ) -> Result<()> {
+        message::try_send_agent_out(self, agent_id, ctx, data)
     }
 
-    pub fn try_send_board_out(&self, name: String, data: AgentData) -> Result<()> {
-        message::try_send_board_out(self, name, data)
+    pub fn try_send_board_out(
+        &self,
+        name: String,
+        ctx: AgentContext,
+        data: AgentData,
+    ) -> Result<()> {
+        message::try_send_board_out(self, name, ctx, data)
     }
 
     // Returns a list of agent IDs connected to the given agent's input handles

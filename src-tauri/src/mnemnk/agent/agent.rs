@@ -7,6 +7,7 @@ use crate::mnemnk::settings;
 use super::config::AgentConfig;
 use super::data::AgentData;
 use super::env::AgentEnv;
+use super::AgentContext;
 
 #[derive(Debug, Error)]
 pub enum AgentError {
@@ -26,7 +27,7 @@ pub enum AgentStatus {
 }
 
 pub enum AgentMessage {
-    Input { ch: String, data: AgentData },
+    Input { ctx: AgentContext, data: AgentData },
     Config { config: AgentConfig },
     Stop,
 }
@@ -58,7 +59,7 @@ pub trait Agent {
 
     fn stop(&mut self) -> Result<()>;
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()>;
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()>;
 
     // Utility methods
 
@@ -129,7 +130,7 @@ pub trait AsAgent {
         Ok(())
     }
 
-    fn process(&mut self, _ch: String, _data: AgentData) -> Result<()> {
+    fn process(&mut self, _ctx: AgentContext, _data: AgentData) -> Result<()> {
         Ok(())
     }
 }
@@ -190,8 +191,8 @@ impl<T: AsAgent> Agent for T {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
-        if let Err(e) = self.process(ch, data) {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+        if let Err(e) = self.process(ctx, data) {
             self.env()
                 .emit_error(self.id().to_string(), e.to_string())?;
             return Err(e);

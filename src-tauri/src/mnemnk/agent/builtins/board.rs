@@ -3,8 +3,8 @@ use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentValue,
-    AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
 };
 
 struct BoardInAgent {
@@ -41,25 +41,25 @@ impl AsAgent for BoardInAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let mut board_name = self.board_name.clone().unwrap_or_default();
         if board_name.is_empty() {
             // if board_name is not set, stop processing
             return Ok(());
         }
         if board_name == "*" {
-            if ch.is_empty() {
+            if ctx.ch().is_empty() {
                 // ch should not be empty, but just in case
                 return Ok(());
             }
-            board_name = ch;
+            board_name = ctx.ch().to_string();
         }
         let env = self.env();
         {
             let mut board_data = env.board_data.lock().unwrap();
             board_data.insert(board_name.clone(), data.clone());
         }
-        env.try_send_board_out(board_name.clone(), data.clone())
+        env.try_send_board_out(board_name.clone(), ctx, data.clone())
             .context("Failed to send board")?;
 
         Ok(())

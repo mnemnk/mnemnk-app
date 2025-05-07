@@ -5,8 +5,8 @@ use tauri::{AppHandle, Manager};
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentEnv, AgentValue, AgentValueMap, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentEnv, AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Rhai Expr Agent
@@ -46,13 +46,13 @@ impl AsAgent for RhaiExprAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let Some(ast) = &self.ast else {
             return Ok(());
         };
 
         let mut scope = Scope::new();
-        scope.push("ch", ch);
+        scope.push("ch", ctx.ch().to_string());
 
         let rhai_value: Dynamic = to_dynamic(&data)?;
         scope.push("kind", data.kind);
@@ -66,7 +66,7 @@ impl AsAgent for RhaiExprAgent {
 
         let out_data: AgentData = from_dynamic(&result)?;
 
-        self.try_output(CH_DATA, out_data.from_meta(&data.metadata))
+        self.try_output(ctx, CH_DATA, out_data)
             .context("Failed to output template")
     }
 }

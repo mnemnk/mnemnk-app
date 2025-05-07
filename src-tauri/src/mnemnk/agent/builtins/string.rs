@@ -5,8 +5,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
 /// The `StringJoinAgent` is responsible for joining an array of strings into a single string
@@ -48,7 +48,7 @@ impl AsAgent for StringJoinAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
 
         let sep = config.get_string_or_default(CONFIG_SEP);
@@ -64,10 +64,10 @@ impl AsAgent for StringJoinAgent {
             out = out.replace("\\r", "\r");
             out = out.replace("\\\\", "\\");
             let out_data = AgentData::new_string(out);
-            self.try_output(CH_STRING, out_data.from_meta(&data.metadata))
+            self.try_output(ctx, CH_STRING, out_data)
                 .context("Failed to output")
         } else {
-            self.try_output(CH_STRING, data)
+            self.try_output(ctx, CH_STRING, data)
                 .context("Failed to output template")
         }
     }
@@ -112,7 +112,7 @@ impl AsAgent for TextJoinAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
 
         let sep = config.get_string_or_default(CONFIG_SEP);
@@ -128,10 +128,10 @@ impl AsAgent for TextJoinAgent {
             out = out.replace("\\r", "\r");
             out = out.replace("\\\\", "\\");
             let out_data = AgentData::new_text(out);
-            self.try_output(CH_TEXT, out_data.from_meta(&data.metadata))
+            self.try_output(ctx, CH_TEXT, out_data)
                 .context("Failed to output")
         } else {
-            self.try_output(CH_TEXT, data)
+            self.try_output(ctx, CH_TEXT, data)
                 .context("Failed to output template")
         }
     }
@@ -162,7 +162,7 @@ impl AsAgent for TemplateStringAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
 
         let template = config.get_string_or_default(CONFIG_TEMPLATE);
@@ -174,26 +174,21 @@ impl AsAgent for TemplateStringAgent {
 
         if data.is_array() {
             let kind = &data.kind;
-            let metadata = &data.metadata;
             let mut out_arr = Vec::new();
             for v in data.as_array().context("failed as_array")? {
                 let d = AgentData {
                     kind: kind.clone(),
                     value: v.clone(),
-                    metadata: metadata.clone(),
                 };
                 let rendered_string = reg.render_template(&template, &d)?;
                 out_arr.push(AgentValue::new_string(rendered_string));
             }
-            self.try_output(
-                CH_STRING,
-                AgentData::new_array("string", out_arr).from_meta(&data.metadata),
-            )
-            .context("Failed to output template")
+            self.try_output(ctx, CH_STRING, AgentData::new_array("string", out_arr))
+                .context("Failed to output template")
         } else {
             let rendered_string = reg.render_template(&template, &data)?;
             let out_data = AgentData::new_string(rendered_string);
-            self.try_output(CH_STRING, out_data.from_meta(&data.metadata))
+            self.try_output(ctx, CH_STRING, out_data)
                 .context("Failed to output template")
         }
     }
@@ -224,7 +219,7 @@ impl AsAgent for TemplateTextAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
 
         let template = config.get_string_or_default(CONFIG_TEMPLATE);
@@ -236,26 +231,21 @@ impl AsAgent for TemplateTextAgent {
 
         if data.is_array() {
             let kind = &data.kind;
-            let metadata = &data.metadata;
             let mut out_arr = Vec::new();
             for v in data.as_array().context("failed as_array")? {
                 let d = AgentData {
                     kind: kind.clone(),
                     value: v.clone(),
-                    metadata: metadata.clone(),
                 };
                 let rendered_string = reg.render_template(&template, &d)?;
                 out_arr.push(AgentValue::new_string(rendered_string));
             }
-            self.try_output(
-                CH_TEXT,
-                AgentData::new_array("text", out_arr).from_meta(&data.metadata),
-            )
-            .context("Failed to output template")
+            self.try_output(ctx, CH_TEXT, AgentData::new_array("text", out_arr))
+                .context("Failed to output template")
         } else {
             let rendered_string = reg.render_template(&template, &data)?;
             let out_data = AgentData::new_text(rendered_string);
-            self.try_output(CH_TEXT, out_data.from_meta(&data.metadata))
+            self.try_output(ctx, CH_TEXT, out_data)
                 .context("Failed to output template")
         }
     }
@@ -286,7 +276,7 @@ impl AsAgent for TemplateArrayAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
 
         let template = config.get_string_or_default(CONFIG_TEMPLATE);
@@ -298,17 +288,14 @@ impl AsAgent for TemplateArrayAgent {
 
         if data.is_array() {
             let rendered_string = reg.render_template(&template, &data)?;
-            self.try_output(
-                CH_TEXT,
-                AgentData::new_text(rendered_string).from_meta(&data.metadata),
-            )
-            .context("Failed to output template")
+            self.try_output(ctx, CH_TEXT, AgentData::new_text(rendered_string))
+                .context("Failed to output template")
         } else {
             let kind = &data.kind;
             let d = AgentData::new_array(kind, vec![data.value.clone()]);
             let rendered_string = reg.render_template(&template, &d)?;
             let out_data = AgentData::new_text(rendered_string);
-            self.try_output(CH_TEXT, out_data.from_meta(&data.metadata))
+            self.try_output(ctx, CH_TEXT, out_data)
                 .context("Failed to output template")
         }
     }

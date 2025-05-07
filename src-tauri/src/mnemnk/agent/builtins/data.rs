@@ -4,8 +4,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
 // To String
@@ -33,7 +33,7 @@ impl AsAgent for ToStringAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let s: String = match data.kind.as_str() {
             "unit" => "()".to_string(),
             "bool" => data.value.as_bool().context("wrong bool")?.to_string(),
@@ -44,11 +44,8 @@ impl AsAgent for ToStringAgent {
             _ => serde_json::to_string(&data.value).context("failed to serialize")?,
         };
 
-        self.try_output(
-            CH_STRING,
-            AgentData::new_string(s).from_meta(&data.metadata),
-        )
-        .context("Failed to output")?;
+        self.try_output(ctx, CH_STRING, AgentData::new_string(s))
+            .context("Failed to output")?;
 
         Ok(())
     }
@@ -79,7 +76,7 @@ impl AsAgent for ToTextAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let s: String = match data.kind.as_str() {
             "unit" => "()".to_string(),
             "bool" => data.value.as_bool().context("wrong bool")?.to_string(),
@@ -90,7 +87,7 @@ impl AsAgent for ToTextAgent {
             _ => serde_json::to_string_pretty(&data.value).context("failed to serialize")?,
         };
 
-        self.try_output(CH_TEXT, AgentData::new_text(s).from_meta(&data.metadata))
+        self.try_output(ctx, CH_TEXT, AgentData::new_text(s))
             .context("Failed to output")?;
 
         Ok(())
@@ -122,9 +119,9 @@ impl AsAgent for ToJsonAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let json = serde_json::to_string_pretty(&data.value).context("failed to serialize")?;
-        self.try_output(CH_JSON, AgentData::new_text(json).from_meta(&data.metadata))
+        self.try_output(ctx, CH_JSON, AgentData::new_text(json))
             .context("Failed to output")?;
         Ok(())
     }
@@ -155,12 +152,13 @@ impl AsAgent for FromJsonAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let json_value: serde_json::Value =
             serde_json::from_str(data.value.as_str().context("wrong json")?)
                 .context("failed to parse")?;
-        let data = AgentData::from_json_value(json_value)?.from_meta(&data.metadata);
-        self.try_output(CH_DATA, data).context("Failed to output")?;
+        let data = AgentData::from_json_value(json_value)?;
+        self.try_output(ctx, CH_DATA, data)
+            .context("Failed to output")?;
         Ok(())
     }
 }
@@ -190,7 +188,7 @@ impl AsAgent for GetPropertyAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let property = self
             .config()
             .context("missing config")?
@@ -229,8 +227,9 @@ impl AsAgent for GetPropertyAgent {
                 &out_arr[0].kind()
             };
             self.try_output(
+                ctx,
                 CH_DATA,
-                AgentData::new_array(kind.to_string(), out_arr).from_meta(&data.metadata),
+                AgentData::new_array(kind.to_string(), out_arr),
             )
             .context("Failed to output")?;
         } else if data.is_object() {
@@ -249,11 +248,8 @@ impl AsAgent for GetPropertyAgent {
                 }
             }
 
-            self.try_output(
-                CH_DATA,
-                AgentData::from_value(value).from_meta(&data.metadata),
-            )
-            .context("Failed to output")?;
+            self.try_output(ctx, CH_DATA, AgentData::from_value(value))
+                .context("Failed to output")?;
         }
 
         Ok(())

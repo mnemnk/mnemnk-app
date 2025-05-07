@@ -4,8 +4,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentStatus, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentStatus, AgentValue, AsAgent, AsAgentData,
 };
 
 // Unit Input
@@ -37,7 +37,7 @@ impl AsAgent for UnitInputAgent {
         // Since set_config is called even when the agent is not running,
         // we need to check the status before outputting the value.
         if *self.status() == AgentStatus::Start {
-            self.try_output(CONFIG_UNIT, AgentData::new_unit())
+            self.try_output(AgentContext::new(), CONFIG_UNIT, AgentData::new_unit())
                 .context("Failed to output value")?;
         }
 
@@ -79,8 +79,12 @@ impl AsAgent for BooleanInputAgent {
                 .context("no context")?
                 .get_bool(CONFIG_BOOLEAN)
                 .context("not a boolean")?;
-            self.try_output(CONFIG_BOOLEAN, AgentData::new_boolean(value))
-                .context("Failed to output value")?;
+            self.try_output(
+                AgentContext::new(),
+                CONFIG_BOOLEAN,
+                AgentData::new_boolean(value),
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
@@ -121,8 +125,12 @@ impl AsAgent for IntegerInputAgent {
                 .context("no context")?
                 .get_integer(CONFIG_INTEGER)
                 .context("not an integer")?;
-            self.try_output(CONFIG_INTEGER, AgentData::new_integer(value))
-                .context("Failed to output value")?;
+            self.try_output(
+                AgentContext::new(),
+                CONFIG_INTEGER,
+                AgentData::new_integer(value),
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
@@ -163,8 +171,12 @@ impl AsAgent for NumberInputAgent {
                 .context("no context")?
                 .get_number(CONFIG_NUMBER)
                 .context("not a number")?;
-            self.try_output(CONFIG_NUMBER, AgentData::new_number(value))
-                .context("Failed to output value")?;
+            self.try_output(
+                AgentContext::new(),
+                CONFIG_NUMBER,
+                AgentData::new_number(value),
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
@@ -205,8 +217,12 @@ impl AsAgent for StringInputAgent {
                 .context("no context")?
                 .get_string(CONFIG_STRING)
                 .context("not a string")?;
-            self.try_output(CONFIG_STRING, AgentData::new_string(value))
-                .context("Failed to output value")?;
+            self.try_output(
+                AgentContext::new(),
+                CONFIG_STRING,
+                AgentData::new_string(value),
+            )
+            .context("Failed to output value")?;
         }
 
         Ok(())
@@ -247,7 +263,7 @@ impl AsAgent for TextInputAgent {
                 .context("no context")?
                 .get_string(CONFIG_TEXT)
                 .context("not a text")?;
-            self.try_output(CONFIG_TEXT, AgentData::new_text(value))
+            self.try_output(AgentContext::new(), CONFIG_TEXT, AgentData::new_text(value))
                 .context("Failed to output text")?;
         }
 
@@ -287,11 +303,19 @@ impl AsAgent for ObjectInputAgent {
             let config = self.config().context("no context")?;
             let value = config.get(CONFIG_OBJECT).context("no object")?;
             if let Some(obj) = value.as_object() {
-                self.try_output(CONFIG_OBJECT, AgentData::new_object(obj.clone()))
-                    .context("Failed to output value")?;
+                self.try_output(
+                    AgentContext::new(),
+                    CONFIG_OBJECT,
+                    AgentData::new_object(obj.clone()),
+                )
+                .context("Failed to output value")?;
             } else if let Some(arr) = value.as_array() {
-                self.try_output(CONFIG_OBJECT, AgentData::new_array("object", arr.clone()))
-                    .context("Failed to output value")?;
+                self.try_output(
+                    AgentContext::new(),
+                    CONFIG_OBJECT,
+                    AgentData::new_array("object", arr.clone()),
+                )
+                .context("Failed to output value")?;
             } else {
                 bail!("not an object");
             }

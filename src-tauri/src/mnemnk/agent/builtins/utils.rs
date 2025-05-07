@@ -6,8 +6,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentDisplayConfigEntry, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentDisplayConfigEntry, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
 // Counter
@@ -43,16 +43,14 @@ impl AsAgent for CounterAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, _data: AgentData) -> Result<()> {
+        let ch = ctx.ch();
         if ch == CH_RESET {
             self.count = 0;
         } else if ch == CH_IN {
             self.count += 1;
         }
-        self.try_output(
-            CH_COUNT,
-            AgentData::new_integer(self.count).from_meta(&data.metadata),
-        )?;
+        self.try_output(ctx, CH_COUNT, AgentData::new_integer(self.count))?;
         self.emit_display(DISPLAY_COUNT, AgentData::new_integer(self.count))
     }
 }
@@ -87,15 +85,15 @@ impl AsAgent for MemoryAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
-        if ch == CH_RESET {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+        if ctx.ch() == CH_RESET {
             // Reset command empties the memory
             self.memory.clear();
 
-            self.try_output(CH_RESET, AgentData::new_unit().from_meta(&data.metadata))?;
-        } else if ch == CH_IN {
+            self.try_output(ctx, CH_RESET, AgentData::new_unit())?;
+        } else if ctx.ch() == CH_IN {
             // Add new data to memory
-            self.memory.push(data.clone());
+            self.memory.push(data);
 
             // Trim to max size if needed
             if let Some(n) = self.config().context("no config")?.get_integer(CONFIG_N) {
@@ -113,12 +111,12 @@ impl AsAgent for MemoryAgent {
 
             // Output the memory array
             self.try_output(
+                ctx,
                 CH_MEMORY,
                 AgentData::new_array(
                     self.memory[0].kind.clone(),
                     self.memory.iter().map(|data| data.value.clone()).collect(),
-                )
-                .from_meta(&data.metadata),
+                ),
             )?;
         }
 
