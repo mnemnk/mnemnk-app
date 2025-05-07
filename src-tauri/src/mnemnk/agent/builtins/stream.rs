@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
 use anyhow::{bail, Context as _, Result};
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions,
-    AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Stream agent
@@ -37,30 +35,27 @@ impl AsAgent for StreamAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
-        let stream = self
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+        let stream_name = self
             .config()
             .context("missing config")?
             .get(CONFIG_STREAM)
-            .context("missing name")?
+            .context("missing stream")?
             .as_str()
             .context("failed as_str")?
             .to_string();
-        if stream.is_empty() {
-            self.try_output(CH_DATA, data).context("Failed to output")?;
+        if stream_name.is_empty() {
+            self.try_output(ctx, CH_DATA, data)
+                .context("Failed to output")?;
             return Ok(());
         }
 
         // TODO: add workflow name
 
         self.last_id += 1;
-        let key = format!("$stream:{}", stream);
-        let mut new_meta = data.metadata.as_ref().clone();
-        new_meta.insert(key, AgentValue::new_integer(self.last_id));
-
-        let out_data = data.clone().with_meta(Arc::new(new_meta));
-
-        self.try_output(CH_DATA, out_data)
+        let key = format!("$stream:{}", stream_name);
+        let new_ctx = ctx.with_var(key, AgentValue::new_integer(self.last_id));
+        self.try_output(new_ctx, CH_DATA, data)
             .context("Failed to output")?;
 
         Ok(())
@@ -134,25 +129,25 @@ impl AsAgent for StreamZipAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         for i in 0..self.n {
             if self.keys[i].is_empty() {
                 bail!("key{} is not set", i + 1);
             }
         }
 
-        let stream = self
+        let stream_name = self
             .config()
             .context("missing config")?
             .get(CONFIG_STREAM)
-            .context("missing name")?
+            .context("missing stream")?
             .as_str()
             .context("failed as_str")?
             .to_string();
 
-        if !stream.is_empty() {
-            let key = format!("$stream:{}", stream);
-            let Some(value) = data.metadata.get(key.as_str()) else {
+        if !stream_name.is_empty() {
+            let key = format!("$stream:{}", stream_name);
+            let Some(value) = ctx.get_var(key.as_str()) else {
                 // value does not have the stream key
                 return Ok(());
             };
@@ -169,7 +164,7 @@ impl AsAgent for StreamZipAgent {
         }
 
         for i in 0..self.n {
-            if ch == self.in_channels[i] {
+            if ctx.ch() == self.in_channels[i] {
                 self.input_value[i] = Some(data.value.clone());
             }
         }
@@ -188,9 +183,9 @@ impl AsAgent for StreamZipAgent {
             let value = self.input_value[i].take().unwrap();
             map.insert(key, value);
         }
-        let out_data = AgentData::new_object(map).from_meta(&data.metadata);
+        let out_data = AgentData::new_object(map);
 
-        self.try_output(CH_DATA, out_data)
+        self.try_output(ctx, CH_DATA, out_data)
             .context("Failed to output")?;
 
         Ok(())

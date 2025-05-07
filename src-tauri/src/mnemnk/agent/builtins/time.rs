@@ -10,8 +10,8 @@ use tauri::{AppHandle, Manager};
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentData, AgentDefinition, AgentDefinitions, AgentEnv,
-    AgentStatus, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentEnv, AgentStatus, AgentValue, AsAgent, AsAgentData,
 };
 
 // Delay Agent
@@ -41,15 +41,13 @@ impl AsAgent for DelayAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let delay_ms = config.get_integer_or(CONFIG_DELAY, DELAY_MS_DEFAULT);
         let max_tasks = config.get_integer_or(CONFIG_MAX_TASKS, MAX_TASKS_DEFAULT);
 
         let agent_id = self.id().to_string();
         let app_handle = self.app().clone();
-        let channel = ch.clone();
-        let agent_data = data.clone();
 
         // To avoid generating too many tasks.
         {
@@ -66,7 +64,7 @@ impl AsAgent for DelayAgent {
             tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
 
             let env = app_handle.state::<crate::mnemnk::agent::AgentEnv>();
-            if let Err(e) = env.send_agent_out(agent_id, channel, agent_data).await {
+            if let Err(e) = env.send_agent_out(agent_id, ctx, data).await {
                 log::error!("Failed to send delayed output: {}", e);
             }
 
@@ -108,7 +106,7 @@ impl IntervalTimerAgent {
                 let env = app_handle.state::<AgentEnv>();
                 if let Err(e) = env.try_send_agent_out(
                     agent_id.clone(),
-                    CH_UNIT.to_string(),
+                    AgentContext::new_with_ch(CH_UNIT),
                     AgentData::new_unit(),
                 ) {
                     log::error!("Failed to send interval timer output: {}", e);

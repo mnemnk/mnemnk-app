@@ -1,6 +1,5 @@
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::path::PathBuf;
 use std::vec;
 use tauri::{AppHandle, Manager};
@@ -8,8 +7,8 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::mnemnk::agent::{
-    data::AgentMetadata, Agent, AgentConfig, AgentData, AgentDefinition, AgentDefinitionError,
-    AgentEnv, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitionError, AgentEnv,
+    AsAgent, AsAgentData,
 };
 
 pub struct CommandAgent {
@@ -122,28 +121,14 @@ impl AsAgent for CommandAgent {
                         let (cmd, args) = parse_stdout(&line);
                         match cmd {
                             ".OUT" => match parse_out_args(args) {
-                                Ok(data) => {
+                                Ok((ctx, ch, data)) => {
+                                    let new_ctx = ctx.with_ch(ch);
                                     let env = app_handle.state::<AgentEnv>();
-                                    match AgentData::from_json_data(
-                                        data.kind,
-                                        data.value,
-                                        data.metadata.as_ref(),
-                                    ) {
-                                        Ok(agent_data) => {
-                                            env.send_agent_out(
-                                                agent_id.clone(),
-                                                data.ch,
-                                                agent_data,
-                                            )
-                                            .await
-                                            .unwrap_or_else(|e| {
-                                                log::error!("Failed to send agent out: {}", e);
-                                            });
-                                        }
-                                        Err(e) => {
-                                            log::error!("Failed to parse agent data: {}", e);
-                                        }
-                                    }
+                                    env.send_agent_out(agent_id.clone(), new_ctx, data)
+                                        .await
+                                        .unwrap_or_else(|e| {
+                                            log::error!("Failed to send agent out: {}", e);
+                                        });
                                 }
                                 Err(e) => {
                                     log::error!("Failed to parse OUT command: {}", e);
@@ -233,22 +218,15 @@ impl AsAgent for CommandAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         #[derive(Debug, Serialize)]
         struct InData {
-            ch: String,
-            kind: String,
-            value: AgentValue,
-            metadata: AgentMetadata,
+            ctx: AgentContext,
+            data: AgentData,
         }
 
-        let data = InData {
-            ch: ch.clone(),
-            kind: data.kind,
-            value: data.value,
-            metadata: data.metadata,
-        };
-        let data_json = serde_json::to_string(&data).context("Failed to serialize input data")?;
+        let in_data = InData { ctx, data };
+        let in_json = serde_json::to_string(&in_data).context("Failed to serialize input data")?;
 
         let env = self.env();
         let mut env_commands = env.commands.lock().unwrap();
@@ -256,7 +234,7 @@ impl AsAgent for CommandAgent {
             .get_mut(self.id())
             .context("command not found")?;
         command
-            .write(format!(".IN {}\n", data_json).as_bytes())
+            .write(format!(".IN {}\n", in_json).as_bytes())
             .context("Failed to write to command")
     }
 }
@@ -318,14 +296,14 @@ fn parse_stdout(line: &str) -> (&str, &str) {
 }
 
 #[derive(Debug, Deserialize)]
-struct OutData {
+struct OutArg {
+    ctx: Option<AgentContext>,
     ch: String,
-    kind: String,
-    value: Value,
-    metadata: Option<Value>,
+    data: AgentData,
 }
 
-fn parse_out_args(args: &str) -> Result<OutData> {
-    let data: OutData = serde_json::from_str(args).context("Failed to parse OUT command")?;
-    return Ok(data);
+fn parse_out_args(args: &str) -> Result<(AgentContext, String, AgentData)> {
+    let data: OutArg = serde_json::from_str(args).context("Failed to parse OUT command")?;
+    let ctx = data.ctx.unwrap_or_default();
+    return Ok((ctx, data.ch, data.data));
 }

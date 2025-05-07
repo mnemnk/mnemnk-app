@@ -1,13 +1,14 @@
 use anyhow::Result;
 
 use super::agent::Agent;
+use super::context::AgentContext;
 use super::data::AgentData;
 
 pub trait AgentOutput {
-    fn try_output_raw(&self, ch: String, data: AgentData) -> Result<()>;
+    fn try_output_raw(&self, ctx: AgentContext, ch: String, data: AgentData) -> Result<()>;
 
-    fn try_output<S: Into<String>>(&self, ch: S, data: AgentData) -> Result<()> {
-        self.try_output_raw(ch.into(), data)
+    fn try_output<S: Into<String>>(&self, ctx: AgentContext, ch: S, data: AgentData) -> Result<()> {
+        self.try_output_raw(ctx, ch.into(), data)
     }
 
     fn emit_display_raw(&self, key: String, data: AgentData) -> Result<()>;
@@ -25,9 +26,10 @@ pub trait AgentOutput {
 }
 
 impl<T: Agent> AgentOutput for T {
-    fn try_output_raw(&self, ch: String, data: AgentData) -> Result<()> {
+    fn try_output_raw(&self, ctx: AgentContext, ch: String, data: AgentData) -> Result<()> {
+        let new_ctx = ctx.with_ch(ch);
         self.env()
-            .try_send_agent_out(self.id().to_string(), ch, data)
+            .try_send_agent_out(self.id().to_string(), new_ctx, data)
     }
 
     fn emit_display_raw(&self, key: String, data: AgentData) -> Result<()> {

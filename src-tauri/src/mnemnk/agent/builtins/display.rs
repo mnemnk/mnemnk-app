@@ -4,8 +4,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    AgentConfig, AgentData, AgentDefinition, AgentDefinitions, AgentDisplayConfigEntry,
-    AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
+    AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions,
+    AgentDisplayConfigEntry, AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
 // Display Data
@@ -33,7 +33,7 @@ impl AsAgent for DisplayDataAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ctx: AgentContext, data: AgentData) -> Result<()> {
         self.emit_display(DISPLAY_DATA, data)
     }
 }
@@ -63,16 +63,15 @@ impl AsAgent for DebugDataAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let value = AgentValue::new_object(AgentValueMap::from([
             ("kind".to_string(), AgentValue::new_string(data.kind)),
             ("value".to_string(), data.value),
         ]));
-        let metadata = AgentValue::from_json_value(serde_json::to_value(&data.metadata)?)?;
+        let ctx = AgentValue::from_json_value(serde_json::to_value(&ctx)?)?;
         let debug_data = AgentData::new_object(AgentValueMap::from([
-            ("ch".to_string(), AgentValue::new_string(ch)),
+            ("ctx".to_string(), ctx),
             ("data".to_string(), value),
-            ("metadata".to_string(), metadata),
         ]));
         self.emit_display(DISPLAY_DATA, debug_data)
     }

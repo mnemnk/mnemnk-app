@@ -5,8 +5,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
 // Truthy Pass agent
@@ -34,9 +34,10 @@ impl AsAgent for TruthyPassAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         if is_truthy(&data) {
-            self.try_output(ch, data)?;
+            let ch = ctx.ch().to_string();
+            self.try_output(ctx, ch, data)?;
         }
         Ok(())
     }
@@ -79,9 +80,10 @@ impl AsAgent for FalsyPassAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         if !is_truthy(&data) {
-            self.try_output(ch, data)?;
+            let ch = ctx.ch().to_string();
+            self.try_output(ctx, ch, data)?;
         }
         Ok(())
     }
@@ -169,7 +171,7 @@ impl AsAgent for PassOrBlockRegexListAgent {
         Ok(())
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("missing config")?;
         let field = config.get_string_or_default(CONFIG_FIELD);
         if field.is_empty() {
@@ -179,13 +181,15 @@ impl AsAgent for PassOrBlockRegexListAgent {
         if self.def_name() == "$pass_regex_list" {
             if self.is_match(&data, &field) {
                 // value matches the regex
-                self.try_output(ch, data)
+                let ch = ctx.ch().to_string();
+                self.try_output(ctx, ch, data)
                     .context("Failed to output result")?;
             }
         } else if self.def_name() == "$block_regex_list" {
             if !self.is_match(&data, &field) {
                 // value does not match the regex
-                self.try_output(ch, data)
+                let ch = ctx.ch().to_string();
+                self.try_output(ctx, ch, data)
                     .context("Failed to output result")?;
             }
         }

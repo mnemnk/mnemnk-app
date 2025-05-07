@@ -4,8 +4,8 @@ use tauri::AppHandle;
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_DATABASE;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentOutput, AgentData, AgentDefinition,
-    AgentDefinitions, AgentValue, AgentValueMap, AsAgent, AsAgentData,
+    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
+    AgentDefinitions, AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 use crate::mnemnk::store;
 
@@ -34,7 +34,7 @@ impl AsAgent for EventDatabaseAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, _ctx: AgentContext, data: AgentData) -> Result<()> {
         store::create_event(self.app(), data)
     }
 }
@@ -64,7 +64,7 @@ impl AsAgent for DatabaseDeleteAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let return_before = config.get_bool_or_default(CONFIG_RETURN_BEFORE);
@@ -78,15 +78,15 @@ impl AsAgent for DatabaseDeleteAgent {
         if return_before {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
-                let kv_data = new_kv_data(key, value).from_meta(&data.metadata);
-                self.try_output(CH_KV, kv_data)?;
+                let kv_data = new_kv_data(key, value);
+                self.try_output(ctx, CH_KV, kv_data)?;
             } else {
                 // value is empty
-                self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
+                self.try_output(ctx, CH_KV, AgentData::new_unit())?;
             }
         } else {
             // return_before is false
-            self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
+            self.try_output(ctx, CH_KV, AgentData::new_unit())?;
         }
 
         Ok(())
@@ -118,14 +118,14 @@ impl AsAgent for DatabaseInsertAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
         let json_value = value.to_json_value();
         store::insert(self.app(), db, table, key, json_value)?;
 
-        self.try_output(ch, data)
+        self.try_output(ctx, CH_KV, data)
     }
 }
 
@@ -154,7 +154,7 @@ impl AsAgent for DatabaseQueryAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let db = get_db(config)?;
 
@@ -192,8 +192,8 @@ impl AsAgent for DatabaseQueryAgent {
             let value = AgentValue::from_json_value(r)?;
             arr.push(value);
         }
-        let out_data = AgentData::new_array("object", arr).from_meta(&data.metadata);
-        self.try_output(CH_DATA, out_data)?;
+        let out_data = AgentData::new_array("object", arr);
+        self.try_output(ctx, CH_DATA, out_data)?;
         Ok(())
     }
 }
@@ -223,7 +223,7 @@ impl AsAgent for DatabaseSelectAgent {
         &mut self.data
     }
 
-    fn process(&mut self, _ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
 
@@ -236,9 +236,9 @@ impl AsAgent for DatabaseSelectAgent {
         if let Some(json_value) = result {
             let value = AgentValue::from_json_value(json_value)?;
             let kv_data = new_kv_data(key, value);
-            self.try_output(CH_KV, kv_data.from_meta(&data.metadata))?;
+            self.try_output(ctx, CH_KV, kv_data)?;
         } else {
-            self.try_output(CH_KV, AgentData::new_unit().from_meta(&data.metadata))?;
+            self.try_output(ctx, CH_KV, AgentData::new_unit())?;
         }
         Ok(())
     }
@@ -269,14 +269,14 @@ impl AsAgent for DatabaseUpdateAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
         let json_value = value.to_json_value();
         store::update(self.app(), db, table, key, json_value)?;
 
-        self.try_output(ch, data)
+        self.try_output(ctx, CH_KV, data)
     }
 }
 
@@ -305,7 +305,7 @@ impl AsAgent for DatabaseUpdateMergeAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let return_after = config.get_bool_or_default(CONFIG_RETURN_AFTER);
@@ -318,14 +318,14 @@ impl AsAgent for DatabaseUpdateMergeAgent {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
                 let kv_data = new_kv_data(key, value);
-                self.try_output(ch, kv_data.from_meta(&data.metadata))?;
+                self.try_output(ctx, CH_KV, kv_data)?;
             } else {
-                self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
+                self.try_output(ctx, CH_KV, AgentData::new_unit())?;
             }
         } else {
             // return_after is false
             store::update_merge(self.app(), db, table, key, json_value, return_after)?;
-            self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
+            self.try_output(ctx, CH_KV, AgentData::new_unit())?;
         }
 
         Ok(())
@@ -357,14 +357,14 @@ impl AsAgent for DatabaseUpsertAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let (key, value) = get_kv(&data)?;
         let json_value = value.to_json_value();
         store::upsert(self.app(), db, table, key, json_value)?;
 
-        self.try_output(ch, data)
+        self.try_output(ctx, CH_KV, data)
     }
 }
 
@@ -393,7 +393,7 @@ impl AsAgent for DatabaseUpsertMergeAgent {
         &mut self.data
     }
 
-    fn process(&mut self, ch: String, data: AgentData) -> Result<()> {
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let (db, table) = get_db_table(config)?;
         let return_after = config.get_bool_or_default(CONFIG_RETURN_AFTER);
@@ -406,14 +406,14 @@ impl AsAgent for DatabaseUpsertMergeAgent {
             if let Some(json_value) = result {
                 let value = AgentValue::from_json_value(json_value)?;
                 let kv_data = new_kv_data(key, value);
-                self.try_output(ch, kv_data.from_meta(&data.metadata))?;
+                self.try_output(ctx, CH_KV, kv_data)?;
             } else {
-                self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
+                self.try_output(ctx, CH_KV, AgentData::new_unit())?;
             }
         } else {
             // return_after is false
             store::upsert_merge(self.app(), db, table, key, json_value, return_after)?;
-            self.try_output(ch, AgentData::new_unit().from_meta(&data.metadata))?;
+            self.try_output(ctx, CH_KV, AgentData::new_unit())?;
         }
 
         Ok(())

@@ -5,6 +5,7 @@ use tauri::{AppHandle, Manager, State};
 mod agent;
 mod builtins;
 mod config;
+mod context;
 mod data;
 mod definition;
 mod env;
@@ -14,6 +15,7 @@ mod output;
 
 pub use agent::{Agent, AgentStatus, AsAgent, AsAgentData};
 pub use config::{AgentConfig, AgentConfigs};
+pub use context::AgentContext;
 pub use data::{AgentData, AgentValue, AgentValueMap};
 pub use definition::{
     AgentConfigEntry, AgentDefinition, AgentDefinitionError, AgentDefinitions,

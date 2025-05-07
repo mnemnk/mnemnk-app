@@ -1,17 +1,18 @@
 use anyhow::{Context as _, Result};
 use tauri::{AppHandle, Manager};
 
-use super::{data::AgentData, env::AgentEnv};
+use super::{context::AgentContext, data::AgentData, env::AgentEnv};
 
 #[derive(Clone, Debug)]
 pub enum EnvAgentMessage {
     AgentOut {
         agent: String,
-        ch: String,
+        ctx: AgentContext,
         data: AgentData,
     },
     BoardOut {
         name: String,
+        ctx: AgentContext,
         data: AgentData,
     },
 }
@@ -19,7 +20,7 @@ pub enum EnvAgentMessage {
 pub async fn send_agent_out(
     env: &AgentEnv,
     agent: String,
-    ch: String,
+    ctx: AgentContext,
     data: AgentData,
 ) -> Result<()> {
     let env_tx;
@@ -32,7 +33,7 @@ pub async fn send_agent_out(
             .context("tx is not initialized")?;
     }
     env_tx
-        .send(EnvAgentMessage::AgentOut { agent, ch, data })
+        .send(EnvAgentMessage::AgentOut { agent, ctx, data })
         .await
         .context("Failed to send AgentOut message")
 }
@@ -40,7 +41,7 @@ pub async fn send_agent_out(
 pub fn try_send_agent_out(
     env: &AgentEnv,
     agent: String,
-    ch: String,
+    ctx: AgentContext,
     data: AgentData,
 ) -> Result<()> {
     let env_tx;
@@ -53,11 +54,16 @@ pub fn try_send_agent_out(
             .context("tx is not initialized")?;
     }
     env_tx
-        .try_send(EnvAgentMessage::AgentOut { agent, ch, data })
+        .try_send(EnvAgentMessage::AgentOut { agent, ctx, data })
         .context("Failed to try_send AgentOut message")
 }
 
-pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Result<()> {
+pub fn try_send_board_out(
+    env: &AgentEnv,
+    name: String,
+    ctx: AgentContext,
+    data: AgentData,
+) -> Result<()> {
     let env_tx;
     {
         env_tx = env
@@ -68,12 +74,12 @@ pub fn try_send_board_out(env: &AgentEnv, name: String, data: AgentData) -> Resu
             .context("tx is not initialized")?;
     }
     env_tx
-        .try_send(EnvAgentMessage::BoardOut { name, data })
+        .try_send(EnvAgentMessage::BoardOut { name, ctx, data })
         .context("Failed to try_send BoardOut message")
 }
 
 // Processing AgentOut message
-pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: AgentData) {
+pub async fn agent_out(app: &AppHandle, source_agent: String, ctx: AgentContext, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let targets;
@@ -89,7 +95,7 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
     for target in targets.unwrap() {
         let (target_agent, source_handle, target_handle) = target;
 
-        if source_handle != ch && source_handle != "*" {
+        if source_handle != ctx.ch() && source_handle != "*" {
             // Skip if source_handle does not match with the given ch.
             // "*" is a wildcard, and outputs messages of all channels.
             continue;
@@ -104,12 +110,14 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
 
         let target_ch = if target_handle == "*" {
             // If target_handle is "*", use the ch specified by the source agent
-            ch.clone()
+            ctx.ch().to_string()
         } else {
             target_handle.clone()
         };
 
-        env.agent_input(&target_agent, target_ch, data.clone())
+        let target_ctx = ctx.with_ch(target_ch);
+
+        env.agent_input(&target_agent, target_ctx, data.clone())
             .await
             .unwrap_or_else(|e| {
                 log::error!("Failed to send message to {}: {}", target_agent, e);
@@ -117,7 +125,7 @@ pub async fn agent_out(app: &AppHandle, source_agent: String, ch: String, data: 
     }
 }
 
-pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
+pub async fn board_out(app: &AppHandle, name: String, ctx: AgentContext, data: AgentData) {
     let env = app.state::<AgentEnv>();
 
     let board_nodes;
@@ -149,7 +157,8 @@ pub async fn board_out(app: &AppHandle, name: String, data: AgentData) {
             } else {
                 target_handle.clone()
             };
-            env.agent_input(&target_agent, target_ch, data.clone())
+            let target_ctx = ctx.with_ch(target_ch);
+            env.agent_input(&target_agent, target_ctx, data.clone())
                 .await
                 .unwrap_or_else(|e| {
                     log::error!("Failed to send message to {}: {}", target_agent, e);
