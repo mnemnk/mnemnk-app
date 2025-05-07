@@ -543,7 +543,7 @@ impl AgentEnv {
                 let Some(tx) = agent_txs.get(agent_id) else {
                     bail!("Agent tx for {} not found", agent_id);
                 };
-                (*tx).clone()
+                tx.clone()
             };
             match tx {
                 AgentMessageSender::Sync(tx) => {
