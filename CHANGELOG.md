@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.0](https://github.com/mnemnk/mnemnk-app/compare/v0.17.11...v0.18.0) (2025-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* 🧨 change protocol of Command agent
+
+### Features
+
+* 🎸 AgentContext ([#357](https://github.com/mnemnk/mnemnk-app/issues/357)) ([be6e81e](https://github.com/mnemnk/mnemnk-app/commit/be6e81e31b0b70bb41f9c34beee0aecadde17d1c))
+* 🎸 hidden config ([#354](https://github.com/mnemnk/mnemnk-app/issues/354)) ([b932963](https://github.com/mnemnk/mnemnk-app/commit/b932963d91e298baa3f3c60e2089dcae1ba4f49f))
+* 🎸 Stream and Stream Zip2 agents ([#351](https://github.com/mnemnk/mnemnk-app/issues/351)) ([d0ae569](https://github.com/mnemnk/mnemnk-app/commit/d0ae569e4d95a2937f116dc6b23824aa6d685851))
+* 🎸 Template Array agent ([#349](https://github.com/mnemnk/mnemnk-app/issues/349)) ([f9d002a](https://github.com/mnemnk/mnemnk-app/commit/f9d002a46ad0d6465cbf6058fcabd52e9b160783))
+* 🎸 Zip3 and Zip4 agents ([#355](https://github.com/mnemnk/mnemnk-app/issues/355)) ([028403b](https://github.com/mnemnk/mnemnk-app/commit/028403bc5181ddb71dc5568f1eb0e452dabc8252))
+
+
+### Bug Fixes
+
+* 🐛 command agent metadata ([#352](https://github.com/mnemnk/mnemnk-app/issues/352)) ([5c55c21](https://github.com/mnemnk/mnemnk-app/commit/5c55c211dfd8db1f8808d06a6b2b2c87dc603e02))
+* 🐛 serialize only once ([#353](https://github.com/mnemnk/mnemnk-app/issues/353)) ([3b3cab8](https://github.com/mnemnk/mnemnk-app/commit/3b3cab8ad4915457901171c4bfdd1439d196ecf1))
+
 ## [0.17.11](https://github.com/mnemnk/mnemnk-app/compare/v0.17.10...v0.17.11) (2025-05-03)
 
 ## [0.17.10](https://github.com/mnemnk/mnemnk-app/compare/v0.17.9...v0.17.10) (2025-05-02)
