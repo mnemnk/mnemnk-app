@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicUsize;
 
 use anyhow::{bail, Context as _, Result};
-use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
@@ -163,6 +163,9 @@ fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
     }
     let content = std::fs::read_to_string(&path)?;
     let mut flow: AgentFlow = serde_json::from_str(&content)?;
+    let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
+    flow.nodes = nodes;
+    flow.edges = edges;
     flow.path = Some(path);
     Ok(flow)
 }
@@ -388,13 +391,16 @@ pub fn copy_sub_flow(
     (new_nodes, new_edges)
 }
 
+static NODE_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
+
 fn new_node_id(def_name: &str) -> String {
-    format!("{}_{}", def_name, nanoid!())
+    let new_id = NODE_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    format!("{}:{}", def_name, new_id)
 }
 
 fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &str) -> String {
     format!(
-        "xy-edge__{}{}-{}{}",
+        "xy-edge__{}:{}-{}:{}",
         source, source_handle, target, target_handle
     )
 }
