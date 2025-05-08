@@ -6,6 +6,7 @@ mod command;
 mod data;
 mod database;
 mod display;
+mod file;
 mod filter;
 mod input;
 mod operator;
@@ -23,6 +24,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     data::init_agent_defs(defs);
     database::init_agent_defs(defs);
     display::init_agent_defs(defs);
+    file::init_agent_defs(defs);
     filter::init_agent_defs(defs);
     input::init_agent_defs(defs);
     operator::init_agent_defs(defs);
