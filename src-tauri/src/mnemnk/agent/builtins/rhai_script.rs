@@ -9,6 +9,8 @@ use crate::mnemnk::agent::{
     AgentDefinitions, AgentEnv, AgentOutput, AgentValue, AgentValueMap, AsAgent, AsAgentData,
 };
 
+use super::filter::is_truthy;
+
 // Rhai Expr Agent
 struct RhaiExprAgent {
     data: AsAgentData,
@@ -68,6 +70,72 @@ impl AsAgent for RhaiExprAgent {
 
         self.try_output(ctx, CH_DATA, out_data)
             .context("Failed to output template")
+    }
+}
+
+// Rhai Filter Agent
+struct RhaiFilterAgent {
+    data: AsAgentData,
+    ast: Option<AST>,
+}
+
+impl AsAgent for RhaiFilterAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        let env = app.state::<AgentEnv>();
+        let ast = match &config {
+            Some(c) => compile_expr(&env, c)?,
+            None => None,
+        };
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+            ast,
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        self.ast = compile_expr(&self.env(), &config)?;
+        Ok(())
+    }
+
+    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+        let Some(ast) = &self.ast else {
+            return Ok(());
+        };
+
+        let mut scope = Scope::new();
+        scope.push("ch", ctx.ch().to_string());
+
+        let rhai_value: Dynamic = to_dynamic(&data)?;
+        scope.push("kind", data.kind.clone());
+        scope.push("value", rhai_value);
+
+        let env = self.env();
+        let result: Dynamic = env
+            .rhai_engine
+            .eval_ast_with_scope(&mut scope, ast)
+            .context("Failed to evaluate Rhai expression")?;
+
+        let out_data: AgentData = from_dynamic(&result)?;
+        if is_truthy(&out_data) {
+            let ch = ctx.ch().to_string();
+            self.try_output(ctx, ch, data)
+                .context("Failed to output template")?;
+        }
+
+        Ok(())
     }
 }
 
@@ -241,6 +309,23 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_category("Core/Script")
         .with_inputs(vec![CH_STAR])
         .with_outputs(vec![CH_DATA])
+        .with_default_config(vec![(
+            CONFIG_EXPR.into(),
+            AgentConfigEntry::new(AgentValue::new_string(""), "text"),
+        )]),
+    );
+
+    defs.insert(
+        "$rhai_filter".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$rhai_filter",
+            Some(new_boxed::<RhaiFilterAgent>),
+        )
+        .with_title("Rhai Filter")
+        .with_category("Core/Script")
+        .with_inputs(vec![CH_STAR])
+        .with_outputs(vec![CH_STAR])
         .with_default_config(vec![(
             CONFIG_EXPR.into(),
             AgentConfigEntry::new(AgentValue::new_string(""), "text"),
