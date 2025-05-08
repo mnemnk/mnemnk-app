@@ -3698,7 +3698,6 @@ dependencies = [
  "handlebars",
  "image",
  "log",
- "nanoid",
  "regex",
  "rhai",
  "serde",
