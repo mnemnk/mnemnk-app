@@ -43,7 +43,7 @@ impl AsAgent for TruthyPassAgent {
     }
 }
 
-fn is_truthy(data: &AgentData) -> bool {
+pub fn is_truthy(data: &AgentData) -> bool {
     match &data.value {
         AgentValue::Boolean(b) => *b,
         AgentValue::Integer(n) => *n != 0,
