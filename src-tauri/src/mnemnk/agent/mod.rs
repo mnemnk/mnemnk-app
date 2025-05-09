@@ -136,6 +136,14 @@ pub fn import_agent_flow_cmd(env: State<AgentEnv>, path: String) -> Result<Agent
 }
 
 #[tauri::command]
+pub fn new_agent_flow_node_cmd(
+    env: State<AgentEnv>,
+    def_name: String,
+) -> Result<AgentFlowNode, String> {
+    AgentFlowNode::new(&env, def_name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn add_agent_flow_node_cmd(
     env: State<AgentEnv>,
     flow_name: String,

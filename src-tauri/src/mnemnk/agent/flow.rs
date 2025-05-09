@@ -60,6 +60,33 @@ pub struct AgentFlowNode {
     pub height: Option<f64>,
 }
 
+impl AgentFlowNode {
+    pub fn new(env: &AgentEnv, def_name: String) -> Result<Self> {
+        let default_config = env.get_agent_default_config(&def_name);
+        let config = if let Some(default_config) = default_config {
+            let mut config = AgentConfig::new();
+            for (key, entry) in default_config {
+                config.set(key, entry.value.clone());
+            }
+            Some(config)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            id: new_node_id(&def_name),
+            name: def_name,
+            enabled: false,
+            config,
+            title: None,
+            x: None,
+            y: None,
+            width: None,
+            height: None,
+        })
+    }
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AgentFlowEdge {
     pub id: String,
@@ -397,12 +424,12 @@ static NODE_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 fn new_node_id(def_name: &str) -> String {
     let new_id = NODE_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    format!("{}:{}", def_name, new_id)
+    format!("{}_{}", def_name, new_id)
 }
 
 fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &str) -> String {
     format!(
-        "xy-edge__{}:{}-{}:{}",
+        "xy-edge__{}{}__{}{}",
         source, source_handle, target, target_handle
     )
 }

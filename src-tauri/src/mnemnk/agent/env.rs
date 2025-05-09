@@ -12,7 +12,7 @@ use crate::mnemnk::settings;
 use super::agent::{self, AgentMessage, AsyncAgent};
 use super::config::AgentConfig;
 use super::data::AgentData;
-use super::definition::{init_agent_defs, AgentDefinitions};
+use super::definition::{init_agent_defs, AgentDefaultConfig, AgentDefinitions};
 use super::flow::{AgentFlow, AgentFlowEdge, AgentFlowNode, AgentFlows};
 use super::message::{self, EnvAgentMessage};
 use super::AgentContext;
@@ -119,6 +119,14 @@ impl AgentEnv {
         });
 
         Ok(())
+    }
+
+    pub fn get_agent_default_config(&self, def_name: &str) -> Option<AgentDefaultConfig> {
+        let defs = self.defs.lock().unwrap();
+        let Some(def) = defs.get(def_name) else {
+            return None;
+        };
+        def.default_config.clone()
     }
 
     pub fn new_agent_flow(&self, name: &str) -> Result<AgentFlow> {
