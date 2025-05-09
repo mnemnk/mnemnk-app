@@ -323,7 +323,10 @@
   let newFlowInput = $state<HTMLInputElement>();
 
   async function onNewFlow() {
-    newFlowName = "";
+    newFlowName = flowNameState.name.split("/").slice(0, -1).join("/");
+    if (newFlowName !== "") {
+      newFlowName += "/";
+    }
     newFlowModal = true;
     await tick();
     newFlowInput?.focus();
@@ -637,7 +640,7 @@
 </div>
 
 {#if newFlowModal}
-  <Modal title="New Flow" bind:open={newFlowModal} classBackdrop="bg-transparent backdrop-blur-xs">
+  <Modal title="New Flow" bind:open={newFlowModal} classBackdrop="bg-transparent">
     <form onsubmit={handleCreateNewFlow} autocomplete="off">
       <div class="flex flex-col">
         <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -660,11 +663,7 @@
 {/if}
 
 {#if renameFlowModal}
-  <Modal
-    title="Rename Flow"
-    bind:open={renameFlowModal}
-    classBackdrop="bg-transparent backdrop-blur-xs"
-  >
+  <Modal title="Rename Flow" bind:open={renameFlowModal} classBackdrop="bg-transparent">
     <form onsubmit={handleRenameFlow} autocomplete="off">
       <div class="flex flex-col">
         <label for="flow_name" class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
@@ -692,7 +691,7 @@
     bind:open={deleteFlowModal}
     size="xs"
     autoclose
-    classBackdrop="bg-transparent backdrop-blur-xs"
+    classBackdrop="bg-transparent"
   >
     <div class="text-center">
       <ExclamationCircleOutline class="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" />
