@@ -254,6 +254,13 @@ pub fn insert_agent_flow(env: State<AgentEnv>, agent_flow: AgentFlow) -> Result<
         .context("Agent flow name not found")?;
 
     let mut flows = env.flows.lock().unwrap();
+    if let Some(flow) = flows.get_mut(&name) {
+        // if the flow already exists, we need to copy the path from the existing flow
+        let mut agent_flow = agent_flow;
+        agent_flow.path = flow.path.clone();
+        flows.insert(name, agent_flow);
+        return Ok(());
+    }
     flows.insert(name, agent_flow);
 
     Ok(())
@@ -332,11 +339,6 @@ pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
 
     // reset path of the flow
     flow.path = None;
-
-    // refresh the node and edge ids
-    let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
-    flow.nodes = nodes;
-    flow.edges = edges;
 
     // disable all nodes
     for node in &mut flow.nodes {
