@@ -453,7 +453,7 @@
   }
 
   async function onAddAgent(agent_name: string) {
-    const snode = newAgentFlowNode(agent_name, agentDefs);
+    const snode = await newAgentFlowNode(agent_name);
     const xy = screenToFlowPosition({
       x: window.innerWidth * 0.45,
       y: window.innerHeight * 0.3,

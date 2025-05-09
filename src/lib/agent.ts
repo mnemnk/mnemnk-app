@@ -2,8 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { getContext, setContext } from "svelte";
 
-import { nanoid } from "nanoid";
-
 import type {
   AgentFlow,
   AgentFlowEdge,
@@ -77,6 +75,10 @@ export function getAgentDefinitionsContext(): SAgentDefinitions {
 
 export async function addAgentFlowNode(flowName: string, node: SAgentFlowNode): Promise<void> {
   await invoke("add_agent_flow_node_cmd", { flowName, node });
+}
+
+export async function newAgentFlowNode(defName: string): Promise<SAgentFlowNode> {
+  return await invoke("new_agent_flow_node_cmd", { defName });
 }
 
 export async function removeAgentFlowNode(flowName: string, nodeId: string): Promise<void> {
@@ -321,26 +323,4 @@ export function serializeAgentFlowEdge(edge: AgentFlowEdge): SAgentFlowEdge {
     target: edge.target,
     target_handle: edge.targetHandle ?? null,
   };
-}
-
-export function newAgentFlowNode(def_name: string, agent_defs: SAgentDefinitions): SAgentFlowNode {
-  const id = newNodeId(def_name);
-  const default_config = agent_defs[def_name].default_config ?? [];
-  const config: SAgentConfig = Object.fromEntries(
-    default_config.map(([key, entry]) => [key, entry.value]),
-  );
-  const node_data = {
-    id,
-    name: def_name,
-    enabled: false,
-    config,
-    title: null,
-    x: 0,
-    y: 0,
-  };
-  return node_data;
-}
-
-function newNodeId(prefix: string) {
-  return `${prefix}_${nanoid()}`;
 }
