@@ -258,7 +258,10 @@ fn read_mnemnk_jsons(app: &AppHandle, defs: &mut AgentDefinitions) -> Result<()>
         };
         for def in mnemnk_json.agents.unwrap_or_default() {
             let mut def = def;
-            post_process_agent_def(&mut def, &agent_dir)?;
+            if let Err(e) = post_process_agent_def(&mut def, &agent_dir) {
+                log::error!("Failed to post process agent definition: {}", e);
+                continue;
+            }
             defs.insert(def.name.clone(), def);
         }
     }
