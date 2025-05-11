@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.2](https://github.com/mnemnk/mnemnk-app/compare/v0.18.1...v0.18.2) (2025-05-11)
+
+
+### Features
+
+* 🎸 File agents ([#363](https://github.com/mnemnk/mnemnk-app/issues/363)) ([862406d](https://github.com/mnemnk/mnemnk-app/commit/862406d455955816e7619730f95daa539d7edebe))
+* 🎸 improve flow dialogs ([#368](https://github.com/mnemnk/mnemnk-app/issues/368)) ([cafc4df](https://github.com/mnemnk/mnemnk-app/commit/cafc4dfe07442beed3d909b9f9500d4714eb7d9d))
+* 🎸 Rhai Filter agent ([#361](https://github.com/mnemnk/mnemnk-app/issues/361)) ([7901108](https://github.com/mnemnk/mnemnk-app/commit/790110888db839c4090cbe1aea5c38a09ba24c4a))
+* 🎸 use usize for agent id ([#364](https://github.com/mnemnk/mnemnk-app/issues/364)) ([5c5de31](https://github.com/mnemnk/mnemnk-app/commit/5c5de3169a12bd31dbaf2b68ce9650e2d8965dce))
+
+
+### Bug Fixes
+
+* 🐛 log error on processing invalid agent def ([#369](https://github.com/mnemnk/mnemnk-app/issues/369)) ([84c271d](https://github.com/mnemnk/mnemnk-app/commit/84c271dee858201aa49149b74108d865ef17a8c8))
+* 🐛 new agent node id ([#367](https://github.com/mnemnk/mnemnk-app/issues/367)) ([b8c0160](https://github.com/mnemnk/mnemnk-app/commit/b8c01606737953ce5713f8f0e9d3fa62c3ab0e88))
+* 🐛 rename flow ([#366](https://github.com/mnemnk/mnemnk-app/issues/366)) ([5d93868](https://github.com/mnemnk/mnemnk-app/commit/5d93868cf0fe4e048f23cc44b92e49fcfc055e34)), closes [#365](https://github.com/mnemnk/mnemnk-app/issues/365)
+
 ## [0.18.1](https://github.com/mnemnk/mnemnk-app/compare/v0.18.0...v0.18.1) (2025-05-07)
 
 
