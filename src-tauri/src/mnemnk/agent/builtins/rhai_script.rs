@@ -130,8 +130,10 @@ impl AsAgent for RhaiFilterAgent {
 
         let out_data: AgentData = from_dynamic(&result)?;
         if is_truthy(&out_data) {
-            let ch = ctx.ch().to_string();
-            self.try_output(ctx, ch, data)
+            self.try_output(ctx, CH_TRUE, data)
+                .context("Failed to output template")?;
+        } else {
+            self.try_output(ctx, CH_FALSE, data)
                 .context("Failed to output template")?;
         }
 
@@ -295,6 +297,9 @@ fn from_dynamic_to_value(data: &Dynamic) -> Result<AgentValue> {
 
 static CH_STAR: &str = "*";
 static CH_DATA: &str = "data";
+static CH_FALSE: &str = "false";
+static CH_TRUE: &str = "true";
+
 static CONFIG_EXPR: &str = "expr";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
@@ -325,7 +330,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_title("Rhai Filter")
         .with_category("Core/Script")
         .with_inputs(vec![CH_STAR])
-        .with_outputs(vec![CH_STAR])
+        .with_outputs(vec![CH_TRUE, CH_FALSE])
         .with_default_config(vec![(
             CONFIG_EXPR.into(),
             AgentConfigEntry::new(AgentValue::new_string(""), "text"),
