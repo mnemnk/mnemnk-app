@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.3](https://github.com/mnemnk/mnemnk-app/compare/v0.18.2...v0.18.3) (2025-05-12)
+
+
+### Features
+
+* 🎸 filter agents output to true or false channels ([#370](https://github.com/mnemnk/mnemnk-app/issues/370)) ([af442ad](https://github.com/mnemnk/mnemnk-app/commit/af442ad5d7b1a9c0e8d099c329893087481e696f))
+
 ## [0.18.2](https://github.com/mnemnk/mnemnk-app/compare/v0.18.1...v0.18.2) (2025-05-11)
 
 
