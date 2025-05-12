@@ -9,12 +9,13 @@ use crate::mnemnk::agent::{
     AgentDefinitions, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
-// Truthy Pass agent
-struct TruthyPassAgent {
+/// `BooleanFilterAgent` filters data based on a boolean condition.
+/// It checks if the data is truthy or falsy.
+struct BooleanFilterAgent {
     data: AsAgentData,
 }
 
-impl AsAgent for TruthyPassAgent {
+impl AsAgent for BooleanFilterAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -36,8 +37,9 @@ impl AsAgent for TruthyPassAgent {
 
     fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         if is_truthy(&data) {
-            let ch = ctx.ch().to_string();
-            self.try_output(ctx, ch, data)?;
+            self.try_output(ctx, CH_TRUE, data)?;
+        } else {
+            self.try_output(ctx, CH_FALSE, data)?;
         }
         Ok(())
     }
@@ -55,47 +57,14 @@ pub fn is_truthy(data: &AgentData) -> bool {
     }
 }
 
-// Falsy Pass agent
-struct FalsyPassAgent {
-    data: AsAgentData,
-}
-
-impl AsAgent for FalsyPassAgent {
-    fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData::new(app, id, def_name, config),
-        })
-    }
-
-    fn data(&self) -> &AsAgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AsAgentData {
-        &mut self.data
-    }
-
-    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
-        if !is_truthy(&data) {
-            let ch = ctx.ch().to_string();
-            self.try_output(ctx, ch, data)?;
-        }
-        Ok(())
-    }
-}
-
-// Pass or Block Regex List
-struct PassOrBlockRegexListAgent {
+/// `RegexListFilterAgent` filters data based on a list of regular expressions.
+/// It checks if a specified field in the data matches any of the regexes in the list.
+struct RegexListFilterAgent {
     data: AsAgentData,
     regex_set: Option<RegexSet>,
 }
 
-impl PassOrBlockRegexListAgent {
+impl RegexListFilterAgent {
     fn parse_regex_list(regex_list: &str) -> Option<RegexSet> {
         let regex_list: Vec<String> = regex_list
             .split_terminator('\n')
@@ -136,7 +105,7 @@ impl PassOrBlockRegexListAgent {
     }
 }
 
-impl AsAgent for PassOrBlockRegexListAgent {
+impl AsAgent for RegexListFilterAgent {
     fn new(
         app: AppHandle,
         id: String,
@@ -178,20 +147,12 @@ impl AsAgent for PassOrBlockRegexListAgent {
             bail!("field is not set");
         }
 
-        if self.def_name() == "$pass_regex_list" {
-            if self.is_match(&data, &field) {
-                // value matches the regex
-                let ch = ctx.ch().to_string();
-                self.try_output(ctx, ch, data)
-                    .context("Failed to output result")?;
-            }
-        } else if self.def_name() == "$block_regex_list" {
-            if !self.is_match(&data, &field) {
-                // value does not match the regex
-                let ch = ctx.ch().to_string();
-                self.try_output(ctx, ch, data)
-                    .context("Failed to output result")?;
-            }
+        if self.is_match(&data, &field) {
+            self.try_output(ctx, CH_TRUE, data)
+                .context("Failed to output result")?;
+        } else {
+            self.try_output(ctx, CH_FALSE, data)
+                .context("Failed to output result")?;
         }
 
         Ok(())
@@ -200,70 +161,38 @@ impl AsAgent for PassOrBlockRegexListAgent {
 
 static CATEGORY: &str = "Core/Filter";
 
+static CH_DATA: &str = "data";
+static CH_FALSE: &str = "false";
+static CH_TRUE: &str = "true";
+
 static CONFIG_FIELD: &str = "field";
 static CONFIG_REGEX_LIST: &str = "regex_list";
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     defs.insert(
-        "$truthy_pass".into(),
+        "$boolean_filter".into(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$truthy_pass",
-            Some(new_boxed::<TruthyPassAgent>),
+            "$boolean_filter",
+            Some(new_boxed::<BooleanFilterAgent>),
         )
-        .with_title("Truthy Pass")
+        .with_title("Boolean Filter")
         .with_category(CATEGORY)
         .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"]),
+        .with_outputs(vec![CH_TRUE, CH_FALSE]),
     );
 
     defs.insert(
-        "$falsy_pass".into(),
+        "$regex_list_filter".into(),
         AgentDefinition::new(
             AGENT_KIND_BUILTIN,
-            "$falsy_pass",
-            Some(new_boxed::<FalsyPassAgent>),
+            "$regex_list_filter",
+            Some(new_boxed::<RegexListFilterAgent>),
         )
-        .with_title("Falsy Pass")
+        .with_title("Regex List Filter")
         .with_category(CATEGORY)
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"]),
-    );
-
-    defs.insert(
-        "$pass_regex_list".into(),
-        AgentDefinition::new(
-            AGENT_KIND_BUILTIN,
-            "$pass_regex_list",
-            Some(new_boxed::<PassOrBlockRegexListAgent>),
-        )
-        .with_title("Pass Regex List")
-        .with_category(CATEGORY)
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"])
-        .with_default_config(vec![
-            (
-                CONFIG_FIELD.into(),
-                AgentConfigEntry::new(AgentValue::new_string(""), "string").with_title("Field"),
-            ),
-            (
-                CONFIG_REGEX_LIST.into(),
-                AgentConfigEntry::new(AgentValue::new_string(""), "text").with_title("regex list"),
-            ),
-        ]),
-    );
-
-    defs.insert(
-        "$block_regex_list".into(),
-        AgentDefinition::new(
-            AGENT_KIND_BUILTIN,
-            "$block_regex_list",
-            Some(new_boxed::<PassOrBlockRegexListAgent>),
-        )
-        .with_title("Block Regex List")
-        .with_category(CATEGORY)
-        .with_inputs(vec!["*"])
-        .with_outputs(vec!["*"])
+        .with_inputs(vec![CH_DATA])
+        .with_outputs(vec![CH_TRUE, CH_FALSE])
         .with_default_config(vec![
             (
                 CONFIG_FIELD.into(),
