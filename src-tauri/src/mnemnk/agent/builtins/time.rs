@@ -186,6 +186,58 @@ impl AsAgent for IntervalTimerAgent {
     }
 }
 
+// OnStart
+struct OnStartAgent {
+    data: AsAgentData,
+}
+
+impl AsAgent for OnStartAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        Ok(Self {
+            data: AsAgentData::new(app, id, def_name, config),
+        })
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn start(&mut self) -> Result<()> {
+        let config = self.config().context("Missing config")?;
+        let delay_ms = config.get_integer_or(CONFIG_DELAY, DELAY_MS_DEFAULT);
+
+        let agent_id = self.id().to_string();
+        let app_handle = self.app().clone();
+
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
+
+            let env = app_handle.state::<crate::mnemnk::agent::AgentEnv>();
+            if let Err(e) = env
+                .send_agent_out(
+                    agent_id,
+                    AgentContext::new_with_ch(CH_UNIT),
+                    AgentData::new_unit(),
+                )
+                .await
+            {
+                log::error!("Failed to send delayed output: {}", e);
+            }
+        });
+
+        Ok(())
+    }
+}
+
 // Throttle agent
 struct ThrottleTimeAgent {
     data: AsAgentData,
@@ -372,6 +424,24 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             CONFIG_INTERVAL.into(),
             AgentConfigEntry::new(AgentValue::new_string(INTERVAL_DEFAULT), "string")
                 .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
+        )]),
+    );
+
+    // OnStart
+    defs.insert(
+        "$on_start".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$on_start",
+            Some(new_boxed::<OnStartAgent>),
+        )
+        .with_title("On Start")
+        .with_category(CATEGORY)
+        .with_outputs(vec![CH_UNIT])
+        .with_default_config(vec![(
+            CONFIG_DELAY.into(),
+            AgentConfigEntry::new(AgentValue::new_integer(DELAY_MS_DEFAULT), "integer")
+                .with_title("delay (ms)"),
         )]),
     );
 
