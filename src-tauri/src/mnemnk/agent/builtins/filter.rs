@@ -9,7 +9,8 @@ use crate::mnemnk::agent::{
     AgentDefinitions, AgentOutput, AgentValue, AsAgent, AsAgentData,
 };
 
-// Boolean Filter agent
+/// `BooleanFilterAgent` filters data based on a boolean condition.
+/// It checks if the data is truthy or falsy.
 struct BooleanFilterAgent {
     data: AsAgentData,
 }
@@ -56,7 +57,8 @@ pub fn is_truthy(data: &AgentData) -> bool {
     }
 }
 
-// Regex List Filter agent
+/// `RegexListFilterAgent` filters data based on a list of regular expressions.
+/// It checks if a specified field in the data matches any of the regexes in the list.
 struct RegexListFilterAgent {
     data: AsAgentData,
     regex_set: Option<RegexSet>,
