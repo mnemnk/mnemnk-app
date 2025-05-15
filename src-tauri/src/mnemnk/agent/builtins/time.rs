@@ -17,7 +17,7 @@ use crate::mnemnk::agent::{
 // Delay Agent
 struct DelayAgent {
     data: AsAgentData,
-    num_waiting_tasks: Arc<Mutex<i64>>,
+    num_waiting_data: Arc<Mutex<i64>>,
 }
 
 impl AsAgent for DelayAgent {
@@ -29,7 +29,7 @@ impl AsAgent for DelayAgent {
     ) -> Result<Self> {
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
-            num_waiting_tasks: Arc::new(Mutex::new(0)),
+            num_waiting_data: Arc::new(Mutex::new(0)),
         })
     }
 
@@ -44,22 +44,22 @@ impl AsAgent for DelayAgent {
     fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let delay_ms = config.get_integer_or(CONFIG_DELAY, DELAY_MS_DEFAULT);
-        let max_tasks = config.get_integer_or(CONFIG_MAX_TASKS, MAX_TASKS_DEFAULT);
+        let max_data = config.get_integer_or(CONFIG_MAX_DATA, MAX_DATA_DEFAULT);
 
         let agent_id = self.id().to_string();
         let app_handle = self.app().clone();
 
-        // To avoid generating too many tasks.
+        // To avoid generating too many timers
         {
-            let num_waiting_tasks = self.num_waiting_tasks.clone();
-            let mut num_waiting_tasks = num_waiting_tasks.lock().unwrap();
-            if *num_waiting_tasks >= max_tasks {
+            let num_waiting_data = self.num_waiting_data.clone();
+            let mut num_waiting_data = num_waiting_data.lock().unwrap();
+            if *num_waiting_data >= max_data {
                 return Ok(());
             }
-            *num_waiting_tasks += 1;
+            *num_waiting_data += 1;
         }
 
-        let num_waiting_tasks = self.num_waiting_tasks.clone();
+        let num_waiting_data = self.num_waiting_data.clone();
         tauri::async_runtime::spawn(async move {
             tokio::time::sleep(Duration::from_millis(delay_ms as u64)).await;
 
@@ -68,8 +68,8 @@ impl AsAgent for DelayAgent {
                 log::error!("Failed to send delayed output: {}", e);
             }
 
-            let mut num_waiting_tasks = num_waiting_tasks.lock().unwrap();
-            *num_waiting_tasks -= 1;
+            let mut num_waiting_data = num_waiting_data.lock().unwrap();
+            *num_waiting_data -= 1;
         });
 
         Ok(())
@@ -114,7 +114,7 @@ impl IntervalTimerAgent {
             }
         });
 
-        // Store the task handle
+        // Store the timer handle
         if let Ok(mut timer_handle) = self.timer_handle.lock() {
             *timer_handle = Some(handle);
         }
@@ -123,7 +123,7 @@ impl IntervalTimerAgent {
     }
 
     fn stop_timer(&mut self) -> Result<()> {
-        // Cancel the timer task
+        // Cancel the timer
         if let Ok(mut timer_handle) = self.timer_handle.lock() {
             if let Some(handle) = timer_handle.take() {
                 handle.abort();
@@ -243,6 +243,8 @@ struct ThrottleTimeAgent {
     data: AsAgentData,
     timer_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     time_ms: u64,
+    max_data: i64,
+    waiting_data: Arc<Mutex<Vec<(AgentContext, AgentData)>>>,
 }
 
 impl ThrottleTimeAgent {
@@ -250,15 +252,42 @@ impl ThrottleTimeAgent {
         let timer_handle = self.timer_handle.clone();
         let time_ms = self.time_ms;
 
-        let handle = tauri::async_runtime::spawn(async move {
-            // Sleep for the configured interval
-            tokio::time::sleep(tokio::time::Duration::from_millis(time_ms)).await;
+        let waiting_data = self.waiting_data.clone();
+        let app = self.app().clone();
+        let agent_id = self.id().to_string();
 
-            // reset the timer handle
-            timer_handle.lock().unwrap().take();
+        let handle = tauri::async_runtime::spawn(async move {
+            loop {
+                // Sleep for the configured interval
+                tokio::time::sleep(tokio::time::Duration::from_millis(time_ms)).await;
+
+                // Check if we've been stopped
+                let mut handle = timer_handle.lock().unwrap();
+                if handle.is_none() {
+                    break;
+                }
+
+                // process the waiting data
+                let mut wd = waiting_data.lock().unwrap();
+                if wd.len() > 0 {
+                    // If there are data waiting, output the first one
+                    let env = app.state::<AgentEnv>();
+                    let (ctx, data) = wd.remove(0);
+                    env.try_send_agent_out(agent_id.clone(), ctx, data)
+                        .unwrap_or_else(|e| {
+                            log::error!("Failed to send delayed output: {}", e);
+                        });
+                }
+
+                // If there are no data waiting, we stop the timer
+                if wd.len() == 0 {
+                    handle.take();
+                    break;
+                }
+            }
         });
 
-        // Store the task handle
+        // Store the timer handle
         if let Ok(mut timer_handle) = self.timer_handle.lock() {
             *timer_handle = Some(handle);
         }
@@ -267,7 +296,7 @@ impl ThrottleTimeAgent {
     }
 
     fn stop_timer(&mut self) -> Result<()> {
-        // Cancel the timer task
+        // Cancel the timer
         if let Ok(mut timer_handle) = self.timer_handle.lock() {
             if let Some(handle) = timer_handle.take() {
                 handle.abort();
@@ -290,10 +319,17 @@ impl AsAgent for ThrottleTimeAgent {
             .unwrap_or_else(|| TIME_DEFAULT.to_string());
         let time_ms = parse_duration_to_ms(&time)?;
 
+        let max_data = config
+            .as_ref()
+            .and_then(|c| c.get_integer(CONFIG_MAX_DATA))
+            .unwrap_or(0);
+
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
             timer_handle: Default::default(),
             time_ms,
+            max_data,
+            waiting_data: Arc::new(Mutex::new(vec![])),
         })
     }
 
@@ -317,12 +353,37 @@ impl AsAgent for ThrottleTimeAgent {
                 self.time_ms = new_time;
             }
         }
+        // Check if max_data has changed
+        if let Some(max_data) = config.get_integer(CONFIG_MAX_DATA) {
+            if self.max_data != max_data {
+                let mut wd = self.waiting_data.lock().unwrap();
+                let wd_len = wd.len();
+                if max_data >= 0 && wd_len > (max_data as usize) {
+                    // If we have reached the max data to keep, we drop the oldest one
+                    wd.drain(0..(wd_len - (max_data as usize)));
+                }
+                self.max_data = max_data;
+            }
+        }
         Ok(())
     }
 
     fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         if self.timer_handle.lock().unwrap().is_some() {
-            // If the timer is running, we ignore the input
+            // If the timer is running, we just add the data to the waiting list
+            let mut wd = self.waiting_data.lock().unwrap();
+
+            // If max_data is 0, we don't need to keep any data
+            if self.max_data == 0 {
+                return Ok(());
+            }
+
+            wd.push((ctx, data));
+            if self.max_data > 0 && wd.len() > self.max_data as usize {
+                // If we have reached the max data to keep, we drop the oldest one
+                wd.remove(0);
+            }
+
             return Ok(());
         }
 
@@ -375,12 +436,12 @@ static CATEGORY: &str = "Core/Time";
 static CH_UNIT: &str = "unit";
 
 static CONFIG_DELAY: &str = "delay";
-static CONFIG_MAX_TASKS: &str = "max_tasks";
+static CONFIG_MAX_DATA: &str = "max_data";
 static CONFIG_INTERVAL: &str = "interval";
 static CONFIG_TIME: &str = "time";
 
 const DELAY_MS_DEFAULT: i64 = 1000; // 1 second in milliseconds
-const MAX_TASKS_DEFAULT: i64 = 10;
+const MAX_DATA_DEFAULT: i64 = 10;
 static INTERVAL_DEFAULT: &str = "10s";
 static TIME_DEFAULT: &str = "1s";
 
@@ -401,9 +462,9 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                         .with_title("delay (ms)"),
                 ),
                 (
-                    CONFIG_MAX_TASKS.into(),
-                    AgentConfigEntry::new(AgentValue::new_integer(MAX_TASKS_DEFAULT), "integer")
-                        .with_title("max tasks"),
+                    CONFIG_MAX_DATA.into(),
+                    AgentConfigEntry::new(AgentValue::new_integer(MAX_DATA_DEFAULT), "integer")
+                        .with_title("max #data"),
                 ),
             ]),
     );
@@ -457,10 +518,18 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_category(CATEGORY)
         .with_inputs(vec!["*"])
         .with_outputs(vec!["*"])
-        .with_default_config(vec![(
-            CONFIG_TIME.into(),
-            AgentConfigEntry::new(AgentValue::new_string(TIME_DEFAULT), "string")
-                .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
-        )]),
+        .with_default_config(vec![
+            (
+                CONFIG_TIME.into(),
+                AgentConfigEntry::new(AgentValue::new_string(TIME_DEFAULT), "string")
+                    .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
+            ),
+            (
+                CONFIG_MAX_DATA.into(),
+                AgentConfigEntry::new(AgentValue::new_integer(0), "integer")
+                    .with_title("max #data")
+                    .with_description("0: no data, -1: all data"),
+            ),
+        ]),
     );
 }
