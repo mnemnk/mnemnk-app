@@ -55,7 +55,6 @@ mod implementation {
         ch: String,
         kind: String,
         value: Value,
-        metadata: Option<Value>,
     }
 
     impl ApiAgent {
