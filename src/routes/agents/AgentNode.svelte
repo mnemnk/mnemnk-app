@@ -30,6 +30,7 @@
   import type {
     AgentFlowNodeConfig,
     AgentFlowNodeDisplay,
+    SAgentConfigEntry,
     SAgentDisplayConfigEntry,
   } from "@/lib/types";
 
@@ -246,112 +247,112 @@
   {/if}
 {/snippet}
 
+{#snippet inputItem(key: string, default_config: SAgentConfigEntry)}
+  {#if default_config?.hidden !== true}
+    {@const config = data.config[key]}
+    {@const ty = default_config?.type}
+    <h3 class="flex-none">{default_config?.title || key}</h3>
+    {#if default_config?.description}
+      <p class="flex-none text-xs text-gray-500">{default_config?.description}</p>
+    {/if}
+    {#if ty === "unit"}
+      <Button color="alternative" class="flex-none" onclick={() => updateConfig(key, {})} />
+    {:else if ty === "boolean"}
+      <Toggle
+        class="flex-none"
+        checked={config}
+        onchange={() => updateConfig(key, !data.config[key])}
+      />
+    {:else if ty === "integer"}
+      <NumberInput
+        class="nodrag flex-none"
+        value={config}
+        onkeydown={(evt) => {
+          if (evt.key === "Enter") {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+        onchange={(evt) => {
+          if (evt.currentTarget.value !== data.config[key]) {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+      />
+    {:else if ty === "number"}
+      <Input
+        class="nodrag flex-none"
+        type="text"
+        value={config}
+        onkeydown={(evt) => {
+          if (evt.key === "Enter") {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+        onchange={(evt) => {
+          if (evt.currentTarget.value !== data.config[key]) {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+      />
+    {:else if ty === "string"}
+      <Input
+        class="nodrag flex-none"
+        type="text"
+        value={config}
+        onkeydown={(evt) => {
+          if (evt.key === "Enter") {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+        onchange={(evt) => {
+          if (evt.currentTarget.value !== data.config[key]) {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+      />
+    {:else if ty === "text"}
+      <Textarea
+        class="nodrag nowheel flex-1"
+        value={config}
+        onkeydown={(evt) => {
+          if (evt.ctrlKey && evt.key === "Enter") {
+            evt.preventDefault();
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+        onchange={(evt) => {
+          if (evt.currentTarget.value !== data.config[key]) {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+      />
+    {:else if ty === "object"}
+      <Textarea
+        class="nodrag nowheel flex-1"
+        value={config}
+        onkeydown={(evt) => {
+          if (evt.ctrlKey && evt.key === "Enter") {
+            evt.preventDefault();
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+        onchange={(evt) => {
+          if (evt.currentTarget.value !== data.config[key]) {
+            updateConfig(key, evt.currentTarget.value);
+          }
+        }}
+      />
+    {:else}
+      <Textarea class="nodrag nowheel flex-1" value={JSON.stringify(config, null, 2)} disabled />
+    {/if}
+  {/if}
+{/snippet}
+
 {#snippet contents()}
   {#if agentDefaultConfig}
     <form class="grow flex flex-col gap-1 pl-4 pr-4 pb-4">
       {#each agentDefaultConfig as [key, default_config]}
-        {#if default_config?.hidden !== true}
-          {@const config = data.config[key]}
-          {@const ty = default_config?.type}
-          <h3 class="flex-none">{default_config?.title || key}</h3>
-          {#if default_config?.description}
-            <p class="flex-none text-xs text-gray-500">{default_config?.description}</p>
-          {/if}
-          {#if ty === "unit"}
-            <Button color="alternative" class="flex-none" onclick={() => updateConfig(key, {})} />
-          {:else if ty === "boolean"}
-            <Toggle
-              class="flex-none"
-              checked={config}
-              onchange={() => updateConfig(key, !data.config[key])}
-            />
-          {:else if ty === "integer"}
-            <NumberInput
-              class="nodrag flex-none"
-              value={config}
-              onkeydown={(evt) => {
-                if (evt.key === "Enter") {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-              onchange={(evt) => {
-                if (evt.currentTarget.value !== data.config[key]) {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-            />
-          {:else if ty === "number"}
-            <Input
-              class="nodrag flex-none"
-              type="text"
-              value={config}
-              onkeydown={(evt) => {
-                if (evt.key === "Enter") {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-              onchange={(evt) => {
-                if (evt.currentTarget.value !== data.config[key]) {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-            />
-          {:else if ty === "string"}
-            <Input
-              class="nodrag flex-none"
-              type="text"
-              value={config}
-              onkeydown={(evt) => {
-                if (evt.key === "Enter") {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-              onchange={(evt) => {
-                if (evt.currentTarget.value !== data.config[key]) {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-            />
-          {:else if ty === "text"}
-            <Textarea
-              class="nodrag nowheel flex-1"
-              value={config}
-              onkeydown={(evt) => {
-                if (evt.ctrlKey && evt.key === "Enter") {
-                  evt.preventDefault();
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-              onchange={(evt) => {
-                if (evt.currentTarget.value !== data.config[key]) {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-            />
-          {:else if ty === "object"}
-            <Textarea
-              class="nodrag nowheel flex-1"
-              value={config}
-              onkeydown={(evt) => {
-                if (evt.ctrlKey && evt.key === "Enter") {
-                  evt.preventDefault();
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-              onchange={(evt) => {
-                if (evt.currentTarget.value !== data.config[key]) {
-                  updateConfig(key, evt.currentTarget.value);
-                }
-              }}
-            />
-          {:else}
-            <Textarea
-              class="nodrag nowheel flex-1"
-              value={JSON.stringify(config, null, 2)}
-              disabled
-            />
-          {/if}
-        {/if}
+        {@render inputItem(key, default_config)}
       {/each}
     </form>
   {/if}
