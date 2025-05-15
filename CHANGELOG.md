@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.4](https://github.com/mnemnk/mnemnk-app/compare/v0.18.3...v0.18.4) (2025-05-15)
+
+
+### Features
+
+* 🎸 On Start agent ([#371](https://github.com/mnemnk/mnemnk-app/issues/371)) ([1fe1545](https://github.com/mnemnk/mnemnk-app/commit/1fe1545c133e79c6f143dbf897adc6d211d2e0b0))
+* 🎸 waiting list of Throttle Timer agent ([#372](https://github.com/mnemnk/mnemnk-app/issues/372)) ([fca2dff](https://github.com/mnemnk/mnemnk-app/commit/fca2dffae312181ef8e2498840f40adef5c52edd))
+
+
+### Bug Fixes
+
+* 🐛 remove metadata out from API agent ([#373](https://github.com/mnemnk/mnemnk-app/issues/373)) ([3d9ff20](https://github.com/mnemnk/mnemnk-app/commit/3d9ff205fb650c790c9e39cec96afc235fb5bafc))
+
 ## [0.18.3](https://github.com/mnemnk/mnemnk-app/compare/v0.18.2...v0.18.3) (2025-05-12)
 
 
