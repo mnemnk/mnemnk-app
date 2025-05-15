@@ -44,7 +44,7 @@ impl AsAgent for DelayAgent {
     fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
         let config = self.config().context("Missing config")?;
         let delay_ms = config.get_integer_or(CONFIG_DELAY, DELAY_MS_DEFAULT);
-        let max_data = config.get_integer_or(CONFIG_MAX_DATA, MAX_DATA_DEFAULT);
+        let max_num_data = config.get_integer_or(CONFIG_MAX_NUM_DATA, MAX_NUM_DATA_DEFAULT);
 
         let agent_id = self.id().to_string();
         let app_handle = self.app().clone();
@@ -53,7 +53,7 @@ impl AsAgent for DelayAgent {
         {
             let num_waiting_data = self.num_waiting_data.clone();
             let mut num_waiting_data = num_waiting_data.lock().unwrap();
-            if *num_waiting_data >= max_data {
+            if *num_waiting_data >= max_num_data {
                 return Ok(());
             }
             *num_waiting_data += 1;
@@ -243,7 +243,7 @@ struct ThrottleTimeAgent {
     data: AsAgentData,
     timer_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
     time_ms: u64,
-    max_data: i64,
+    max_num_data: i64,
     waiting_data: Arc<Mutex<Vec<(AgentContext, AgentData)>>>,
 }
 
@@ -319,16 +319,16 @@ impl AsAgent for ThrottleTimeAgent {
             .unwrap_or_else(|| TIME_DEFAULT.to_string());
         let time_ms = parse_duration_to_ms(&time)?;
 
-        let max_data = config
+        let max_num_data = config
             .as_ref()
-            .and_then(|c| c.get_integer(CONFIG_MAX_DATA))
+            .and_then(|c| c.get_integer(CONFIG_MAX_NUM_DATA))
             .unwrap_or(0);
 
         Ok(Self {
             data: AsAgentData::new(app, id, def_name, config),
             timer_handle: Default::default(),
             time_ms,
-            max_data,
+            max_num_data,
             waiting_data: Arc::new(Mutex::new(vec![])),
         })
     }
@@ -353,16 +353,16 @@ impl AsAgent for ThrottleTimeAgent {
                 self.time_ms = new_time;
             }
         }
-        // Check if max_data has changed
-        if let Some(max_data) = config.get_integer(CONFIG_MAX_DATA) {
-            if self.max_data != max_data {
+        // Check if max_num_data has changed
+        if let Some(max_num_data) = config.get_integer(CONFIG_MAX_NUM_DATA) {
+            if self.max_num_data != max_num_data {
                 let mut wd = self.waiting_data.lock().unwrap();
                 let wd_len = wd.len();
-                if max_data >= 0 && wd_len > (max_data as usize) {
+                if max_num_data >= 0 && wd_len > (max_num_data as usize) {
                     // If we have reached the max data to keep, we drop the oldest one
-                    wd.drain(0..(wd_len - (max_data as usize)));
+                    wd.drain(0..(wd_len - (max_num_data as usize)));
                 }
-                self.max_data = max_data;
+                self.max_num_data = max_num_data;
             }
         }
         Ok(())
@@ -373,13 +373,13 @@ impl AsAgent for ThrottleTimeAgent {
             // If the timer is running, we just add the data to the waiting list
             let mut wd = self.waiting_data.lock().unwrap();
 
-            // If max_data is 0, we don't need to keep any data
-            if self.max_data == 0 {
+            // If max_num_data is 0, we don't need to keep any data
+            if self.max_num_data == 0 {
                 return Ok(());
             }
 
             wd.push((ctx, data));
-            if self.max_data > 0 && wd.len() > self.max_data as usize {
+            if self.max_num_data > 0 && wd.len() > self.max_num_data as usize {
                 // If we have reached the max data to keep, we drop the oldest one
                 wd.remove(0);
             }
@@ -436,12 +436,12 @@ static CATEGORY: &str = "Core/Time";
 static CH_UNIT: &str = "unit";
 
 static CONFIG_DELAY: &str = "delay";
-static CONFIG_MAX_DATA: &str = "max_data";
+static CONFIG_MAX_NUM_DATA: &str = "max_num_data";
 static CONFIG_INTERVAL: &str = "interval";
 static CONFIG_TIME: &str = "time";
 
 const DELAY_MS_DEFAULT: i64 = 1000; // 1 second in milliseconds
-const MAX_DATA_DEFAULT: i64 = 10;
+const MAX_NUM_DATA_DEFAULT: i64 = 10;
 static INTERVAL_DEFAULT: &str = "10s";
 static TIME_DEFAULT: &str = "1s";
 
@@ -462,9 +462,9 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                         .with_title("delay (ms)"),
                 ),
                 (
-                    CONFIG_MAX_DATA.into(),
-                    AgentConfigEntry::new(AgentValue::new_integer(MAX_DATA_DEFAULT), "integer")
-                        .with_title("max #data"),
+                    CONFIG_MAX_NUM_DATA.into(),
+                    AgentConfigEntry::new(AgentValue::new_integer(MAX_NUM_DATA_DEFAULT), "integer")
+                        .with_title("max num data"),
                 ),
             ]),
     );
@@ -525,9 +525,9 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
                     .with_description("(ex. 10s, 5m, 100ms, 1h, 1d)"),
             ),
             (
-                CONFIG_MAX_DATA.into(),
+                CONFIG_MAX_NUM_DATA.into(),
                 AgentConfigEntry::new(AgentValue::new_integer(0), "integer")
-                    .with_title("max #data")
+                    .with_title("max num data")
                     .with_description("0: no data, -1: all data"),
             ),
         ]),
