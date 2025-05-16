@@ -1,8 +1,11 @@
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::vec;
 
 use anyhow::{bail, Context as _, Result};
+use chrono::{DateTime, Local, Utc};
+use cron::Schedule;
 use regex::Regex;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Manager};
@@ -238,6 +241,170 @@ impl AsAgent for OnStartAgent {
     }
 }
 
+// Schedule Timer Agent
+struct ScheduleTimerAgent {
+    data: AsAgentData,
+    cron_schedule: Option<Schedule>,
+    timer_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
+}
+
+impl ScheduleTimerAgent {
+    fn start_timer(&mut self) -> Result<()> {
+        let Some(schedule) = &self.cron_schedule else {
+            bail!("No schedule set");
+        };
+
+        let app_handle = self.app().clone();
+        let agent_id = self.id().to_string();
+        let timer_handle = self.timer_handle.clone();
+        let schedule = schedule.clone();
+
+        let handle = tauri::async_runtime::spawn(async move {
+            loop {
+                // Calculate the next time this schedule should run
+                let now: DateTime<Utc> = Utc::now();
+                let next = match schedule.upcoming(Utc).next() {
+                    Some(next_time) => next_time,
+                    None => {
+                        log::error!("No upcoming schedule times found");
+                        break;
+                    }
+                };
+
+                // Calculate the duration until the next scheduled time
+                let duration = match (next - now).to_std() {
+                    Ok(duration) => duration,
+                    Err(e) => {
+                        log::error!("Failed to calculate duration until next schedule: {}", e);
+                        // If we can't calculate the duration, sleep for a short time and try again
+                        tokio::time::sleep(Duration::from_secs(60)).await;
+                        continue;
+                    }
+                };
+
+                let next_local = next.with_timezone(&Local);
+                log::debug!(
+                    "Scheduling timer for '{}' to fire at {} (in {:?})",
+                    agent_id,
+                    next_local.format("%Y-%m-%d %H:%M:%S %z"),
+                    duration
+                );
+
+                // Sleep until the next scheduled time
+                tokio::time::sleep(duration).await;
+
+                // Check if we've been stopped
+                if let Ok(handle) = timer_handle.lock() {
+                    if handle.is_none() {
+                        break;
+                    }
+                }
+
+                // Get the current local timestamp (in seconds)
+                let current_local_time = Local::now().timestamp();
+
+                // Output the timestamp as an integer
+                let env = app_handle.state::<AgentEnv>();
+                if let Err(e) = env.try_send_agent_out(
+                    agent_id.clone(),
+                    AgentContext::new_with_ch(CH_TIME),
+                    AgentData::new_integer(current_local_time),
+                ) {
+                    log::error!("Failed to send schedule timer output: {}", e);
+                }
+            }
+        });
+
+        // Store the timer handle
+        if let Ok(mut timer_handle) = self.timer_handle.lock() {
+            *timer_handle = Some(handle);
+        }
+
+        Ok(())
+    }
+
+    fn stop_timer(&mut self) -> Result<()> {
+        // Cancel the timer
+        if let Ok(mut timer_handle) = self.timer_handle.lock() {
+            if let Some(handle) = timer_handle.take() {
+                handle.abort();
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_schedule(&mut self, schedule_str: &str) -> Result<()> {
+        if schedule_str.trim().is_empty() {
+            self.cron_schedule = None;
+            return Ok(());
+        }
+
+        let schedule = Schedule::from_str(schedule_str)?;
+        self.cron_schedule = Some(schedule);
+        Ok(())
+    }
+}
+
+impl AsAgent for ScheduleTimerAgent {
+    fn new(
+        app: AppHandle,
+        id: String,
+        def_name: String,
+        config: Option<AgentConfig>,
+    ) -> Result<Self> {
+        let mut agent = Self {
+            data: AsAgentData::new(app, id, def_name, config.clone()),
+            cron_schedule: None,
+            timer_handle: Default::default(),
+        };
+
+        if let Some(config) = config {
+            if let Some(schedule_str) = config.get_string(CONFIG_SCHEDULE) {
+                if !schedule_str.is_empty() {
+                    agent.parse_schedule(&schedule_str)?;
+                }
+            }
+        }
+
+        Ok(agent)
+    }
+
+    fn data(&self) -> &AsAgentData {
+        &self.data
+    }
+
+    fn mut_data(&mut self) -> &mut AsAgentData {
+        &mut self.data
+    }
+
+    fn start(&mut self) -> Result<()> {
+        if self.cron_schedule.is_some() {
+            self.start_timer()?;
+        }
+        Ok(())
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        self.stop_timer()
+    }
+
+    fn set_config(&mut self, config: AgentConfig) -> Result<()> {
+        // Check if schedule has changed
+        if let Some(schedule_str) = config.get_string(CONFIG_SCHEDULE) {
+            self.parse_schedule(&schedule_str)?;
+
+            if *self.status() == AgentStatus::Start {
+                // Restart the timer with the new schedule
+                self.stop_timer()?;
+                if self.cron_schedule.is_some() {
+                    self.start_timer()?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 // Throttle agent
 struct ThrottleTimeAgent {
     data: AsAgentData,
@@ -433,11 +600,13 @@ fn parse_duration_to_ms(duration_str: &str) -> Result<u64> {
 
 static CATEGORY: &str = "Core/Time";
 
+static CH_TIME: &str = "time";
 static CH_UNIT: &str = "unit";
 
 static CONFIG_DELAY: &str = "delay";
 static CONFIG_MAX_NUM_DATA: &str = "max_num_data";
 static CONFIG_INTERVAL: &str = "interval";
+static CONFIG_SCHEDULE: &str = "schedule";
 static CONFIG_TIME: &str = "time";
 
 const DELAY_MS_DEFAULT: i64 = 1000; // 1 second in milliseconds
@@ -503,6 +672,24 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
             CONFIG_DELAY.into(),
             AgentConfigEntry::new(AgentValue::new_integer(DELAY_MS_DEFAULT), "integer")
                 .with_title("delay (ms)"),
+        )]),
+    );
+
+    // Schedule Timer Agent
+    defs.insert(
+        "$schedule_timer".into(),
+        AgentDefinition::new(
+            AGENT_KIND_BUILTIN,
+            "$schedule_timer",
+            Some(new_boxed::<ScheduleTimerAgent>),
+        )
+        .with_title("Schedule Timer")
+        .with_category(CATEGORY)
+        .with_outputs(vec![CH_TIME])
+        .with_default_config(vec![(
+            CONFIG_SCHEDULE.into(),
+            AgentConfigEntry::new(AgentValue::new_string("0 0 * * * *"), "string")
+                .with_description("sec min hour day month week year"),
         )]),
     );
 
