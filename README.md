@@ -52,7 +52,7 @@ Mnemnk is a personal lifelogging platform that records your activities and enhan
 
 ## Getting Started
 
-Follow the instructions on the [Getting Started](https://mnemnk.com/guide/getting-started) page to complete the installation.
+Follow the instructions on the [Installing Mnemnk](https://mnemnk.com/guide/intro/installation) page to complete the installation.
 
 <details>
   <summary><strong>Build from the repo</strong></summary>
