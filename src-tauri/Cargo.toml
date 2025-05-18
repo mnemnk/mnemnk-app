@@ -23,10 +23,12 @@ tonic-build = "0.12.3"
 anyhow = "1"
 base64 = "0.22.1"
 chrono = "0.4.38"
+cron = "0.15.0"
 ctrlc = "3.4.5"
 handlebars = "6.3.2"
-image = "0.25.5"
+image = "0.25.6"
 log = "0.4.25"
+photon-rs = "0.3.3"
 regex = "1"
 rhai = { version = "1.21.0", features = ["serde", "sync"] }
 serde = { version = "1", features = ["derive"] }
@@ -47,7 +49,6 @@ unicode-segmentation = "1.12.0"
 axum = { version = "0.8", optional = true }
 axum-auth = { version = "0.8", features = ["auth-bearer"], optional = true }
 tower-http = { version = "0.6", features = ["timeout"], optional = true }
-cron = "0.15.0"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-autostart = "2"

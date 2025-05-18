@@ -1,13 +1,14 @@
+use std::fs;
 use std::io::{BufRead, Write};
+use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};
 
 use anyhow::{bail, Context as _, Result};
-use base64::{self, Engine as _};
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
-use image::RgbaImage;
+use photon_rs::native::save_image;
+use photon_rs::PhotonImage;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{fs, io::Cursor, path::PathBuf};
 use surrealdb::{
     engine::local::{Db, RocksDb},
     sql::Datetime,
@@ -19,6 +20,7 @@ use tauri::{
 };
 use tokio::sync::{mpsc, oneshot};
 
+use super::agent::AgentValue;
 use super::{agent::AgentData, tokenize::tokenize_text};
 use crate::mnemnk::settings::{data_dir, CoreSettings};
 
@@ -837,7 +839,6 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
     if let Some(image) = map.get("image").cloned() {
         // remove image from the value. it's too big to store into the database.
         map.remove("image");
-        let image = image.as_str().context("wrong image type")?.to_string();
 
         if let Some(image_id) = map.get("image_id").cloned() {
             let image_id = image_id
@@ -848,7 +849,7 @@ pub fn create_event(app: &AppHandle, data: AgentData) -> Result<()> {
             let app = app.clone();
             let kind = kind.clone();
             tauri::async_runtime::spawn(async move {
-                save_image(&app, kind, image_id, image)
+                save_image_value(&app, kind, image_id, image)
                     .await
                     .unwrap_or_else(|e| {
                         log::error!("Failed to save image: {}", e);
@@ -914,16 +915,26 @@ async fn process_create_event(app: &AppHandle, event: Event) -> Result<()> {
 }
 
 // Image
-async fn save_image(
+async fn save_image_value(
     app: &AppHandle,
     kind: String,
     image_id: String,
-    image_str: String,
+    value: AgentValue,
 ) -> Result<()> {
     let image_dir = image_dir(app, &kind)?;
 
-    let base64_str = image_str.trim_start_matches("data:image/png;base64,");
-    let rgba_image = base64_to_rgba_image(base64_str)?;
+    let mut image: Option<PhotonImage> = None;
+    if value.is_string() {
+        let image_str = value
+            .as_str()
+            .context("image is not a string")?
+            .trim_start_matches("data:image/png;base64,");
+        image = Some(PhotonImage::new_from_base64(image_str));
+    } else if value.is_image() {
+        image = value.as_image().cloned();
+    }
+
+    let image = image.context("image is not a valid image")?;
 
     // TODO: check if the image_id is valid
     let ymd = &image_id[0..8];
@@ -933,9 +944,6 @@ async fn save_image(
     }
 
     let filename = &image_id[9..];
-    rgba_image
-        .save(ymd_dir.join(filename).with_extension("png"))
-        .context("Failed to save image")?;
 
     let settings = app.state::<Mutex<CoreSettings>>();
     let thumbnail_width;
@@ -945,19 +953,12 @@ async fn save_image(
         thumbnail_width = settings.thumbnail_width.clone();
         thumbnail_height = settings.thumbnail_height.clone();
     }
-    let thumbnail = make_thumbnail(&rgba_image, thumbnail_width, thumbnail_height);
-    thumbnail
-        .save(ymd_dir.join(filename).with_extension("t.png"))
-        .context("Failed to save thumbnail")?;
+    let thumbnail = make_thumbnail(&image, thumbnail_width, thumbnail_height);
+
+    save_image(image, ymd_dir.join(filename).with_extension("png"))?;
+    save_image(thumbnail, ymd_dir.join(filename).with_extension("t.png"))?;
 
     Ok(())
-}
-
-fn base64_to_rgba_image(base64_str: &str) -> Result<RgbaImage> {
-    let png_data = base64::engine::general_purpose::STANDARD.decode(base64_str)?;
-    let cursor = Cursor::new(png_data);
-    let dynamic_image = image::load_from_memory(&cursor.into_inner())?;
-    Ok(dynamic_image.to_rgba8())
 }
 
 fn image_dir(app: &AppHandle, kind: &str) -> Result<PathBuf> {
@@ -972,24 +973,18 @@ fn image_dir(app: &AppHandle, kind: &str) -> Result<PathBuf> {
     }
 }
 
-// fn load_image(app: &AppHandle, event: String, image_id: String) -> Result<RgbaImage> {
-//     let image_dir = image_dir(app, &event)?;
-//     // TODO: check if the image_id is valid
-//     let ymd = &image_id[0..8];
-//     let image_id = &image_id[9..];
-//     let image_path = image_dir.join(ymd).join(image_id).with_extension("png");
-
-//     let rgba_image = image::open(image_path)?.to_rgba8();
-
-//     Ok(rgba_image)
-// }
-
-fn make_thumbnail(image: &RgbaImage, width: Option<u32>, height: Option<u32>) -> RgbaImage {
+fn make_thumbnail(image: &PhotonImage, width: Option<u32>, height: Option<u32>) -> PhotonImage {
     let (width, height) = thumbnail_size(image, width, height);
-    image::imageops::thumbnail(image, width, height)
+
+    photon_rs::transform::resize(
+        image,
+        width,
+        height,
+        photon_rs::transform::SamplingFilter::Nearest,
+    )
 }
 
-fn thumbnail_size(image: &RgbaImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
+fn thumbnail_size(image: &PhotonImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
     static DEFAULT_THUMBNAIL_HEIGHT: u32 = 36;
 
     let mut height = height;
@@ -1000,16 +995,16 @@ fn thumbnail_size(image: &RgbaImage, width: Option<u32>, height: Option<u32>) ->
         height = Some(DEFAULT_THUMBNAIL_HEIGHT);
     }
     if let Some(height) = height {
-        let ratio = height as f32 / image.height() as f32;
-        let width = (image.width() as f32 * ratio) as u32;
+        let ratio = height as f32 / image.get_height() as f32;
+        let width = (image.get_width() as f32 * ratio) as u32;
         return (width, height);
     }
     if let Some(width) = width {
         if let Some(height) = height {
             return (width, height);
         }
-        let ratio = width as f32 / image.width() as f32;
-        let height = (image.height() as f32 * ratio) as u32;
+        let ratio = width as f32 / image.get_width() as f32;
+        let height = (image.get_height() as f32 * ratio) as u32;
         return (width, height);
     }
     // never reach here
