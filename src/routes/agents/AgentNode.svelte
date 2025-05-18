@@ -197,6 +197,8 @@
         evt.preventDefault();
       }}
     />
+  {:else if ty === "image"}
+    <img class="flex-1 text-wrap" src={value} alt="" />
   {:else if ty === "object"}
     <Textarea
       class="nodrag nowheel flex-1 text-wrap"
