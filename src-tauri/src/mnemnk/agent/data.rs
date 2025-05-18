@@ -293,7 +293,7 @@ impl AgentValue {
     }
 
     pub fn default_image() -> Self {
-        AgentValue::Image(Arc::new(PhotonImage::new(vec![0u8], 1, 1)))
+        AgentValue::Image(Arc::new(PhotonImage::new(vec![0u8, 0u8, 0u8, 0u8], 1, 1)))
     }
 
     pub fn default_array() -> Self {
