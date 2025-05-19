@@ -72,16 +72,12 @@ impl AsAgent for ImageCropAgent {
                 // Check if the bounding box is within the image bounds
                 let image_width = image.get_width();
                 let image_height = image.get_height();
-                if x > 0
-                    && x < image_width
-                    && y > 0
-                    && y < image_height
-                    && width > 0
+                if width > 0
                     && height > 0
-                    && x2 > 0
-                    && x2 < image_width
-                    && y2 > 0
-                    && y2 < image_height
+                    && x < image_width
+                    && y < image_height
+                    && x2 <= image_width
+                    && y2 <= image_height
                 {
                     // Crop the image using the bounding box
                     let new_image = photon_rs::transform::crop(image, x, y, x2, y2);
