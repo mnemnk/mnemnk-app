@@ -44,8 +44,9 @@ impl AsAgent for ImageCropAgent {
                 || data.get_i64("height").is_none()
             {
                 self.bounding = None;
+            } else {
+                self.bounding = Some(data);
             }
-            self.bounding = Some(data);
             return Ok(());
         }
 
