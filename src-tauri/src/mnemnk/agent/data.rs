@@ -201,6 +201,46 @@ impl AgentData {
     pub fn as_array(&self) -> Option<&Vec<AgentValue>> {
         self.value.as_array()
     }
+
+    #[allow(unused)]
+    pub fn get(&self, key: &str) -> Option<&AgentValue> {
+        self.value.get(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
+        self.value.get_bool(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_i64(&self, key: &str) -> Option<i64> {
+        self.value.get_i64(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_f64(&self, key: &str) -> Option<f64> {
+        self.value.get_f64(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_str(&self, key: &str) -> Option<&str> {
+        self.value.get_str(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_image(&self, key: &str) -> Option<&PhotonImage> {
+        self.value.get_image(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_object(&self, key: &str) -> Option<&AgentValueMap<String, AgentValue>> {
+        self.value.get_object(key)
+    }
+
+    #[allow(unused)]
+    pub fn get_array(&self, key: &str) -> Option<&Vec<AgentValue>> {
+        self.value.get_array(key)
+    }
 }
 
 impl<'de> Deserialize<'de> for AgentData {
@@ -597,6 +637,46 @@ impl AgentValue {
             AgentValue::Array(a) => Some(a),
             _ => None,
         }
+    }
+
+    #[allow(unused)]
+    pub fn get(&self, key: &str) -> Option<&AgentValue> {
+        self.as_object().and_then(|o| o.get(key))
+    }
+
+    #[allow(unused)]
+    pub fn get_bool(&self, key: &str) -> Option<bool> {
+        self.get(key).and_then(|v| v.as_bool())
+    }
+
+    #[allow(unused)]
+    pub fn get_i64(&self, key: &str) -> Option<i64> {
+        self.get(key).and_then(|v| v.as_i64())
+    }
+
+    #[allow(unused)]
+    pub fn get_f64(&self, key: &str) -> Option<f64> {
+        self.get(key).and_then(|v| v.as_f64())
+    }
+
+    #[allow(unused)]
+    pub fn get_str(&self, key: &str) -> Option<&str> {
+        self.get(key).and_then(|v| v.as_str())
+    }
+
+    #[allow(unused)]
+    pub fn get_image(&self, key: &str) -> Option<&PhotonImage> {
+        self.get(key).and_then(|v| v.as_image())
+    }
+
+    #[allow(unused)]
+    pub fn get_object(&self, key: &str) -> Option<&AgentValueMap<String, AgentValue>> {
+        self.get(key).and_then(|v| v.as_object())
+    }
+
+    #[allow(unused)]
+    pub fn get_array(&self, key: &str) -> Option<&Vec<AgentValue>> {
+        self.get(key).and_then(|v| v.as_array())
     }
 
     pub fn kind(&self) -> String {
