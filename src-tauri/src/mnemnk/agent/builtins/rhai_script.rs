@@ -176,6 +176,11 @@ fn from_kind_value_to_dynamic(kind: &str, value: &AgentValue) -> Result<Dynamic>
         "number" => value.as_f64().context("wrong number value")?.into(),
         "string" => value.as_str().context("wrong string value")?.into(),
         "text" => value.as_str().context("wrong text value")?.into(),
+        "image" => value
+            .as_image()
+            .context("wrong image value")?
+            .get_base64()
+            .into(),
         _ => {
             let obj = value.as_object().context("wrong object value")?;
             rhai::serde::to_dynamic(obj)?
