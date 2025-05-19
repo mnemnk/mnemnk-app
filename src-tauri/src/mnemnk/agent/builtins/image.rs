@@ -129,6 +129,10 @@ impl AsAgent for ImageScaleDownAgent {
                 .get_integer(CONFIG_MAX_HEIGHT)
                 .context("missing height")? as u32;
 
+            if config_width == 0 && config_height == 0 {
+                return Ok(());
+            }
+
             let image: Option<&PhotonImage> = if data.is_image() {
                 data.as_image()
             } else {
@@ -145,8 +149,16 @@ impl AsAgent for ImageScaleDownAgent {
                 return Ok(());
             }
 
-            let ratio_width = config_width as f32 / image_width as f32;
-            let ratio_height = config_height as f32 / image_height as f32;
+            let ratio_width = if config_width == 0 {
+                1.0
+            } else {
+                config_width as f32 / image_width as f32
+            };
+            let ratio_height = if config_height == 0 {
+                1.0
+            } else {
+                config_height as f32 / image_height as f32
+            };
             let aspect_ratio = if ratio_width < ratio_height {
                 ratio_width
             } else {
