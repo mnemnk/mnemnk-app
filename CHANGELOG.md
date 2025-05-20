@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.6](https://github.com/mnemnk/mnemnk-app/compare/v0.18.5...v0.18.6) (2025-05-20)
+
+
+### Features
+
+* 🎸 AgentValue::Image ([#379](https://github.com/mnemnk/mnemnk-app/issues/379)) ([680d2c7](https://github.com/mnemnk/mnemnk-app/commit/680d2c7bce3633ab34d02419d0f565c05ccdc80d))
+* 🎸 Image Crop agent ([#380](https://github.com/mnemnk/mnemnk-app/issues/380)) ([1abee0b](https://github.com/mnemnk/mnemnk-app/commit/1abee0b6141f31b11c6cace224321723914979a5))
+* 🎸 Image Scale Down agent ([#381](https://github.com/mnemnk/mnemnk-app/issues/381)) ([bd5e0d4](https://github.com/mnemnk/mnemnk-app/commit/bd5e0d496debf02d5f09bd554ea55d68b471188f))
+* 🎸 Schedule Timer agent ([#378](https://github.com/mnemnk/mnemnk-app/issues/378)) ([8488d88](https://github.com/mnemnk/mnemnk-app/commit/8488d88e16fe8ab2393ee87c8153c68dd7c73d70))
+* 🎸 support AgentValue::Image in Rhai ([#382](https://github.com/mnemnk/mnemnk-app/issues/382)) ([c8b47e7](https://github.com/mnemnk/mnemnk-app/commit/c8b47e73b3a42e5b3f4f0004cfb24c837ca0e34d))
+
 ## [0.18.5](https://github.com/mnemnk/mnemnk-app/compare/v0.18.4...v0.18.5) (2025-05-16)
 
 ## [0.18.4](https://github.com/mnemnk/mnemnk-app/compare/v0.18.3...v0.18.4) (2025-05-15)
