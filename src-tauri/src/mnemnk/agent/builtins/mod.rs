@@ -12,6 +12,7 @@ mod image;
 mod input;
 mod operator;
 mod rhai_script;
+mod rig;
 mod stream;
 mod string;
 mod time;
@@ -31,6 +32,7 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     input::init_agent_defs(defs);
     operator::init_agent_defs(defs);
     rhai_script::init_agent_defs(defs);
+    rig::init_agent_defs(defs);
     stream::init_agent_defs(defs);
     string::init_agent_defs(defs);
     time::init_agent_defs(defs);
