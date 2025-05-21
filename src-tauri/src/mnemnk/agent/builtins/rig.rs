@@ -38,15 +38,20 @@ mod implementation {
         }
 
         fn get_client(&mut self) -> Result<Client> {
-            let mut client = self.client.lock().unwrap();
-            if client.is_some() {
-                return Ok(client.as_ref().unwrap().clone());
+            let mut client_guard = self
+                .client
+                .lock()
+                .map_err(|e| anyhow::anyhow!("Client mutex poisoned: {}", e))?;
+
+            if let Some(client) = client_guard.as_ref() {
+                return Ok(client.clone());
             }
 
             let ollama_url = self.get_ollama_url()?;
-            *client = Some(Client::from_url(&ollama_url));
+            let new_client = Client::from_url(&ollama_url);
+            *client_guard = Some(new_client.clone());
 
-            Ok(client.as_ref().unwrap().clone())
+            Ok(new_client)
         }
     }
 
