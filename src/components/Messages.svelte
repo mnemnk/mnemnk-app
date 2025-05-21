@@ -1,7 +1,9 @@
 <script lang="ts" module>
   interface Message {
-    type: string;
-    data: {
+    type?: string;
+    role?: string;
+    content?: string | string[];
+    data?: {
       content: string | string[];
     };
   }
@@ -21,24 +23,29 @@
   let msgs = $derived.by(() => {
     let msgArray = Array.isArray(messages) ? messages : messages ? [messages] : [];
     return msgArray.map((msg) => {
-      if (msg.type === "ai") {
-        if (typeof msg.data.content === "string") {
-          let html = marked.parse(DOMPurify.sanitize(msg.data.content));
-          return { type: msg.type, html };
-        } else if (Array.isArray(msg.data.content)) {
-          let html = marked.parse(DOMPurify.sanitize(msg.data.content.join("\n\n")));
-          return { type: msg.type, html };
+      let role = msg.type || msg.role || "user";
+      if (role === "assistant") {
+        role = "ai";
+      }
+      let content = msg.data?.content || msg.content;
+      if (role === "ai") {
+        if (typeof content === "string") {
+          let html = marked.parse(DOMPurify.sanitize(content));
+          return { role, html };
+        } else if (Array.isArray(content)) {
+          let html = marked.parse(DOMPurify.sanitize(content.join("\n\n")));
+          return { role, html };
         }
       } else {
-        if (typeof msg.data.content === "string") {
-          let html = msg.data.content;
-          return { type: msg.type, html };
-        } else if (Array.isArray(msg.data.content)) {
-          let html = msg.data.content.join("\n\n");
-          return { type: msg.type, html };
+        if (typeof content === "string") {
+          let html = content;
+          return { role, html };
+        } else if (Array.isArray(content)) {
+          let html = content.join("\n\n");
+          return { role, html };
         }
       }
-      return { type: msg.type, html: "" };
+      return { role, html: "" };
     });
   });
 </script>
@@ -47,9 +54,9 @@
   {#each msgs as message}
     <Card class="mb-1 min-w-full">
       <div class="flex items-center space-x-4 rtl:space-x-reverse">
-        <Avatar class="flex-none shrink-0">{message.type}</Avatar>
+        <Avatar class="flex-none shrink-0">{message.role}</Avatar>
         <div class="grow">
-          {#if message.type === "ai"}
+          {#if message.role === "ai"}
             {@html message.html}
           {:else}
             {message.html}
