@@ -172,6 +172,21 @@ impl AgentEnv {
             return false;
         }
 
+        // Checks for path-like names:
+        if new_name.contains('/') {
+            // Disallow leading, trailing, or consecutive slashes
+            if new_name.starts_with('/') || new_name.ends_with('/') || new_name.contains("//") {
+                return false;
+            }
+            // Disallow segments that are "." or ".."
+            if new_name
+                .split('/')
+                .any(|segment| segment == "." || segment == "..")
+            {
+                return false;
+            }
+        }
+
         // Check if the name contains invalid characters
         let invalid_chars = ['\\', ':', '*', '?', '"', '<', '>', '|'];
         for c in invalid_chars {
