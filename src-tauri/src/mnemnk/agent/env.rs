@@ -168,7 +168,7 @@ impl AgentEnv {
 
     fn is_valid_flow_name(new_name: &str) -> bool {
         // Check if the name is empty
-        if new_name.is_empty() {
+        if new_name.trim().is_empty() {
             return false;
         }
 
@@ -185,8 +185,8 @@ impl AgentEnv {
 
     fn unique_flow_name(&self, name: &str) -> String {
         let flows = self.flows.lock().unwrap();
-        let mut new_name = name.to_string();
-        let mut i = 1;
+        let mut new_name = name.trim().to_string();
+        let mut i = 2;
         while flows.contains_key(&new_name) {
             new_name = format!("{}{}", name, i);
             i += 1;
