@@ -81,6 +81,13 @@ pub trait Agent {
         }
         Some(merged_config)
     }
+
+    fn flow_name(&self) -> String {
+        self.id()
+            .split_once(':')
+            .map(|(flow_name, _)| flow_name.to_string())
+            .unwrap_or_default()
+    }
 }
 
 pub struct AsAgentData {
