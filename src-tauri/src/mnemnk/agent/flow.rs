@@ -61,7 +61,7 @@ pub struct AgentFlowNode {
 }
 
 impl AgentFlowNode {
-    pub fn new(env: &AgentEnv, def_name: String) -> Result<Self> {
+    pub fn new(env: &AgentEnv, flow_name: &str, def_name: String) -> Result<Self> {
         let default_config = env.get_agent_default_config(&def_name);
         let config = if let Some(default_config) = default_config {
             let mut config = AgentConfig::new();
@@ -74,7 +74,7 @@ impl AgentFlowNode {
         };
 
         Ok(Self {
-            id: new_node_id(&def_name),
+            id: new_node_id(&flow_name, &def_name),
             name: def_name,
             enabled: false,
             config,
@@ -164,9 +164,6 @@ fn read_agent_flows_recursive<P: AsRef<Path>>(
             // Recursively process subdirectories
             read_agent_flows_recursive(base_dir, &path, flows)?;
         } else if path.is_file() && path.extension().unwrap_or_default() == "json" {
-            // Process JSON files
-            let mut flow = read_agent_flow(path.clone())?;
-
             // Set the flow name to be the relative path from base_dir (without extension)
             if let Some(relative_path) = path.strip_prefix(base_dir).ok() {
                 let relative_path_str = relative_path.to_string_lossy();
@@ -175,7 +172,9 @@ fn read_agent_flows_recursive<P: AsRef<Path>>(
                     .trim_end_matches(".json")
                     .replace('\\', "/"); // Ensure consistent path separators
 
-                flow.name = Some(flow_name.clone());
+                // Process JSON files
+                let flow = read_agent_flow(flow_name.clone(), path.clone())?;
+
                 flows.insert(flow_name, flow);
             }
         }
@@ -184,13 +183,18 @@ fn read_agent_flows_recursive<P: AsRef<Path>>(
     Ok(())
 }
 
-fn read_agent_flow(path: PathBuf) -> Result<AgentFlow> {
+fn read_agent_flow(flow_name: String, path: PathBuf) -> Result<AgentFlow> {
     if !path.is_file() || path.extension().unwrap_or_default() != "json" {
         return Err(anyhow::anyhow!("Invalid file extension"));
     }
     let content = std::fs::read_to_string(&path)?;
     let mut flow: AgentFlow = serde_json::from_str(&content)?;
-    let (nodes, edges) = copy_sub_flow(flow.nodes.iter().collect(), flow.edges.iter().collect());
+    let (nodes, edges) = copy_sub_flow(
+        &flow_name,
+        flow.nodes.iter().collect(),
+        flow.edges.iter().collect(),
+    );
+    flow.name = Some(flow_name);
     flow.nodes = nodes;
     flow.edges = edges;
     flow.path = Some(path);
@@ -343,7 +347,6 @@ pub fn save_agent_flow(app: &AppHandle, env: State<AgentEnv>, agent_flow: AgentF
 
 pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
     let path = PathBuf::from(path);
-    let mut flow = read_agent_flow(path.clone())?;
 
     // Get the base name from the file name
     let base_name = path
@@ -362,7 +365,9 @@ pub fn import_agent_flow(env: &AgentEnv, path: String) -> Result<AgentFlow> {
         let agent_flows = env.flows.lock().unwrap();
         name = unique_flow_name(&agent_flows, &base_name);
     }
-    flow.name = Some(name.clone());
+
+    // Read the flow
+    let mut flow = read_agent_flow(name, path.clone())?;
 
     // reset path of the flow
     flow.path = None;
@@ -382,20 +387,21 @@ fn unique_flow_name(agent_flows: &AgentFlows, name: &str) -> String {
     let mut new_name = name.to_string();
     let mut i = 1;
     while agent_flows.contains_key(&new_name) {
-        new_name = format!("{} ({})", name, i);
+        new_name = format!("{}_{}", name, i);
         i += 1;
     }
     new_name
 }
 
 pub fn copy_sub_flow(
+    flow_name: &str,
     nodes: Vec<&AgentFlowNode>,
     edges: Vec<&AgentFlowEdge>,
 ) -> (Vec<AgentFlowNode>, Vec<AgentFlowEdge>) {
     let mut new_nodes = Vec::new();
     let mut node_id_map = HashMap::new();
     for node in nodes {
-        let new_id = new_node_id(node.name.as_str());
+        let new_id = new_node_id(flow_name, node.name.as_str());
         node_id_map.insert(node.id.clone(), new_id.clone());
         let mut new_node = node.clone();
         new_node.id = new_id;
@@ -422,9 +428,9 @@ pub fn copy_sub_flow(
 
 static NODE_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
-fn new_node_id(def_name: &str) -> String {
+fn new_node_id(flow_name: &str, def_name: &str) -> String {
     let new_id = NODE_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    format!("{}_{}", def_name, new_id)
+    format!("{}:{}:{}", flow_name, def_name, new_id)
 }
 
 fn new_edge_id(source: &str, source_handle: &str, target: &str, target_handle: &str) -> String {

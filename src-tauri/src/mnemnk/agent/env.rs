@@ -130,6 +130,10 @@ impl AgentEnv {
     }
 
     pub fn new_agent_flow(&self, name: &str) -> Result<AgentFlow> {
+        if !AgentEnv::is_valid_flow_name(name) {
+            bail!("Invalid flow name: {}", name);
+        }
+
         let new_name = self.unique_flow_name(name);
         let mut flows = self.flows.lock().unwrap();
         let mut flow = AgentFlow::default();
@@ -139,6 +143,10 @@ impl AgentEnv {
     }
 
     pub fn rename_agent_flow(&self, old_name: &str, new_name: &str) -> Result<String> {
+        if !AgentEnv::is_valid_flow_name(new_name) {
+            bail!("Invalid flow name: {}", new_name);
+        }
+
         // check if the new name is already used
         let new_name = self.unique_flow_name(new_name);
 
@@ -158,10 +166,27 @@ impl AgentEnv {
         Ok(new_name)
     }
 
+    fn is_valid_flow_name(new_name: &str) -> bool {
+        // Check if the name is empty
+        if new_name.trim().is_empty() {
+            return false;
+        }
+
+        // Check if the name contains invalid characters
+        let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+        for c in invalid_chars {
+            if new_name.contains(c) {
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn unique_flow_name(&self, name: &str) -> String {
         let flows = self.flows.lock().unwrap();
-        let mut new_name = name.to_string();
-        let mut i = 1;
+        let mut new_name = name.trim().to_string();
+        let mut i = 2;
         while flows.contains_key(&new_name) {
             new_name = format!("{}{}", name, i);
             i += 1;

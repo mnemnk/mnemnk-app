@@ -138,9 +138,10 @@ pub fn import_agent_flow_cmd(env: State<AgentEnv>, path: String) -> Result<Agent
 #[tauri::command]
 pub fn new_agent_flow_node_cmd(
     env: State<AgentEnv>,
+    flow_name: String,
     def_name: String,
 ) -> Result<AgentFlowNode, String> {
-    AgentFlowNode::new(&env, def_name).map_err(|e| e.to_string())
+    AgentFlowNode::new(&env, &flow_name, def_name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -181,10 +182,11 @@ pub fn remove_agent_flow_edge_cmd(
 
 #[tauri::command]
 pub fn copy_sub_flow_cmd(
+    flow_name: String,
     nodes: Vec<AgentFlowNode>,
     edges: Vec<AgentFlowEdge>,
 ) -> (Vec<AgentFlowNode>, Vec<AgentFlowEdge>) {
     let node_refs: Vec<&AgentFlowNode> = nodes.iter().collect();
     let edge_refs: Vec<&AgentFlowEdge> = edges.iter().collect();
-    flow::copy_sub_flow(node_refs, edge_refs)
+    flow::copy_sub_flow(&flow_name, node_refs, edge_refs)
 }

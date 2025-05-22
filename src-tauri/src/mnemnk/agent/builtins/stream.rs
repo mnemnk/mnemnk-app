@@ -50,10 +50,8 @@ impl AsAgent for StreamAgent {
             return Ok(());
         }
 
-        // TODO: add workflow name
-
         self.last_id += 1;
-        let key = format!("$stream:{}", stream_name);
+        let key = format!("{}:$stream:{}", self.flow_name(), stream_name);
         let new_ctx = ctx.with_var(key, AgentValue::new_integer(self.last_id));
         self.try_output(new_ctx, CH_DATA, data)
             .context("Failed to output")?;
@@ -146,7 +144,7 @@ impl AsAgent for StreamZipAgent {
             .to_string();
 
         if !stream_name.is_empty() {
-            let key = format!("$stream:{}", stream_name);
+            let key = format!("{}:$stream:{}", self.flow_name(), stream_name);
             let Some(value) = ctx.get_var(key.as_str()) else {
                 // value does not have the stream key
                 return Ok(());

@@ -227,7 +227,7 @@
       return;
     }
 
-    let [cnodes, cedges] = await copySubFlow(copiedNodes, copiedEdges);
+    let [cnodes, cedges] = await copySubFlow(flowNameState.name, copiedNodes, copiedEdges);
     if (cnodes.length == 0 && cedges.length == 0) return;
 
     let new_nodes = [];
@@ -456,7 +456,7 @@
   }
 
   async function onAddAgent(agent_name: string) {
-    const snode = await newAgentFlowNode(agent_name);
+    const snode = await newAgentFlowNode(flowNameState.name, agent_name);
     const xy = screenToFlowPosition({
       x: window.innerWidth * 0.45,
       y: window.innerHeight * 0.3,

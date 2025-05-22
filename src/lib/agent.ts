@@ -77,8 +77,8 @@ export async function addAgentFlowNode(flowName: string, node: SAgentFlowNode): 
   await invoke("add_agent_flow_node_cmd", { flowName, node });
 }
 
-export async function newAgentFlowNode(defName: string): Promise<SAgentFlowNode> {
-  return await invoke("new_agent_flow_node_cmd", { defName });
+export async function newAgentFlowNode(flowName: string, defName: string): Promise<SAgentFlowNode> {
+  return await invoke("new_agent_flow_node_cmd", { flowName, defName });
 }
 
 export async function removeAgentFlowNode(flowName: string, nodeId: string): Promise<void> {
@@ -94,10 +94,11 @@ export async function removeAgentFlowEdge(flowName: string, edgeId: string): Pro
 }
 
 export async function copySubFlow(
+  flowName: string,
   nodes: SAgentFlowNode[],
   edges: SAgentFlowEdge[],
 ): Promise<[SAgentFlowNode[], SAgentFlowEdge[]]> {
-  return await invoke("copy_sub_flow_cmd", { nodes, edges });
+  return await invoke("copy_sub_flow_cmd", { flowName, nodes, edges });
 }
 
 // Agent Flow
