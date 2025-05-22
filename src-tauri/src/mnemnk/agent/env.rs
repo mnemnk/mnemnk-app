@@ -173,7 +173,7 @@ impl AgentEnv {
         }
 
         // Check if the name contains invalid characters
-        let invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+        let invalid_chars = ['\\', ':', '*', '?', '"', '<', '>', '|'];
         for c in invalid_chars {
             if new_name.contains(c) {
                 return false;
