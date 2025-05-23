@@ -368,13 +368,14 @@ mod implementation {
         if value.is_object() {
             if let Some(history) = value.get("history") {
                 if history.is_array() {
-                    let arr = history.as_array().context("wrong array").unwrap();
-                    let mut messages = Vec::new();
-                    for item in arr.iter() {
-                        let message = value_to_message(item.clone()).unwrap();
-                        messages.push(message);
+                    if let Some(arr) = history.as_array() {
+                        let mut messages = Vec::new();
+                        for item in arr.iter() {
+                            let message = value_to_message(item.clone()).unwrap();
+                            messages.push(message);
+                        }
+                        return messages;
                     }
-                    return messages;
                 }
             }
         }
