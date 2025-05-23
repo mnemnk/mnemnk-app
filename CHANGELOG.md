@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.7](https://github.com/mnemnk/mnemnk-app/compare/v0.18.6...v0.18.7) (2025-05-23)
+
+
+### Features
+
+* 🎸 add Agent::flow_name() ([#384](https://github.com/mnemnk/mnemnk-app/issues/384)) ([d1f5e9b](https://github.com/mnemnk/mnemnk-app/commit/d1f5e9b3695e05d191fe4012b9cf7ce429dccbe3))
+* 🎸 Rig agents ([#383](https://github.com/mnemnk/mnemnk-app/issues/383)) ([42bc6b1](https://github.com/mnemnk/mnemnk-app/commit/42bc6b134ad507ab157864440d98e0748cd265b2))
+* 🎸 Rig agents support array data ([#385](https://github.com/mnemnk/mnemnk-app/issues/385)) ([2c42b24](https://github.com/mnemnk/mnemnk-app/commit/2c42b2420f876a4b8ef0ddcc80da9bd937a93cc9))
+* 🎸 Rig Memory agent ([#387](https://github.com/mnemnk/mnemnk-app/issues/387)) ([7e17240](https://github.com/mnemnk/mnemnk-app/commit/7e17240ee2a74fa573e759339d90cfc2f29ed226))
+
+
+### Bug Fixes
+
+* 🐛 '/' is allowed in flow name ([#386](https://github.com/mnemnk/mnemnk-app/issues/386)) ([6e31da4](https://github.com/mnemnk/mnemnk-app/commit/6e31da433a706ad84e55fc8f742ed473546d320f))
+
 ## [0.18.6](https://github.com/mnemnk/mnemnk-app/compare/v0.18.5...v0.18.6) (2025-05-20)
 
 
