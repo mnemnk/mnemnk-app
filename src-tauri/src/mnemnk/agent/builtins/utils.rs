@@ -1,13 +1,13 @@
 use std::vec;
 
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use tauri::AppHandle;
 
 use crate::mnemnk::agent::agent::new_boxed;
 use crate::mnemnk::agent::definition::AGENT_KIND_BUILTIN;
 use crate::mnemnk::agent::{
-    Agent, AgentConfig, AgentConfigEntry, AgentContext, AgentData, AgentDefinition,
-    AgentDefinitions, AgentDisplayConfigEntry, AgentOutput, AgentValue, AsAgent, AsAgentData,
+    AgentConfig, AgentContext, AgentData, AgentDefinition, AgentDefinitions,
+    AgentDisplayConfigEntry, AgentOutput, AsAgent, AsAgentData,
 };
 
 // Counter
@@ -55,86 +55,13 @@ impl AsAgent for CounterAgent {
     }
 }
 
-// Memory Agent
-//
-// Retains the last `n` of the input data and outputs them.
-// The output data `kind` matches that of the first data.
-struct MemoryAgent {
-    data: AsAgentData,
-    memory: Vec<AgentData>,
-}
-
-impl AsAgent for MemoryAgent {
-    fn new(
-        app: AppHandle,
-        id: String,
-        def_name: String,
-        config: Option<AgentConfig>,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: AsAgentData::new(app, id, def_name, config),
-            memory: vec![],
-        })
-    }
-
-    fn data(&self) -> &AsAgentData {
-        &self.data
-    }
-
-    fn mut_data(&mut self) -> &mut AsAgentData {
-        &mut self.data
-    }
-
-    fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
-        if ctx.ch() == CH_RESET {
-            // Reset command empties the memory
-            self.memory.clear();
-
-            self.try_output(ctx, CH_RESET, AgentData::new_unit())?;
-        } else if ctx.ch() == CH_IN {
-            // Add new data to memory
-            self.memory.push(data);
-
-            // Trim to max size if needed
-            if let Some(n) = self.config().context("no config")?.get_integer(CONFIG_N) {
-                if n > 0 {
-                    let n = n as usize;
-
-                    // If the n is smaller than the current number of data,
-                    // trim the oldest data to fit the n
-                    if n < self.memory.len() {
-                        let data_to_remove = self.memory.len() - n;
-                        self.memory.drain(0..data_to_remove);
-                    }
-                }
-            }
-
-            // Output the memory array
-            self.try_output(
-                ctx,
-                CH_MEMORY,
-                AgentData::new_array(
-                    self.memory[0].kind.clone(),
-                    self.memory.iter().map(|data| data.value.clone()).collect(),
-                ),
-            )?;
-        }
-
-        Ok(())
-    }
-}
-
 static CATEGORY: &str = "Core/Utils";
 
 static CH_IN: &str = "in";
 static CH_RESET: &str = "reset";
 static CH_COUNT: &str = "count";
-static CH_MEMORY: &str = "memory";
 
 static DISPLAY_COUNT: &str = "count";
-
-static CONFIG_N: &str = "n";
-const CONFIG_N_DEFAULT: i64 = 10;
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     // Counter Agent
@@ -153,25 +80,6 @@ pub fn init_agent_defs(defs: &mut AgentDefinitions) {
         .with_display_config(vec![(
             DISPLAY_COUNT.into(),
             AgentDisplayConfigEntry::new("integer").with_hide_title(),
-        )]),
-    );
-
-    // Memory Agent
-    defs.insert(
-        "$memory".into(),
-        AgentDefinition::new(
-            AGENT_KIND_BUILTIN,
-            "$memory",
-            Some(new_boxed::<MemoryAgent>),
-        )
-        .with_title("Memory")
-        .with_description("Stores recent input data")
-        .with_category(CATEGORY)
-        .with_inputs(vec![CH_IN, CH_RESET])
-        .with_outputs(vec![CH_MEMORY, CH_RESET])
-        .with_default_config(vec![(
-            CONFIG_N.into(),
-            AgentConfigEntry::new(AgentValue::new_integer(CONFIG_N_DEFAULT), "integer"),
         )]),
     );
 }

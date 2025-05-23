@@ -15,6 +15,168 @@ mod implementation {
 
     use super::*;
 
+    // Memory Agent
+    //
+    // Retains the last `n` of the input data and outputs them.
+    // The output data `kind` matches that of the first data.
+    pub struct RigMemoryAgent {
+        data: AsAgentData,
+        memory: Vec<AgentValue>,
+    }
+
+    impl AsAgent for RigMemoryAgent {
+        fn new(
+            app: AppHandle,
+            id: String,
+            def_name: String,
+            config: Option<AgentConfig>,
+        ) -> Result<Self> {
+            Ok(Self {
+                data: AsAgentData::new(app, id, def_name, config),
+                memory: vec![],
+            })
+        }
+
+        fn data(&self) -> &AsAgentData {
+            &self.data
+        }
+
+        fn mut_data(&mut self) -> &mut AsAgentData {
+            &mut self.data
+        }
+
+        fn process(&mut self, ctx: AgentContext, data: AgentData) -> Result<()> {
+            if ctx.ch() == CH_RESET {
+                // Reset command empties the memory
+                self.memory.clear();
+
+                self.try_output(
+                    ctx,
+                    CH_MEMORY,
+                    AgentData::new_array("message", self.memory.clone()),
+                )
+                .context("Failed to output")?;
+
+                return Ok(());
+            }
+
+            let (user_message, history) = data_to_message_history(data)?;
+
+            // Merge the history with memory
+            self.memory.extend(history);
+
+            // Trim to max size if needed
+            if let Some(n) = self.config().context("no config")?.get_integer(CONFIG_N) {
+                if n > 0 {
+                    let n = n as usize;
+
+                    // If the n is smaller than the current number of data,
+                    // trim the oldest data to fit the n
+                    if n < self.memory.len() {
+                        let data_to_remove = self.memory.len() - n;
+                        self.memory.drain(0..data_to_remove);
+                    }
+                }
+            }
+
+            if let Some(user_message) = user_message {
+                let mut map = user_message
+                    .value
+                    .as_object()
+                    .context("wrong object")?
+                    .clone();
+                map.insert(
+                    "history".to_string(),
+                    AgentValue::new_array(self.memory.clone()),
+                );
+
+                self.try_output(
+                    ctx.clone(),
+                    CH_MESSAGE,
+                    AgentData::new_custom_object("message", map),
+                )
+                .context("Failed to output")?;
+
+                // Add the user message to the memory
+                self.memory.push(user_message.value.clone());
+            }
+
+            self.try_output(
+                ctx,
+                CH_MEMORY,
+                AgentData::new_array("message", self.memory.clone()),
+            )
+            .context("Failed to output")?;
+
+            Ok(())
+        }
+    }
+
+    fn data_to_message_history(data: AgentData) -> Result<(Option<AgentData>, Vec<AgentValue>)> {
+        value_to_message_history(data.value)
+    }
+
+    fn value_to_message_history(value: AgentValue) -> Result<(Option<AgentData>, Vec<AgentValue>)> {
+        if value.is_array() {
+            let arr = value.as_array().context("wrong array")?.to_owned();
+            let mut out_value = Vec::new();
+            for item in arr {
+                let (message, history) = value_to_message_history(item)?;
+                out_value.extend(history);
+                if let Some(message) = message {
+                    out_value.push(message.value);
+                }
+            }
+
+            // If the last message is from the user, return it as a message.
+            let last_role = out_value
+                .last()
+                .and_then(|m| m.get_str("role"))
+                .unwrap_or_default();
+            if last_role == "user" {
+                let last_message = out_value.pop().unwrap();
+                return Ok((
+                    Some(AgentData::new_custom_object(
+                        "message",
+                        last_message.as_object().context("wrong object")?.to_owned(),
+                    )),
+                    out_value,
+                ));
+            }
+
+            return Ok((None, out_value));
+        }
+
+        if value.is_string() {
+            let mut map = AgentValueMap::new();
+            map.insert("content".to_string(), value.clone());
+            map.insert("role".to_string(), AgentValue::new_string("user"));
+            return Ok((Some(AgentData::new_custom_object("message", map)), vec![]));
+        }
+
+        if value.is_object() {
+            let map = value.as_object().context("wrong object")?;
+            let Some(role) = map.get("role") else {
+                bail!("data has no role");
+            };
+            let Some(role) = role.as_str() else {
+                bail!("role is not a string");
+            };
+
+            if role == "user" {
+                return Ok((
+                    Some(AgentData::new_custom_object("message", map.to_owned())),
+                    vec![],
+                ));
+            }
+
+            // If the role is not "user", return the data as history.
+            return Ok((None, vec![value]));
+        }
+
+        bail!("Unsupported data type");
+    }
+
     // Rig Ollama Agent
     pub struct RigOllamaAgent {
         data: AsAgentData,
@@ -97,11 +259,13 @@ mod implementation {
                 let comp_model = comp_model.clone();
                 let response = tauri::async_runtime::block_on(async move {
                     let user_message = prompt.message;
-                    let preamble = prompt.preamble;
 
                     let mut builder = CompletionRequestBuilder::new(comp_model, user_message);
-                    if let Some(preamble) = preamble {
+                    if let Some(preamble) = prompt.preamble {
                         builder = builder.preamble(preamble);
+                    }
+                    if prompt.history.len() > 0 {
+                        builder = builder.messages(prompt.history);
                     }
                     builder.send().await
                 })?;
@@ -154,6 +318,7 @@ mod implementation {
     struct Prompt {
         message: rig::completion::Message,
         preamble: Option<String>,
+        history: Vec<rig::completion::Message>,
     }
 
     fn data_to_prompts(data: AgentData) -> Result<Vec<Prompt>> {
@@ -163,21 +328,25 @@ mod implementation {
             let arr = data.as_array().context("wrong array")?.to_owned();
             for item in arr {
                 let preamble = preamble_from_value(&item);
+                let history = history_from_value(&item);
                 let user_message = value_to_user_message(item)?;
                 prompts.push(Prompt {
                     message: user_message,
                     preamble,
+                    history,
                 });
             }
             return Ok(prompts);
         }
 
         let preamble = preamble_from_value(&data.value);
+        let history = history_from_value(&data.value);
         let user_message = value_to_user_message(data.value)?;
 
         prompts.push(Prompt {
             message: user_message,
             preamble,
+            history,
         });
 
         Ok(prompts)
@@ -195,10 +364,27 @@ mod implementation {
         None
     }
 
+    fn history_from_value(value: &AgentValue) -> Vec<rig::completion::Message> {
+        if value.is_object() {
+            if let Some(history) = value.get("history") {
+                if history.is_array() {
+                    let arr = history.as_array().context("wrong array").unwrap();
+                    let mut messages = Vec::new();
+                    for item in arr.iter() {
+                        let message = value_to_message(item.clone()).unwrap();
+                        messages.push(message);
+                    }
+                    return messages;
+                }
+            }
+        }
+
+        vec![]
+    }
+
     fn value_to_user_message(value: AgentValue) -> Result<rig::completion::Message> {
         if value.is_string() {
             let text = value.as_str().context("wrong string")?;
-
             return Ok(rig::completion::Message::user(text));
         }
 
@@ -272,6 +458,97 @@ mod implementation {
             return Ok(rig::completion::Message::User {
                 content: OneOrMany::many(items)?,
             });
+        };
+
+        bail!("Unsupported data type");
+    }
+
+    fn value_to_message(value: AgentValue) -> Result<rig::completion::Message> {
+        if value.is_string() {
+            let text = value.as_str().context("wrong string")?;
+            return Ok(rig::completion::Message::user(text));
+        }
+
+        if value.is_object() {
+            let role = value.get_str("role").unwrap_or_default();
+
+            let content = value.get_str("content").or_else(|| value.get_str("text"));
+
+            let mut images: Option<Vec<String>> = None;
+            if let Some(image) = value.get("image") {
+                if image.is_image() {
+                    let image = image.as_image().context("wrong image")?.get_base64();
+                    images = Some(vec![image]);
+                } else if image.is_string() {
+                    let image = image.as_str().context("wrong string")?;
+                    images = Some(vec![image.to_string()]);
+                } else {
+                    bail!("invalid image property");
+                }
+            } else if let Some(images_value) = value.get("images") {
+                if images_value.is_array() {
+                    let arr = images_value.as_array().context("wrong array")?;
+                    let mut images_vec = Vec::new();
+                    for image in arr.iter() {
+                        if image.is_image() {
+                            let image = image.as_image().context("wrong image")?;
+                            images_vec.push(image.get_base64().to_string());
+                        } else if image.is_string() {
+                            let image = image.as_str().context("wrong string")?;
+                            images_vec.push(image.to_string());
+                        } else {
+                            bail!("invalid images property");
+                        }
+                    }
+                    images = Some(images_vec);
+                } else {
+                    bail!("invalid images property");
+                }
+            }
+
+            if content.is_none() && images.is_none() {
+                bail!("Both content and images are None");
+            }
+
+            if role == "user" || role == "system" {
+                // TODO: system is only available in Ollama
+                let mut items = Vec::new();
+                if content.is_some() {
+                    items.push(rig::completion::message::UserContent::Text(
+                        rig::completion::message::Text {
+                            text: content.unwrap().to_string(),
+                        },
+                    ));
+                }
+                if images.is_some() {
+                    for image in images.unwrap() {
+                        items.push(rig::completion::message::UserContent::Image(
+                            rig::completion::message::Image {
+                                data: image
+                                    .trim_start_matches("data:image/png;base64,")
+                                    .to_string(),
+                                format: None,
+                                media_type: None,
+                                detail: None,
+                            },
+                        ));
+                    }
+                }
+
+                return Ok(rig::completion::Message::User {
+                    content: OneOrMany::many(items)?,
+                });
+            }
+
+            if role == "assistant" {
+                return Ok(rig::completion::Message::Assistant {
+                    content: OneOrMany::one(rig::completion::message::AssistantContent::Text(
+                        rig::completion::message::Text {
+                            text: content.unwrap().to_string(),
+                        },
+                    )),
+                });
+            }
         };
 
         bail!("Unsupported data type");
@@ -483,20 +760,44 @@ use crate::mnemnk::agent::{AgentConfigEntry, AgentDefinition, AgentDefinitions, 
 static CATEGORY: &str = "Core/Rig";
 
 static CH_IMAGE: &str = "image";
+static CH_MEMORY: &str = "memory";
 static CH_MESSAGE: &str = "message";
+static CH_RESET: &str = "reset";
 static CH_RESPONSE: &str = "response";
 
 static CONFIG_MODEL: &str = "model";
 static CONFIG_OLLAMA_URL: &str = "ollama_url";
 static CONFIG_TEXT: &str = "prompt";
+static CONFIG_N: &str = "n";
 
-static DEFAULT_CONFIG_MODEL: &str = "gemma3:4b";
-static DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
+const DEFAULT_CONFIG_MODEL: &str = "gemma3:4b";
+const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
+const DEFAULT_CONFIG_N: i64 = 10;
 
 pub fn init_agent_defs(defs: &mut AgentDefinitions) {
     #[cfg(feature = "rig")]
     {
         use implementation::*;
+
+        defs.insert(
+            "$rig_memory".into(),
+            AgentDefinition::new(
+                AGENT_KIND_BUILTIN,
+                "$rig_memory",
+                Some(new_boxed::<RigMemoryAgent>),
+            )
+            .with_title("Rig Memory")
+            .with_description("Stores recent input data")
+            .with_category(CATEGORY)
+            .with_inputs(vec![CH_MESSAGE, CH_RESET])
+            .with_outputs(vec![CH_MESSAGE, CH_MEMORY])
+            .with_default_config(vec![(
+                CONFIG_N.into(),
+                AgentConfigEntry::new(AgentValue::new_integer(DEFAULT_CONFIG_N), "integer")
+                    .with_title("Memory Size")
+                    .with_description("-1 = unlimited"),
+            )]),
+        );
 
         defs.insert(
             "$rig_ollama".to_string(),
