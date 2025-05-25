@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.18.8](https://github.com/mnemnk/mnemnk-app/compare/v0.18.7...v0.18.8) (2025-05-25)
+
+
+### Features
+
+* 🎸 Automatic Backup ([#389](https://github.com/mnemnk/mnemnk-app/issues/389)) ([1994413](https://github.com/mnemnk/mnemnk-app/commit/19944130e03a8791cf2c0c347023647526a7869d)), closes [#388](https://github.com/mnemnk/mnemnk-app/issues/388)
+
 ## [0.18.7](https://github.com/mnemnk/mnemnk-app/compare/v0.18.6...v0.18.7) (2025-05-23)
 
 
