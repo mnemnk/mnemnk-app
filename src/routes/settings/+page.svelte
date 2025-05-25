@@ -14,7 +14,7 @@
   <h1 class="text-xl font-semibold sm:text-2xl">Settings</h1>
   <Core {settings} />
 
-  <Database />
+  <Database {settings} />
 
   <h2 class="text-xl font-semibold sm:text-2xl">Agents</h2>
   {#each Object.entries(agentGlobalConfigs) as [agentName, agentConfig]}

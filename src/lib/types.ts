@@ -149,6 +149,9 @@ export type CoreSettings = {
   thumbnail_width: number | null;
   thumbnail_height: number | null;
   day_start_hour: number | null;
+  backup_interval_hours: number | null;
+  max_backup_count: number | null;
+  enable_auto_backup: boolean;
 };
 
 export type Settings = {

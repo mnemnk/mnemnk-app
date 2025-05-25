@@ -2,9 +2,31 @@
   import { invoke } from "@tauri-apps/api/core";
   import { ask, open, save, message } from "@tauri-apps/plugin-dialog";
 
-  import { Button } from "flowbite-svelte";
+  import { Button, Label, NumberInput, Toggle } from "flowbite-svelte";
 
   import Card from "@/components/Card.svelte";
+  import { exitApp, setCoreSettings } from "@/lib/utils";
+
+  interface Props {
+    settings: Record<string, any>;
+  }
+
+  const { settings }: Props = $props();
+
+  let backup_interval_hours = $state(settings["backup_interval_hours"]);
+  let max_backup_count = $state(settings["max_backup_count"]);
+  let enable_auto_backup = $state(settings["enable_auto_backup"]);
+
+  async function saveSettings() {
+    await setCoreSettings({
+      backup_interval_hours,
+      max_backup_count,
+      enable_auto_backup,
+    });
+    // confirm restart
+    await message("Mnemnk will quit to apply changes.\n\nPlease restart.");
+    await exitApp();
+  }
 
   async function handleExport() {
     try {
@@ -105,6 +127,22 @@
 </script>
 
 <Card title="Database" tooltip="Database management functions">
+  <form class="grid grid-cols-6 gap-6 mb-6">
+    <Toggle bind:checked={enable_auto_backup}>Enable Auto Backup</Toggle>
+
+    <Label class="col-span-6 space-y-2">
+      <span>Backup Interval (hours)</span>
+      <NumberInput min="1" bind:value={backup_interval_hours} placeholder="24" />
+    </Label>
+
+    <Label class="col-span-6 space-y-2">
+      <span>Max Backup Count</span>
+      <NumberInput min="1" bind:value={max_backup_count} placeholder="7" />
+    </Label>
+
+    <Button class="w-fit" onclick={saveSettings} outline>Save</Button>
+  </form>
+
   <div class="flex flex-col gap-4">
     <div>
       <Button color="alternative" onclick={handleExport}>Export Events</Button>

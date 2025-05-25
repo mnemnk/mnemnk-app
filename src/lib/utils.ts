@@ -59,7 +59,7 @@ export async function getCoreSettings(): Promise<CoreSettings> {
   return await invoke("get_core_settings_cmd");
 }
 
-export async function setCoreSettings(newSettings: CoreSettings): Promise<void> {
+export async function setCoreSettings(newSettings: Partial<CoreSettings>): Promise<void> {
   await invoke("set_core_settings_cmd", { newSettings });
 }
 

@@ -33,12 +33,10 @@ pub fn run() {
             let app_handle = app.handle().clone();
             tauri::async_runtime::block_on(async move {
                 mnemnk::settings::init(&app_handle).unwrap_or_else(|e| {
-                    log::error!("Failed to initialize settings: {}", e);
-                    app_handle.exit(1);
+                    panic!("Failed to initialize settings: {}", e);
                 });
                 mnemnk::store::init(&app_handle).await.unwrap_or_else(|e| {
-                    log::error!("Failed to initialize store: {}", e);
-                    app_handle.exit(1);
+                    panic!("Failed to initialize store: {}\nTo restore from a backup, please move `store.db` to some other name and copy a backup file and rename it to `restore.surql` in the data directory.", e);
                 });
                 mnemnk::tray::init(&app_handle).unwrap_or_else(|e| {
                     log::error!("Failed to initialize tray: {}", e);
