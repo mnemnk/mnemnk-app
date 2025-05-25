@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
@@ -91,6 +91,11 @@ pub struct CoreSettings {
     pub thumbnail_width: Option<u32>,
     pub thumbnail_height: Option<u32>,
     pub day_start_hour: Option<u32>,
+
+    // backup settings
+    pub backup_interval_hours: Option<u64>,
+    pub max_backup_count: Option<u64>,
+    pub enable_auto_backup: Option<bool>,
 }
 
 impl Default for CoreSettings {
@@ -118,6 +123,10 @@ impl Default for CoreSettings {
             thumbnail_width: None,
             thumbnail_height: None,
             day_start_hour: None,
+            // backup settings
+            backup_interval_hours: Some(24),
+            max_backup_count: Some(7),
+            enable_auto_backup: Some(false),
         }
     }
 }
@@ -125,8 +134,12 @@ impl Default for CoreSettings {
 fn init_core_settings(app: &AppHandle) -> Result<()> {
     let store = app.store(SETTINGS_JSON)?;
 
-    let mut core_settings: CoreSettings;
-    if let Some(value) = store.get("core") {
+    let core_settings: CoreSettings;
+    if let Some(store_value) = store.get("core") {
+        let mut value = serde_json::to_value(CoreSettings::default())
+            .context("Failed to serialize default core settings")?;
+        json_merge(&mut value, store_value.clone());
+
         core_settings = serde_json::from_value(value).unwrap_or_else(|e| {
             log::error!("Failed to load core settings: {}", e);
             CoreSettings::default()
@@ -134,19 +147,26 @@ fn init_core_settings(app: &AppHandle) -> Result<()> {
     } else {
         core_settings = CoreSettings::default();
     }
-    if let Some(ref mut shortcut_keys) = core_settings.shortcut_keys {
-        let default_core_settings = CoreSettings::default();
-        for (k, v) in default_core_settings.shortcut_keys.unwrap().iter() {
-            if !shortcut_keys.contains_key(k) {
-                shortcut_keys.insert(k.clone(), v.clone());
-            }
-        }
-    } else {
-        core_settings.shortcut_keys = CoreSettings::default().shortcut_keys;
-    }
+
     app.manage(Mutex::new(core_settings));
 
     Ok(())
+}
+
+fn json_merge(a: &mut Value, b: Value) {
+    if let Value::Object(a) = a {
+        if let Value::Object(b) = b {
+            for (k, v) in b {
+                if v.is_null() {
+                    a.remove(&k);
+                } else {
+                    json_merge(a.entry(k).or_insert(Value::Null), v);
+                }
+            }
+            return;
+        }
+    }
+    *a = b;
 }
 
 #[tauri::command]
@@ -162,13 +182,24 @@ pub fn set_core_settings_cmd(
     settings: State<Mutex<CoreSettings>>,
     new_settings: Value,
 ) -> Result<(), String> {
-    let new_settings: CoreSettings =
-        serde_json::from_value(new_settings).map_err(|e| e.to_string())?;
-    {
-        let mut settings = settings.lock().unwrap();
-        *settings = new_settings;
+    if new_settings.is_null() {
+        return Ok(());
     }
+
+    // Merge new settings into existing settings
+    if new_settings.is_object() {
+        let mut settings = settings.lock().unwrap();
+        let mut value = serde_json::to_value(&*settings)
+            .map_err(|e| format!("Failed to serialize current settings: {}", e))?;
+        json_merge(&mut value, new_settings);
+        *settings = serde_json::from_value(value)
+            .map_err(|e| format!("Failed to deserialize new settings: {}", e))?;
+    } else {
+        return Err("Invalid settings format".to_string());
+    }
+
     save(&app).map_err(|e| e.to_string())?;
+
     Ok(())
 }
 

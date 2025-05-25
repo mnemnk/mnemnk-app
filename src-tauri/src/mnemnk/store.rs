@@ -1,7 +1,8 @@
 use std::fs;
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
+use std::time::Duration;
 
 use anyhow::{bail, Context as _, Result};
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike, Utc};
@@ -48,6 +49,9 @@ struct Record {
 // Event types that can be sent to the store event loop
 #[derive(Debug)]
 enum StoreEvent {
+    Backup {
+        response: oneshot::Sender<Result<()>>,
+    },
     CreateEvent {
         event: Event,
         // response: std::sync::mpsc::Sender<Result<()>>,
@@ -151,12 +155,35 @@ const MNEMNK_DB: &str = "mnemnk";
 
 pub async fn init(app: &AppHandle) -> Result<()> {
     let data_dir = data_dir(app).context("data_dir is not set")?;
-    let db_path = PathBuf::from(data_dir).join("store.db");
-    let db = Surreal::new::<RocksDb>(db_path).await?;
+    let db_path = PathBuf::from(&data_dir).join("store.db");
+
+    if !db_path.exists() {
+        // Check if the restore file exists
+        let restore_path = data_dir.join("restore.surql");
+        if restore_path.exists() {
+            log::info!("Found restore file: {}", restore_path.display());
+            restore_from_backup(app, &restore_path).await?;
+            std::process::exit(0);
+        }
+    }
+
+    let db = try_init_database(&db_path).await?;
+
+    let event_tx = start_event_loop(app);
+
+    app.manage(MnemnkDatabase { db, event_tx });
+
+    start_auto_backup(app).await?;
+
+    Ok(())
+}
+
+async fn try_init_database(path: &Path) -> Result<Surreal<Db>> {
+    let db = Surreal::new::<RocksDb>(path).await?;
     db.use_ns(MNEMNK_NS).use_db(MNEMNK_DB).await?;
 
     log::info!("store::init: initializing tables");
-    let _result = db
+    let mut resp = db
         .query("DEFINE TABLE IF NOT EXISTS event SCHEMAFULL")
         // fields
         .query("DEFINE FIELD IF NOT EXISTS kind ON TABLE event TYPE string")
@@ -167,7 +194,6 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .query("DEFINE FIELD IF NOT EXISTS local_ymd ON TABLE event TYPE int")
         .query("DEFINE FIELD IF NOT EXISTS agent ON TABLE event TYPE string")
         .query("DEFINE FIELD IF NOT EXISTS value ON TABLE event FLEXIBLE TYPE object")
-        // .query("DEFINE FIELD IF NOT EXISTS metadata ON TABLE event FLEXIBLE TYPE option<object>")
         // index
         .query("DEFINE INDEX IF NOT EXISTS eventLocalYIndex ON TABLE event COLUMNS local_y")
         .query("DEFINE INDEX IF NOT EXISTS eventLocalYmIndex ON TABLE event COLUMNS local_ym")
@@ -179,8 +205,36 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         .query("DEFINE ANALYZER IF NOT EXISTS eventTextTokensAnalyzer TOKENIZERS blank")
         .query("DEFINE INDEX IF NOT EXISTS eventTextTokensIndex ON TABLE event COLUMNS text_tokens SEARCH ANALYZER eventTextTokensAnalyzer")
         .await?;
-    log::info!("store::init: {:?}", _result);
+    log::info!("store::init: {:?}", resp);
+    if resp.take_errors().len() > 0 {
+        bail!("Failed to initialize database.");
+    }
 
+    Ok(db)
+}
+
+async fn restore_from_backup(app: &AppHandle, restore_file: &Path) -> Result<Surreal<Db>> {
+    let data_dir = data_dir(app).context("data_dir is not set")?;
+    let db_path = PathBuf::from(&data_dir).join("store.db");
+
+    log::info!("Create a new database at: {}", db_path.display());
+    let db = create_new_database(&db_path).await?;
+
+    log::info!("Importing data from: {}", restore_file.display());
+    db.import(restore_file).await?;
+
+    log::info!("Database restored successfully");
+
+    Ok(db)
+}
+
+async fn create_new_database(db_path: &Path) -> Result<Surreal<Db>> {
+    let db = Surreal::new::<RocksDb>(db_path).await?;
+    db.use_ns(MNEMNK_NS).use_db(MNEMNK_DB).await?;
+    Ok(db)
+}
+
+fn start_event_loop(app: &AppHandle) -> mpsc::Sender<StoreEvent> {
     // TODO: the number of events should be configurable
     let (event_tx, mut event_rx) = mpsc::channel::<StoreEvent>(1000);
 
@@ -192,6 +246,12 @@ pub async fn init(app: &AppHandle) -> Result<()> {
             // log::debug!("Store event: {:?}", event);
 
             match event {
+                StoreEvent::Backup { response } => {
+                    let result = process_backup(&app_clone).await;
+                    response.send(result).unwrap_or_else(|_| {
+                        log::error!("Failed to send backup result");
+                    });
+                }
                 StoreEvent::CreateEvent { event } => {
                     let result = process_create_event(&app_clone, event).await;
                     // response.send(result).unwrap_or_else(|_| {
@@ -364,9 +424,7 @@ pub async fn init(app: &AppHandle) -> Result<()> {
         log::info!("Store event loop terminated");
     });
 
-    app.manage(MnemnkDatabase { db, event_tx });
-
-    Ok(())
+    event_tx
 }
 
 pub async fn quit(app: &AppHandle) {
@@ -1670,6 +1728,124 @@ pub async fn process_import_events(app: &AppHandle, path: String) -> Result<()> 
 #[tauri::command]
 pub async fn import_events_cmd(app: AppHandle, path: String) -> Result<(), String> {
     import_events(&app, &path).await.map_err(|e| e.to_string())
+}
+
+// Backup
+
+async fn process_backup(app: &AppHandle) -> Result<()> {
+    let enable_auto_backup = {
+        let settings = app.state::<Mutex<CoreSettings>>();
+        let settings = settings.lock().unwrap();
+        settings.enable_auto_backup.unwrap_or(true)
+    };
+
+    if !enable_auto_backup {
+        log::debug!("Auto backup is disabled");
+        return Ok(());
+    }
+
+    let data_dir = data_dir(app).context("data_dir is not set")?;
+    let backup_dir = PathBuf::from(&data_dir).join("backups");
+
+    if !backup_dir.exists() {
+        std::fs::create_dir_all(&backup_dir)?;
+    }
+
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let backup_path = backup_dir.join(format!("backup_{}.surql", timestamp));
+
+    let state = app.state::<MnemnkDatabase>();
+    let db = &state.db;
+    db.use_db(MNEMNK_DB).await?;
+    db.export(&backup_path).await?;
+
+    log::info!("Database backup created: {}", backup_path.display());
+
+    cleanup_old_backups(app, &backup_dir)?;
+
+    Ok(())
+}
+
+fn cleanup_old_backups(app: &AppHandle, backup_dir: &Path) -> Result<()> {
+    let max_backup_count = {
+        let settings = app.state::<Mutex<CoreSettings>>();
+        let settings = settings.lock().unwrap();
+        settings.max_backup_count.unwrap_or(7) as usize
+    };
+
+    let mut backups: Vec<_> = std::fs::read_dir(backup_dir)?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().extension().and_then(|s| s.to_str()) == Some("surql"))
+        .collect();
+
+    // Sort by creation date (oldest first)
+    backups.sort_by_key(|entry| {
+        entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+    });
+
+    // Delete backups exceeding the maximum count
+    if backups.len() > max_backup_count {
+        let to_remove = backups.len() - max_backup_count;
+        for entry in backups.into_iter().take(to_remove) {
+            if let Err(e) = std::fs::remove_file(entry.path()) {
+                log::error!("Failed to remove old backup: {}", e);
+            } else {
+                log::info!("Removed old backup: {}", entry.path().display());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub async fn start_auto_backup(app: &AppHandle) -> Result<()> {
+    let (enable_auto_backup, backup_interval_hours) = {
+        let settings = app.state::<Mutex<CoreSettings>>();
+        let settings = settings.lock().unwrap();
+        (
+            settings.enable_auto_backup.unwrap_or(false),
+            settings.backup_interval_hours.unwrap_or(24),
+        )
+    };
+
+    if !enable_auto_backup {
+        log::info!("Auto backup is disabled in settings");
+        return Ok(());
+    }
+
+    let state = app.state::<MnemnkDatabase>();
+    let event_tx = state.event_tx.clone();
+
+    let backup_interval = Duration::from_secs(backup_interval_hours as u64 * 3600);
+
+    log::info!(
+        "Starting auto backup with interval: {} hours",
+        backup_interval_hours
+    );
+
+    tauri::async_runtime::spawn(async move {
+        let mut interval = tokio::time::interval(backup_interval);
+        loop {
+            interval.tick().await; // The first tick is completed immediately
+
+            let (tx, rx) = oneshot::channel();
+            if let Err(e) = event_tx.send(StoreEvent::Backup { response: tx }).await {
+                log::error!("Failed to send backup event: {}", e);
+                continue;
+            }
+
+            match rx.await {
+                Ok(Ok(())) => log::info!("Auto backup completed"),
+                Ok(Err(e)) => log::error!("Auto backup failed: {}", e),
+                Err(e) => log::error!("Auto backup response error: {}", e),
+            }
+        }
+    });
+
+    Ok(())
 }
 
 // Tests
