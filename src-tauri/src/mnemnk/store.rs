@@ -1782,7 +1782,7 @@ fn cleanup_old_backups(app: &AppHandle, backup_dir: &Path) -> Result<()> {
     backups.sort_by_key(|entry| {
         entry
             .metadata()
-            .and_then(|m| m.modified())
+            .and_then(|m| m.created())
             .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
     });
 
