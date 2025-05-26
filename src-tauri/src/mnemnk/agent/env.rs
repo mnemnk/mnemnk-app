@@ -178,11 +178,8 @@ impl AgentEnv {
             if new_name.starts_with('/') || new_name.ends_with('/') || new_name.contains("//") {
                 return false;
             }
-            // Disallow segments that are "." or ".."
-            if new_name
-                .split('/')
-                .any(|segment| segment == "." || segment == "..")
-            {
+            // Disallow segments that starts with "."
+            if new_name.split('/').any(|segment| segment.starts_with('.')) {
                 return false;
             }
         }
