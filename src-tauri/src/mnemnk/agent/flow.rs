@@ -172,6 +172,10 @@ fn read_agent_flows_recursive<P: AsRef<Path>>(
                     .trim_end_matches(".json")
                     .replace('\\', "/"); // Ensure consistent path separators
 
+                if flow_name.starts_with('.') {
+                    continue;
+                }
+
                 // Process JSON files
                 let flow = read_agent_flow(flow_name.clone(), path.clone())?;
 
